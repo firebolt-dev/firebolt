@@ -1,0 +1,11 @@
+{
+  "name": "galaxy-monorepo",
+  "version": "1.0.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "private": true,
+  "dependencies": {
+    "prettier": "^3.2.4"
+  }
+}
