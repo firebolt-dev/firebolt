@@ -19,6 +19,7 @@ const galaxy = stack => {
   const routes = []
   const routesById = {}
   const metadataByPath = {}
+  const metadataLoaders = {} // [path]: Promise
   const metadataListeners = {} // [path]: [...callback]
   function init({ routes: _routes, path, metadata }) {
     routes.length = 0
@@ -107,11 +108,18 @@ const galaxy = stack => {
     const route = resolveRoute(path)
     return loadRoute(route)
   }
-  async function loadMetadata(path) {
-    console.log('loadMetadata', path)
-    const resp = await fetch(`/_galaxy/metadata?path=${path}`)
-    const metadata = await resp.json()
-    setMetadata(path, metadata)
+  function loadMetadata(path) {
+    if (metadataLoaders[path]) return metadataLoaders[path]
+    const promise = new Promise(async resolve => {
+      console.log('loadMetadata', path)
+      const resp = await fetch(`/_galaxy/metadata?path=${path}`)
+      const metadata = await resp.json()
+      setMetadata(path, metadata)
+      resolve()
+      delete metadataLoaders[path]
+    })
+    metadataLoaders[path] = promise
+    return promise
   }
   function subscribeToMetadata(path, callback) {
     console.log('subscribeToMetadata', path, callback)
@@ -168,14 +176,10 @@ function PageMounter({ route }) {
   console.log('metadata', metadata)
 
   useEffect(() => {
-    if (Shell && !metadata) {
+    if (!metadata) {
       g.loadMetadata(path)
+      return g.subscribeToMetadata(path, refresh)
     }
-  }, [])
-
-  useEffect(() => {
-    if (metadata) return
-    return g.subscribeToMetadata(path, refresh)
   }, [])
 
   useEffect(() => {
@@ -186,6 +190,10 @@ function PageMounter({ route }) {
   }, [Page])
 
   if (!Page) {
+    return null
+  }
+
+  if (!Shell && !metadata) {
     return null
   }
 
