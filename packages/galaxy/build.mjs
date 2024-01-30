@@ -11,6 +11,8 @@ options.minify = process.argv.includes('--minify')
 
 // const cwd = process.cwd()
 
+const env = process.env.NODE_ENV || 'development'
+
 async function build() {
   log('build...')
   await esbuild.build({
@@ -18,6 +20,7 @@ async function build() {
     bundle: true,
     minify: options.minify,
     sourcemap: true,
+    treeShaking: true,
     outfile: 'build/cli.js',
     platform: 'node',
     loader: {
@@ -43,6 +46,9 @@ async function build() {
     //   'aws-sdk',
     //   'nock',
     // ],
+    define: {
+      'process.env.NODE_ENV': JSON.stringify(env),
+    },
   })
   log('build complete')
 }

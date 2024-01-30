@@ -11,6 +11,7 @@ export default function Home({ test }) {
         Home holy shit: {test}
       </div>
       <Link href='/about'>About</Link>
+      <Link href='/shell'>Shell</Link>
     </div>
   )
 }
@@ -27,11 +28,7 @@ export async function getMetadata() {
     props: {
       test: 'TEST!',
     },
-    // data expiration
-    // - when not set, clients will only fetch metadata for each page once and re-use old data when navigating back to it, forever (unless hard refresh)
-    // - when set to 0, metadata immediately expires so clients will always re-fetch metadata when coming back to the page
-    // - when set to >0, metadata will be cached for X seconds, after that it will be re-fetched and cached again
-    expire: 0,
+    expire: null,
   }
 }
 

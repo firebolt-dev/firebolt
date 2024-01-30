@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "galaxy dev",
     "build": "galaxy build",
-    "serve": "galaxy serve"
+    "start": "galaxy start"
   },
   "devDependencies": {
     "galaxy": "*",

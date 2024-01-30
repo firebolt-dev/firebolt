@@ -9,10 +9,13 @@ import React from 'react'
 
 import { getFilePaths } from '../utils/getFilePaths'
 import { filePathToRoutePath } from '../utils/filePathToRoutePath'
-import { getBaseUrl } from '../utils/getBaseUrl'
-import makeMatcher from 'wouter/matcher'
+import makeMatcher from '../utils/matcher'
 
 const port = 4004
+
+const env = process.env.NODE_ENV || 'development'
+const isProduction = env === 'production'
+const isDevelopment = !isProduction
 
 export async function dev() {
   const rootDir = process.cwd()
@@ -34,9 +37,6 @@ export async function dev() {
       path: filePathToRoutePath(routeFile),
       fileBase: routeFile,
       filePath: path.join(rootDir, 'pages', routeFile),
-      // filePath,
-      // baseUrl: getBaseUrl(filePath),
-      // fullPath: path.join(rootDir, 'pages', filePath),
     })
   }
 
@@ -63,11 +63,15 @@ export async function dev() {
     jsx: 'automatic',
     jsxImportSource: '@emotion/react',
     bundle: true,
-    minify: false,
+    treeShaking: true,
+    minify: isProduction,
     sourcemap: true,
     outfile: libOutputPath,
     platform: 'node',
     external: ['react', 'react-dom', '@emotion/react'],
+    define: {
+      'process.env.NODE_ENV': JSON.stringify(env),
+    },
   })
 
   // generate server entry
@@ -90,13 +94,17 @@ export async function dev() {
     jsx: 'automatic',
     jsxImportSource: '@emotion/react',
     bundle: true,
-    minify: false,
+    minify: isProduction,
+    treeShaking: true,
     sourcemap: true,
     outfile: serverEntryBuildPath,
     platform: 'node',
     external: ['react', 'react-dom', '@emotion/react'],
     alias: {
       galaxy: libOutputPath,
+    },
+    define: {
+      'process.env.NODE_ENV': JSON.stringify(env),
     },
   })
 
@@ -105,61 +113,11 @@ export async function dev() {
   console.log('modules', modules)
   for (const route of routes) {
     route.module = modules[route.id]
-    route.Component = modules[route.id].default
+    route.Page = modules[route.id].default
+    route.Shell = modules[route.id].Shell
     route.getMetadata = modules[route.id].getMetadata || defaultGetMetadata
     route.hasMetadata = !!modules[route.id].getMetadata
   }
-
-  // generate client main script
-  // const clientMainScript = `
-  //   import { hydrateRoot } from 'react-dom/client'
-  //   import { Suspense, lazy, useState, useEffect, use } from 'react'
-  //   import { Router, Route, Switch } from 'wouter'
-
-  //   import { Document } from '../document.js'
-
-  //   const ctx = window.$galaxy
-  //   const { metadata, routes, registry } = window.$galaxy
-
-  //   function Page({ id, path, file, props }) {
-  //     const page = ctx.get(id)
-  //     const [n, setN] = useState(0)
-  //     useEffect(() => {
-  //       // if (page)
-  //     }, [])
-  //     const Component = use(ctx.get(id))
-  //     // const Component = registry[path]
-  //     // const [active, setActive] = useState(!!Component)
-
-  //     // useEffect(() => {
-  //     //   if (Component) return
-  //     //   console.log(file)
-  //     //   import(file).then(() => {
-  //     //     setActive(true)
-  //     //   })
-  //     // }, [])
-  //     if (!Component) return null
-  //     return <Component {...props} />
-  //   }
-
-  //   function App() {
-  //     return (
-  //       <Document {...metadata}>
-  //         <Router>
-  //           <Switch>
-  //             {routes.map(route => (
-  //               <Route path={route.path} key={route.path}>
-  //                 <Page path={route.path} file={route.file} props={metadata.props} />
-  //               </Route>
-  //             ))}
-  //           </Switch>
-  //         </Router>
-  //       </Document>
-  //     )
-  //   }
-
-  //   const root = hydrateRoot(document, <App />)
-  // `
 
   // copy over client main
   const mainSrc = path.join(__dirname, '../scripts/main.js')
@@ -170,9 +128,11 @@ export async function dev() {
   for (const route of routes) {
     // TODO: retain function name?
     const script = `
-      import Route from '../pages${route.fileBase}'
+      import Page from '../pages${route.fileBase}'
+      ${route.Shell && `import { Shell } from '../pages${route.fileBase}'`}
 
-      window.$galaxy.registerRoute('${route.id}', Route)
+      window.$galaxy.call('registerPage', '${route.id}', Page)
+      ${route.Shell && `window.$galaxy.call('registerShell', '${route.id}', Shell)`}
     `
     route.registryPath = path.join(stagingDir, route.fileBase)
     await fs.writeFile(route.registryPath, script)
@@ -198,7 +158,7 @@ export async function dev() {
     splitting: true,
     treeShaking: true,
     bundle: true,
-    minify: false,
+    minify: isProduction,
     sourcemap: true,
     outdir: clientEntryBuildDir,
     platform: 'browser',
@@ -207,6 +167,9 @@ export async function dev() {
       galaxy: libOutputPath,
     },
     metafile: true,
+    define: {
+      'process.env.NODE_ENV': JSON.stringify(env),
+    },
   })
   let clientMainRelPath
   for (const file in clientEntryResult.metafile.outputs) {
@@ -246,7 +209,15 @@ export async function dev() {
   //   )
   // }
 
-  const isMatch = makeMatcher()
+  const match = makeMatcher()
+
+  function resolveRoute(path) {
+    for (const route of routes) {
+      const [hit, params] = match(route.path, path)
+      if (hit) return [route, params]
+    }
+    return []
+  }
 
   // start server
   const server = express()
@@ -255,36 +226,32 @@ export async function dev() {
   server.use(express.json())
   server.use(express.static('public'))
   server.use(express.static('.galaxy/public'))
+  server.get('/_galaxy/metadata', async (req, res) => {
+    const path = req.query.path
+    const [route, params] = resolveRoute(path)
+    if (!route) return res.json({})
+    const metadata = await route.getMetadata() // todo: pass in params? request?
+    return res.json(metadata)
+  })
   server.use('*', async (req, res) => {
     const reqPath = req.baseUrl || '/'
 
     // handle page requests
-    let route
-    let params
-    for (const _route of routes) {
-      const [hit, _params] = isMatch(_route.path, reqPath)
-      if (hit) {
-        route = _route
-        params = _params
-        break
-      }
-    }
+    const [route, params] = resolveRoute(reqPath)
     if (route) {
       console.log('route', route)
       console.log('match params', params)
       const Document = modules.Document
       const Router = modules.galaxy.Router
       const Route = modules.galaxy.Route
-      const Switch = modules.galaxy.Switch
-      const RouteComponent = route.Component
+      const Page = route.Page
       const metadata = await route.getMetadata()
-      // globalThis.location = { pathname: reqPath }
       function App() {
         return (
           <Document {...metadata}>
             <Router ssrPath={reqPath}>
               <Route path={route.path}>
-                <RouteComponent {...metadata.props} />
+                <Page {...metadata.props} />
               </Route>
             </Router>
           </Document>
@@ -292,53 +259,18 @@ export async function dev() {
       }
       const { pipe, abort } = renderToPipeableStream(<App />, {
         bootstrapScriptContent: `
-          const routes = ${JSON.stringify(_routes)}
-          const routesById = {}
-          for (const route of routes) {
-            routesById[route.id] = route
+          const g = {
+            stack: [],
+            call(action, ...args) {
+              g.stack.push({ action, args })
+            }
           }
-          const ctx = {
-            routes,
-            routesById,
-            metadata: {
-              '${reqPath}': ${JSON.stringify(metadata)}
-            },            
-            registerRoute(id, Component) {
-              const route = ctx.routesById[id]
-              if (!route) return console.error('TODO: handle')
-              route.Component = Component
-            },
-            getRoute(id) {
-              return ctx.routesById[id]
-            },
-            getRouteComponent(id) {
-              return ctx.routesById[id]?.Component
-            },
-            setMetadata(path, metadata) {
-              if (metadata.expires) {
-                metadata.expires = new Date().getTime() + metadata.expires * 1000 // seconds
-              }
-              ctx.metadata[path] = metadata
-            },
-            getProps(path) {
-              return ctx.getMetadata(path)?.props
-            },
-            getMetadata(path) {
-              let metadata = ctx.metadata[path]
-              if (!metadata) {
-                return {}
-              }
-              if (metadata.expires) {
-                const hasExpired = new Date().getTime() >= metadata.expires
-                if (hasExpired) return
-              }
-              return metadata
-            },
-          }
-          ctx.initial = {
+          g.call('init', {
+            routes: ${JSON.stringify(_routes)},
+            path: '${reqPath}',
             metadata: ${JSON.stringify(metadata)}
-          }
-          window.$galaxy = ctx
+          })
+          window.$galaxy = g
         `,
         bootstrapModules: [route.clientPath, clientMainRelPath],
         onShellReady() {

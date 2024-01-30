@@ -38,7 +38,6 @@ A lightweight react framework with all the essentials and simple documentation.
 
 - <Link> will preload any page js that hasn't yet been loaded
 
-
 - esbuild our client page bundles, multiple entry points in pages/\*, this also gives us a shared bundle
 - build
 
@@ -59,3 +58,28 @@ A lightweight react framework with all the essentials and simple documentation.
     - build or use cached version
     - fetch any page data
     - render it and pipe to client, injecting
+
+### Route Changes
+
+- initial
+  - request route from server
+  - server loads any require data (getData)
+  - server renders and streams to client
+  - client hydrates
+- Link (on mount)
+  - preload any route file so that its ready to go
+- Link (on click)
+  - prevent default
+  - load route file if we don't have it
+  - if we already have not-expired data, go there immediately, stop here
+  - if route has a shell, go there immediately
+  - request data and broadcast (for any listening shell)
+  - if route didnt have a shell, go there now
+
+### Expire
+
+Your `getMetadata()` can return an `expire` key which determines how long (in seconds) the metadata is valid for.
+
+1. If not set (undefined or null) the data never expires. Data will be loaded/fetched once and used forever.
+2. If set to 0, data expires immediately and will be re-fetched when coming back to that page
+3. If set to >0, data is cached for that number of seconds. After that time, it will be re-fetched and cached again.

@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 export { css } from '@emotion/react'
 // import { Router, Route, Switch } from 'wouter'
-import { Link as WLink } from 'wouter'
+import { Link as WLink, useLocation } from 'wouter'
 export { Router, Route, Switch, useParams, useRouter } from 'wouter'
 
 // export function Router() {
@@ -9,26 +9,31 @@ export { Router, Route, Switch, useParams, useRouter } from 'wouter'
 //   return <div onClick={() => setFoo(!foo)}>ROUTER !!! {foo ? 'YES' : 'NO'}</div>
 // }
 
-export function Link({ children, ...props }) {
-  //   return <a>{children}</a>
+// const browser = typeof window !== 'undefined'
+// const g = browser ? window.$galaxy : null
+
+const g = () => window.$galaxy
+
+export function Link({ href, onClick, children, ...props }) {
+  const [location, setLocation] = useLocation()
+  const handleClick = async e => {
+    onClick?.(e)
+    if (e.defaultPrevented) return
+    const route = g().resolveRoute(href)
+    if (!route) return
+    e.preventDefault()
+    if (!route.Page) await g().loadRouteByPath(href)
+    const metadata = g().getMetadata(href, true)
+    if (metadata) return setLocation(href)
+    if (route.Shell) return setLocation(href)
+    await g().loadMetadata(href)
+    setLocation(href)
+  }
+  useEffect(() => {
+    g().loadRouteByPath(href)
+  }, [])
   return (
-    <WLink
-      {...props}
-      onClick={e => {
-        console.log('ON CLICK')
-        /**
-         * todo
-         * - check if this is a page
-         * - preload script if not already
-         * - on click
-         *   - prevent default
-         *   - if we dont have the page script, load it + register
-         *   - fetch metadata
-         *   - now we can route there, with the metadata+props
-         */
-        // e.preventDefault()
-      }}
-    >
+    <WLink href={href} {...props} onClick={handleClick}>
       {children}
     </WLink>
   )
