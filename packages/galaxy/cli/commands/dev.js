@@ -244,24 +244,26 @@ export async function dev() {
     if (route) {
       console.log('route', route)
       console.log('match params', params)
-      const MetaProvider = modules.galaxy.MetaProvider
+      const SSRProvider = modules.galaxy.SSRProvider
       const Document = modules.Document
       const Router = modules.galaxy.Router
       const Route = modules.galaxy.Route
       const Page = route.Page
       const metadata = await route.getMetadata()
-      const props = metadata.props
+      const ssr = {
+        Page,
+        metadata,
+        props: metadata.props,
+        location: {
+          pathname: reqPath,
+          params,
+        },
+      }
       function Root() {
         return (
-          <MetaProvider metadata={metadata}>
-            <Document>
-              {/* <Router ssrPath={reqPath}>
-                <Route path={route.path}> */}
-              <Page {...props} />
-              {/* </Route>
-              </Router> */}
-            </Document>
-          </MetaProvider>
+          <SSRProvider value={ssr}>
+            <Document />
+          </SSRProvider>
         )
       }
       const { pipe, abort } = renderToPipeableStream(<Root />, {

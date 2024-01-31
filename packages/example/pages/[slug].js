@@ -1,16 +1,17 @@
-import { css, useLocation } from 'galaxy'
+import { Link, css, useLocation } from 'galaxy'
 
 export default function Sluggy() {
-  // const location = useLocation()
+  const location = useLocation()
+  // console.log('loc', location)
+  // console.log('par', location.params)
   return (
     <div
       css={css`
         color: green;
       `}
     >
-      <div>Slug</div>
-
-      {/* Slug: {params.slug} */}
+      <div>Slug: {location.params.slug}</div>
+      <Link to='/foobies'>FOOBIES</Link>
     </div>
   )
 }
