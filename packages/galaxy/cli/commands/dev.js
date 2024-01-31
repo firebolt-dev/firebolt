@@ -119,10 +119,13 @@ export async function dev() {
     route.hasMetadata = !!modules[route.id].getMetadata
   }
 
-  // copy over client main
-  const mainSrc = path.join(__dirname, '../scripts/main.js')
+  // copy over client main + deps
+  const mainSrc = path.join(__dirname, '../templates/main.js')
   const mainPath = path.join(stagingDir, 'main.js')
   await fs.copyFile(mainSrc, mainPath)
+  const matcherSrc = path.join(__dirname, '../templates/matcher.js')
+  const matcherPath = path.join(stagingDir, 'matcher.js')
+  await fs.copyFile(matcherSrc, matcherPath)
 
   // generate client entry points (import tree shaking + register)
   for (const route of routes) {
@@ -241,23 +244,27 @@ export async function dev() {
     if (route) {
       console.log('route', route)
       console.log('match params', params)
+      const MetaProvider = modules.galaxy.MetaProvider
       const Document = modules.Document
       const Router = modules.galaxy.Router
       const Route = modules.galaxy.Route
       const Page = route.Page
       const metadata = await route.getMetadata()
-      function App() {
+      const props = metadata.props
+      function Root() {
         return (
-          <Document {...metadata}>
-            <Router ssrPath={reqPath}>
-              <Route path={route.path}>
-                <Page {...metadata.props} />
-              </Route>
-            </Router>
-          </Document>
+          <MetaProvider metadata={metadata}>
+            <Document>
+              {/* <Router ssrPath={reqPath}>
+                <Route path={route.path}> */}
+              <Page {...props} />
+              {/* </Route>
+              </Router> */}
+            </Document>
+          </MetaProvider>
         )
       }
-      const { pipe, abort } = renderToPipeableStream(<App />, {
+      const { pipe, abort } = renderToPipeableStream(<Root />, {
         bootstrapScriptContent: `
           const g = {
             stack: [],

@@ -83,3 +83,49 @@ Your `getMetadata()` can return an `expire` key which determines how long (in se
 1. If not set (undefined or null) the data never expires. Data will be loaded/fetched once and used forever.
 2. If set to 0, data expires immediately and will be re-fetched when coming back to that page
 3. If set to >0, data is cached for that number of seconds. After that time, it will be re-fetched and cached again.
+
+### Routing
+
+We use a custom router because we need to disconnect ACTUAL browser location from routes being rendered.
+
+- hydrate
+  - browser path and virtual path are the same (use browser path)
+- mount link
+  - resolve route
+  - load route file if its missing
+- click link
+  - prevent default
+  - set browser path
+- router
+  - when browser path changes (virtual path hasnt)
+    - resolve route
+    - load route file if its missing
+    - if metadata is still valid (not expired) set virtual path to match and stop here
+    - if route has a shell, set virtual path to match
+    - fetch metadata for new route and update (broadcast? or maybe its all just here now)
+    - if route didnt have a shell, update virtual path now
+
+### Todos
+
+- api routes
+- custom server.js
+- in dev, watch files, rebuild and reload page via websocket signals (or re-hydrate root with new data?)
+- useLocation() -> { pathname, params{}, query{}, push, replace, prefetch, back, forward, reload }
+- navigation scroll to top and restoration
+- if getMetadata crashes, server should render pages/500.js
+- if route doesnt exit, server should render pages/404.js
+- if render itself crashes, server should try pages/500.js but if that also crashes send a fallback 500 page
+- pass a request object into getMetadata with path, params and queries, and allow custom server.js to do things like inject a db into this request object
+
+### Architecture
+
+- build (and watch)
+  - build the `galaxy` lib (used by both server and client)
+  - build the cli (galaxy dev, galaxy build, galaxy start)
+  - build the bootstrapper (runtime + hydrate)
+- server
+  - builds lib
+  - exports
+    - all from app/pages/\*
+    - Document from app/document.js
+    - - as galaxy (aliased bui)

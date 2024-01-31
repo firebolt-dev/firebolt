@@ -12,15 +12,18 @@ export default function About() {
   )
 }
 
+// export function Shell() {
+//   return <div>About loaidng...</div>
+// }
+
 export async function getMetadata() {
-  // await delay(1000)
+  await delay(1000)
   return {
-    title: 'Title!',
-    description: 'Description!',
-    // meta: [
-    //   { name: 'description', content: 'I am a description!' },
-    //   { property: 'og:title', content: 'Title!' },
-    // ],
+    title: 'About',
+    meta: [
+      { name: 'description', content: 'All about me' },
+      { property: 'og:title', content: 'Title!' },
+    ],
     props: {
       test: 'TEST!',
     },

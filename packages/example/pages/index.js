@@ -5,11 +5,12 @@ export default function Home({ test }) {
     <div>
       <div
         css={css`
-          color: red;
+          color: black;
         `}
       >
         Home holy shit: {test}
       </div>
+      {/* <div onClick={() => history.pushState({}, '', '/about')}>/about</div> */}
       <Link href='/about'>About</Link>
       <Link href='/shell'>Shell</Link>
     </div>
@@ -19,12 +20,11 @@ export default function Home({ test }) {
 export async function getMetadata() {
   // await delay(1000)
   return {
-    title: 'Title!',
-    description: 'Description!',
-    // meta: [
-    //   { name: 'description', content: 'I am a description!' },
-    //   { property: 'og:title', content: 'Title!' },
-    // ],
+    title: 'Home',
+    meta: [
+      { name: 'description', content: 'I am description!' },
+      { property: 'og:title', content: 'Title!' },
+    ],
     props: {
       test: 'TEST!',
     },
