@@ -1,79 +1,92 @@
 import { hydrateRoot } from 'react-dom/client'
-import {
-  useState,
-  useEffect,
-  useLayoutEffect,
-  createContext,
-  useMemo,
-} from 'react'
 
-import { Document } from '../document.js'
+import { Document } from '../../document.js'
 
-import makeMatcher from './matcher.js'
+import { matcher } from './matcher.js'
 
-const galaxy = stack => {
-  const match = makeMatcher()
+const match = matcher()
+
+const runtime = stack => {
+  let hasInit
+
   const routes = []
   const routesById = {}
   const metadataByPath = {}
   const metadataLoaders = {} // [path]: Promise
+
+  const actions = {
+    routes,
+    metadataByPath,
+    init,
+    registerPage,
+    call,
+    getPage,
+    getMetadata,
+    resolveRoute,
+    resolveRouteAndParams,
+    loadRoute,
+    loadRouteById,
+    loadRouteByPath,
+    loadMetadata,
+    onMeta,
+    notifyMeta,
+  }
+
   function init({ routes: _routes, path, metadata }) {
-    routes.length = 0
+    if (hasInit) throw new Error('already initialized')
     routes.push(..._routes)
     for (const route of routes) {
       routesById[route.id] = route
     }
-    setMetadata(path, metadata, true)
+    setMetadata(path, metadata)
+    hasInit = true
   }
-  function registerPage(routeId, Page) {
+
+  function registerPage(routeId, Page, Shell) {
     const route = routesById[routeId]
     if (!route) return console.error('TODO: handle')
     route.Page = Page
-  }
-  function registerShell(routeId, Shell) {
-    const route = routesById[routeId]
-    if (!route) return console.error('TODO: handle')
     route.Shell = Shell
   }
-  const actions = {
-    init,
-    registerPage,
-    registerShell,
-  }
+
   function call(action, ...args) {
     actions[action](...args)
   }
+
   for (const item of stack) {
     call(item.action, ...item.args)
   }
+
   function getPage(routeId) {
     return routesById[routeId].Page
   }
-  function setMetadata(path, metadata, force) {
-    if (metadata.expire === 0 && !force) {
-      // expire immediately (dont store it)
-      return
+
+  function setMetadata(path, metadata) {
+    if (metadata.expire === 0) {
+      // expire immediately
+      metadata.expireImmediately = true
     } else if (metadata.expire > 0) {
       // expire in X seconds
-      metadata.expireTime = new Date().getTime() + metadata.expire * 1000
+      metadata.expireAt = new Date().getTime() + metadata.expire * 1000
     } else {
       // never expire
-      metadata.expireTime = 'never'
+      metadata.expireNever = true
     }
-    // console.log('setMetadata', metadata)
     metadataByPath[path] = metadata
+    console.log('setMetadata', metadata)
   }
-  function getMetadata(path, skipExpiry) {
+
+  function getMetadata(path, ignoreExpire) {
     let metadata = metadataByPath[path]
     if (!metadata) return null
-    if (skipExpiry) return metadata
-    if (metadata.expireTime === 'never') {
+    if (ignoreExpire) return metadata
+    if (metadata.expireNever) {
       return metadata
-    } else if (metadata.expireTime === 'once') {
+    } else if (metadata.expireImmediately) {
       delete metadataByPath[path]
-      return metadata
+      return null
     } else {
-      const expired = new Date().getTime() >= metadata.expireTime
+      const expired = new Date().getTime() >= metadata.expireAt
       if (expired) {
         delete metadataByPath[path]
         return null
@@ -81,9 +94,11 @@ const galaxy = stack => {
       return metadata
     }
   }
+
   function resolveRoute(path) {
     return routes.find(route => match(route.path, path)[0])
   }
+
   function resolveRouteAndParams(path) {
     for (const route of routes) {
       const [hit, params] = match(route.path, path)
@@ -99,14 +114,17 @@ const galaxy = stack => {
     route.loader = import(route.file)
     await route.loader
   }
+
   function loadRouteById(routeId) {
     const route = routesById[routeId]
     return loadRoute(route)
   }
+
   function loadRouteByPath(path) {
     const route = resolveRoute(path)
     return loadRoute(route)
   }
+
   function loadMetadata(path) {
     if (metadataLoaders[path]) return metadataLoaders[path]
     const promise = new Promise(async resolve => {
@@ -123,32 +141,22 @@ const galaxy = stack => {
     metadataLoaders[path] = promise
     return promise
   }
+
   let metaListeners = new Set()
   function onMeta(callback) {
     metaListeners.add(callback)
     return () => metaListeners.delete(callback)
   }
+
   function notifyMeta(metadata) {
     for (const callback of metaListeners) {
       callback(metadata)
     }
   }
-  return {
-    call,
-    getPage,
-    getMetadata,
-    routes,
-    resolveRoute,
-    resolveRouteAndParams,
-    loadRoute,
-    loadRouteById,
-    loadRouteByPath,
-    loadMetadata,
-    onMeta,
-    notifyMeta,
-  }
-}
-const g = galaxy(window.$galaxy.stack)
-window.$galaxy = g
 
-const root = hydrateRoot(document, <Document />)
+  return actions
+}
+
+globalThis.$galaxy = runtime(globalThis.$galaxy.stack)
+
+hydrateRoot(document, <Document />)

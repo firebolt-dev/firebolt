@@ -1,82 +1,97 @@
-import { fork } from 'child_process'
-// import path from 'path'
-// import fs from 'fs-extra'
-import chokidar from 'chokidar'
-import * as esbuild from 'esbuild'
 import _ from 'lodash'
+import fs from 'fs-extra'
+import path from 'path'
+import chokidar from 'chokidar'
+import esbuild from 'esbuild'
+
+const cwd = process.cwd()
+const env = process.env.NODE_ENV || 'development'
+const prod = env === 'production'
+
+const buildDir = path.join(cwd, 'build')
 
 const options = {}
 options.watch = process.argv.includes('--watch')
-options.minify = process.argv.includes('--minify')
 
-// const cwd = process.cwd()
-
-const env = process.env.NODE_ENV || 'development'
-
-async function build() {
-  log('build...')
-  await esbuild.build({
-    entryPoints: ['cli/index.js'],
-    bundle: true,
-    minify: options.minify,
-    sourcemap: true,
-    treeShaking: true,
-    outfile: 'build/cli.js',
-    platform: 'node',
-    loader: {
-      '.js': 'jsx',
-    },
-    jsx: 'automatic',
-    jsxImportSource: '@emotion/react',
-    banner: {
-      js: '#!/usr/bin/env node',
-    },
-    // packages: 'external',
-    external: ['esbuild', 'react', 'react-dom', '@emotion/react'],
-    // external: [
-    //   // exclude all the random knex packages fml
-    //   'better-sqlite3',
-    //   'sqlite3',
-    //   'mysql',
-    //   'mysql2',
-    //   'tedious',
-    //   'oracledb',
-    //   'pg-query-stream',
-    //   'mock-aws-s3',
-    //   'aws-sdk',
-    //   'nock',
-    // ],
-    define: {
-      'process.env.NODE_ENV': JSON.stringify(env),
-    },
-  })
-  log('build complete')
-}
-
-async function watch() {
-  // export const cwd = process.cwd()
+async function cli() {
+  async function build() {
+    console.log('[cli] building')
+    await esbuild.build({
+      entryPoints: ['cli/index.js'],
+      outfile: 'build/cli.js',
+      bundle: true,
+      treeShaking: true,
+      sourcemap: true,
+      minify: prod,
+      platform: 'node',
+      packages: 'external',
+      define: {
+        'process.env.NODE_ENV': JSON.stringify(env),
+      },
+      banner: {
+        js: '#!/usr/bin/env node',
+      },
+      loader: {
+        '.js': 'jsx',
+      },
+      jsx: 'automatic',
+      jsxImportSource: '@emotion/react',
+    })
+    console.log('[cli] built')
+  }
+  await build()
+  const bin = path.join(cwd, 'build/cli.js')
+  await fs.chmod(bin, '755')
+  if (!options.watch) return
   const watcher = chokidar.watch(['cli'], {
     ignoreInitial: true,
   })
   const handleChanges = _.debounce(async () => {
     await build()
   })
-  watcher.on('all', async (type, path) => {
-    // changes.push({ type, path });
+  watcher.on('all', async () => {
     handleChanges()
   })
-  log('watching')
+  console.log('[cli] watching')
 }
 
-function log(...args) {
-  console.log('[build]', ...args)
-}
-
-async function start() {
-  await build()
-  if (options.watch) {
-    await watch()
+async function lib() {
+  async function build() {
+    console.log('[lib] building')
+    await esbuild.build({
+      entryPoints: ['lib/index.js'],
+      outfile: 'build/lib.js',
+      bundle: true,
+      treeShaking: true,
+      sourcemap: true,
+      minify: prod,
+      platform: 'node', // remove? this is on client too
+      external: ['react', 'react-dom', '@emotion/react'],
+      define: {
+        'process.env.NODE_ENV': JSON.stringify(env),
+      },
+      loader: {
+        '.js': 'jsx',
+      },
+      jsx: 'automatic',
+      jsxImportSource: '@emotion/react',
+    })
+    console.log('[lib] built')
   }
+  await build()
+  if (!options.watch) return
+  const watcher = chokidar.watch(['lib'], {
+    ignoreInitial: true,
+  })
+  const handleChanges = _.debounce(async () => {
+    await build()
+  })
+  watcher.on('all', async () => {
+    handleChanges()
+  })
+  console.log('[lib] watching')
 }
 
-start()
+await fs.emptyDir(buildDir)
+await cli()
+await lib()

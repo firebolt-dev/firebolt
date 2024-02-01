@@ -2,7 +2,7 @@
 // see: https://github.com/molefrog/wouter/blob/main/matcher.js
 // see: https://www.npmjs.com/package/path-to-regexp
 
-export function filePathToRoutePath(filePath) {
+export function fileToRoutePath(filePath) {
   // remove extension
   filePath = filePath.split('.').slice(0, -1).join('')
   // split by /

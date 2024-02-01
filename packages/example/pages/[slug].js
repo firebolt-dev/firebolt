@@ -27,7 +27,7 @@ export async function getMetadata() {
     props: {
       test: 'TEST!',
     },
-    // expire: 0,
+    expire: 0,
   }
 }
 

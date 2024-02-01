@@ -1,7 +1,7 @@
 // see: https://github.com/molefrog/wouter/blob/main/matcher.js
 
 // creates a matcher function
-export default function makeMatcher(makeRegexpFn = pathToRegexp) {
+export function matcher(makeRegexpFn = pathToRegexp) {
   let cache = {}
 
   // obtains a cached regexp version of the pattern

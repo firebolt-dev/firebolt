@@ -11,34 +11,25 @@ import {
 } from 'react'
 export { css } from '@emotion/react'
 
-const g = () => window.$galaxy
+const getRuntime = () => globalThis.$galaxy
 
 export function Link(props) {
   const { to, href = to, replace, onClick, children } = props
 
   const jsx = isValidElement(children) ? children : <a {...props} />
 
-  const handleClick = useEvent(event => {
-    // ignores the navigation when clicked using right mouse button or
-    // by holding a special modifier key: ctrl, command, win, alt, shift
-    if (
-      event.ctrlKey ||
-      event.metaKey ||
-      event.altKey ||
-      event.shiftKey ||
-      event.button !== 0
-    )
+  const handleClick = useEvent(e => {
+    // ignore modifier clicks
+    if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.button !== 0) {
       return
-
-    onClick?.(event)
-    if (!event.defaultPrevented) {
-      event.preventDefault()
-      console.log('to', to)
-      if (replace) {
-        history.replaceState(null, '', href)
-      } else {
-        history.pushState(null, '', href)
-      }
+    }
+    onClick?.(e)
+    if (e.defaultPrevented) return
+    e.preventDefault()
+    if (replace) {
+      history.replaceState(null, '', href)
+    } else {
+      history.pushState(null, '', href)
     }
   })
 
@@ -48,7 +39,8 @@ export function Link(props) {
   }
 
   useEffect(() => {
-    g().loadRouteByPath(to)
+    // prefetch
+    getRuntime().loadRouteByPath(to)
   }, [])
 
   return cloneElement(jsx, extraProps)
@@ -59,30 +51,28 @@ const SSRContext = createContext()
 export function Meta() {
   const ssr = useContext(SSRContext)
   const [metadata, setMetadata] = useState(() => {
-    // server provides metadata via context
+    // server provides initial metadata via context
     if (ssr) return ssr.metadata
-    // client must source it from the store
-    return g().getMetadata(location.pathname, true)
+    // client sources initial metadata from runtime
+    return getRuntime().getMetadata(location.pathname, true)
   })
 
   useEffect(() => {
     // subscribe to metadata changes
-    return g().onMeta(metadata => {
+    return getRuntime().onMeta(metadata => {
       setMetadata(metadata)
     })
   }, [])
 
-  console.log('<Meta>', metadata)
-
   return (
     <>
       {metadata?.title && <title>{metadata.title}</title>}
-      {metadata?.meta?.map((item, idx) => (
+      {metadata?.meta?.map((meta, idx) => (
         <meta
-          key={item.key || idx}
-          name={item.name}
-          property={item.property}
-          content={item.content}
+          key={meta.key || idx}
+          name={meta.name}
+          property={meta.property}
+          content={meta.content}
         />
       ))}
     </>
@@ -93,18 +83,8 @@ export function SSRProvider({ value, children }) {
   return <SSRContext.Provider value={value}>{children}</SSRContext.Provider>
 }
 
-// Userland polyfill while we wait for the forthcoming
-// https://github.com/reactjs/rfcs/blob/useevent/text/0000-useevent.md
-// Note: "A high-fidelity polyfill for useEvent is not possible because
-// there is no lifecycle or Hook in React that we can use to switch
-// .current at the right timing."
-// So we will have to make do with this "close enough" approach for now.
-// ---
-// Per Dan Abramov: useInsertionEffect executes marginally closer to the
-// correct timing for ref synchronization than useLayoutEffect on React 18.
-// See: https://github.com/facebook/react/pull/25881#issuecomment-1356244360
-// ---
-// Borrowed from wouter: https://github.com/molefrog/wouter/blob/main/react-deps.js
+// ponyfill until react releases this
+// borrowed from https://github.com/molefrog/wouter/blob/main/react-deps.js
 const useEvent = fn => {
   const ref = useRef([fn, (...args) => ref[0](...args)]).current
   useInsertionEffect(() => {
@@ -113,7 +93,7 @@ const useEvent = fn => {
   return ref[1]
 }
 
-// monkey-patch history push/replace to dispatch events!
+// monkey patch history push/replace to dispatch events!
 if (globalThis.history) {
   for (const type of ['pushState', 'replaceState']) {
     const original = history[type]
@@ -159,15 +139,17 @@ export function RouterServer({ ssr }) {
 }
 
 export function RouterClient() {
-  const [browserPath, setBrowserPath] = useState(location.pathname)
+  const [browserPath, setBrowserPath] = useState(globalThis.location.pathname)
   const [virtualPath, setVirtualPath] = useState(browserPath)
-  const [route, params] = g().resolveRouteAndParams(virtualPath)
+  const [route, params] = getRuntime().resolveRouteAndParams(virtualPath)
   const { Page, Shell } = route
-  const [metadata, setMetadata] = useState(() => g().getMetadata(virtualPath))
+  const [metadata, setMetadata] = useState(() => {
+    return getRuntime().getMetadata(virtualPath, true)
+  })
 
   useEffect(() => {
     function onChange(e) {
-      setBrowserPath(location.pathname)
+      setBrowserPath(globalThis.location.pathname)
     }
     const events = ['popstate', 'pushState', 'replaceState', 'hashchange']
     for (const event of events) {
@@ -184,43 +166,43 @@ export function RouterClient() {
     if (browserPath === virtualPath) return
     let cancelled
     const exec = async () => {
-      // console.log('exec...')
+      console.log('exec...')
       const path = browserPath
-      const route = g().resolveRoute(path)
-      // console.log(path, route)
+      const route = getRuntime().resolveRoute(path)
+      console.log(path, route)
       if (!route.Page) {
-        // console.log('missing Page, loading it')
-        await g().loadRoute(route)
+        console.log('missing Page, loading it')
+        await getRuntime().loadRoute(route)
       }
       if (cancelled) {
-        // console.log('cancelled')
+        console.log('cancelled')
         return
       }
-      let metadata = g().getMetadata(path)
+      let metadata = getRuntime().getMetadata(path)
       if (metadata) {
-        // console.log('have metadata, setMetadata + setVirtualPath')
+        console.log('have metadata, setMetadata + setVirtualPath')
         setMetadata(metadata)
-        g().notifyMeta(metadata)
+        getRuntime().notifyMeta(metadata)
         setVirtualPath(path)
         return
       }
       if (route.Shell) {
-        // console.log('route has shell, setVirtualPath')
+        console.log('route has shell, setVirtualPath')
         setMetadata(null)
         setVirtualPath(path)
       }
-      // console.log('loading metadata')
-      metadata = await g().loadMetadata(path)
-      // console.log('metadata', metadata)
+      console.log('loading metadata')
+      metadata = await getRuntime().loadMetadata(path)
+      console.log('metadata', metadata)
       if (cancelled) {
-        // console.log('cancelled')
+        console.log('cancelled')
         return
       }
-      // console.log('setMetadata')
+      console.log('setMetadata')
       setMetadata(metadata)
-      g().notifyMeta(metadata)
+      getRuntime().notifyMeta(metadata)
       if (!route.Shell) {
-        // console.log('route has no Shell, setVirtualPath')
+        console.log('route has no Shell, setVirtualPath')
         setVirtualPath(path)
       }
     }
@@ -232,23 +214,22 @@ export function RouterClient() {
 
   let showShell = Shell && !metadata
 
-  // wtf
-  const locationApi = useMemo(() => {
+  const location = useMemo(() => {
     return {
       pathname: virtualPath,
       params,
     }
   }, [virtualPath, metadata])
 
-  console.log('---')
-  console.log('browser', browserPath)
-  console.log('virtual', virtualPath)
-  console.log('route', route)
-  console.log('metadata', metadata)
-  console.log('shell', !!Shell)
+  // console.log('---')
+  // console.log('browser', browserPath)
+  // console.log('virtual', virtualPath)
+  // console.log('route', route)
+  // console.log('metadata', metadata)
+  // console.log('shell', !!Shell)
 
   return (
-    <LocationProvider value={locationApi}>
+    <LocationProvider value={location}>
       {showShell ? <Shell /> : <Page {...metadata.props} />}
     </LocationProvider>
   )

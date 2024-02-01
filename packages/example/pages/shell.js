@@ -32,7 +32,7 @@ export async function getMetadata() {
     props: {
       serverMsg: 'BOOP',
     },
-    // expire: 0,
+    expire: 2,
   }
 }
 
