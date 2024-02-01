@@ -1,4 +1,4 @@
-import { Meta, Router } from 'galaxy'
+import { Meta, Router, Style, css } from 'galaxy'
 
 export function Document() {
   return (
@@ -7,6 +7,7 @@ export function Document() {
         <Meta />
         <meta charSet='utf-8' />
         <meta name='viewport' content='width=device-width, initial-scale=1' />
+        <Style>{styles}</Style>
       </head>
       <body>
         <Router />
@@ -14,3 +15,9 @@ export function Document() {
     </html>
   )
 }
+
+const styles = css`
+  html {
+    border: 5px solid red;
+  }
+`

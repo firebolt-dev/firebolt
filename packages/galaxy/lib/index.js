@@ -1,4 +1,4 @@
-import {
+import React, {
   createContext,
   isValidElement,
   useContext,
@@ -9,7 +9,13 @@ import {
   useInsertionEffect,
   useMemo,
 } from 'react'
-export { css } from '@emotion/react'
+import { css } from '@emotion/react'
+
+export { css }
+
+export function Style(props) {
+  return <style>{props.children.styles}</style>
+}
 
 const getRuntime = () => globalThis.$galaxy
 
