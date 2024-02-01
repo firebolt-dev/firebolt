@@ -7,19 +7,19 @@ export default function Page({ serverMsg }) {
         color: blue;
       `}
     >
-      Shell replaced with real page! ({serverMsg || ''})
+      Real page! ({serverMsg || ''})
     </div>
   )
 }
 
-export function Shell() {
+export function Loading() {
   return (
     <div
       css={css`
         color: red;
       `}
     >
-      Shell (loading)
+      Skeleton
     </div>
   )
 }
@@ -27,8 +27,8 @@ export function Shell() {
 export async function getPageData() {
   await delay(1000)
   return {
-    title: 'Shell',
-    meta: [{ name: 'description', content: 'Shell' }],
+    title: 'Skeleton',
+    meta: [{ name: 'description', content: 'Skeleton' }],
     props: {
       serverMsg: 'BOOP',
     },

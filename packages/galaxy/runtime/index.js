@@ -42,11 +42,11 @@ const runtime = stack => {
     hasInit = true
   }
 
-  function registerPage(routeId, Page, Shell) {
+  function registerPage(routeId, Page, Loading) {
     const route = routesById[routeId]
     if (!route) return console.error('TODO: handle')
     route.Page = Page
-    route.Shell = Shell
+    route.Loading = Loading
   }
 
   function call(action, ...args) {

@@ -12,7 +12,7 @@ export default function Home({ test }) {
       </div>
       {/* <div onClick={() => history.pushState({}, '', '/about')}>/about</div> */}
       <Link href='/about'>About</Link>
-      <Link href='/shell'>Shell</Link>
+      <Link href='/skeleton'>Skeleton</Link>
     </div>
   )
 }

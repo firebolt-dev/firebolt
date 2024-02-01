@@ -72,9 +72,9 @@ A lightweight react framework with all the essentials and simple documentation.
   - prevent default
   - load route file if we don't have it
   - if we already have not-expired data, go there immediately, stop here
-  - if route has a shell, go there immediately
-  - request data and broadcast (for any listening shell)
-  - if route didnt have a shell, go there now
+  - if route has a loading component, go there immediately
+  - request data and broadcast (for any listening loading component)
+  - if route didnt have a loading component, go there now
 
 ### Expire
 
@@ -101,12 +101,17 @@ We use a custom router because we need to disconnect ACTUAL browser location fro
     - resolve route
     - load route file if its missing
     - if pageData is still valid (not expired) set virtual path to match and stop here
-    - if route has a shell, set virtual path to match
+    - if route has a loading component, set virtual path to match
     - fetch pageData for new route and update (broadcast? or maybe its all just here now)
-    - if route didnt have a shell, update virtual path now
+    - if route didnt have a loading component, update virtual path now
 
 ### Todos
 
+x global styles in Document
+
+- rename Shell to Loading
+- what about static metadata (title, meta etc?) https://nextjs.org/docs/app/building-your-application/optimizing/metadata
+- make sure you can import and use 'react' stuff in Document?
 - api routes
 - custom server.js
 - in dev, watch files, rebuild and reload page via websocket signals (or re-hydrate root with new data?)
@@ -116,6 +121,14 @@ We use a custom router because we need to disconnect ACTUAL browser location fro
 - if route doesnt exit, server should render pages/404.js
 - if render itself crashes, server should try pages/500.js but if that also crashes send a fallback 500 page
 - pass a request object into getPageData with path, params and queries, and allow custom server.js to do things like inject a db into this request object
+- full renders for bots
+
+### Neat Ideas
+
+- nextjs wraps fetch and memoizes requests. eg 2 components can fetch('/user') for account details and it will only make one request and the other one will piggyback off it
+  - https://nextjs.org/docs/app/building-your-application/data-fetching/patterns#fetching-data-where-its-needed
+- looks like nextjs wraps pages with <Suspense> and if the page returns a promise it throws so it can stream it down later
+- looks like nextjs wraps pages with <Suspense> and monitors fetch for requests. if the page makes a request it
 
 ### Architecture
 

@@ -91,7 +91,7 @@ export async function dev() {
   for (const route of routes) {
     route.module = core[route.id]
     route.Page = core[route.id].default
-    route.Shell = core[route.id].Shell
+    route.Loading = core[route.id].Loading
     route.getPageData = core[route.id].getPageData || getEmptyObject
     route.hasPageData = !!core[route.id].getPageData
   }
@@ -106,9 +106,9 @@ export async function dev() {
   for (const route of routes) {
     const code = `
       import Page from '../pages${route.fileBase}'
-      ${route.Shell && `import { Shell } from '../pages${route.fileBase}'`}
-      ${!route.Shell && `globalThis.$galaxy.call('registerPage', '${route.id}', Page)`}
-      ${route.Shell && `globalThis.$galaxy.call('registerPage', '${route.id}', Page, Shell)`}
+      ${route.Loading && `import { Loading } from '../pages${route.fileBase}'`}
+      ${!route.Loading && `globalThis.$galaxy.call('registerPage', '${route.id}', Page)`}
+      ${route.Loading && `globalThis.$galaxy.call('registerPage', '${route.id}', Page, Loading)`}
     `
     route.registryPath = path.join(workDir, route.fileBase)
     await fs.writeFile(route.registryPath, code)

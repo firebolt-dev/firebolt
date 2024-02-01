@@ -148,7 +148,7 @@ export function RouterClient() {
   const [browserPath, setBrowserPath] = useState(globalThis.location.pathname)
   const [virtualPath, setVirtualPath] = useState(browserPath)
   const [route, params] = getRuntime().resolveRouteAndParams(virtualPath)
-  const { Page, Shell } = route
+  const { Page, Loading } = route
   const [pageData, setPageData] = useState(() => {
     return getRuntime().getPageData(virtualPath, true)
   })
@@ -192,8 +192,8 @@ export function RouterClient() {
         setVirtualPath(path)
         return
       }
-      if (route.Shell) {
-        // console.log('route has shell, setVirtualPath')
+      if (route.Loading) {
+        // console.log('route has loading component, setVirtualPath')
         setPageData(null)
         setVirtualPath(path)
       }
@@ -207,8 +207,8 @@ export function RouterClient() {
       // console.log('setPageData')
       setPageData(pageData)
       getRuntime().notifyMeta(pageData)
-      if (!route.Shell) {
-        // console.log('route has no Shell, setVirtualPath')
+      if (!route.Loading) {
+        // console.log('route has no loading component, setVirtualPath')
         setVirtualPath(path)
       }
     }
@@ -218,7 +218,7 @@ export function RouterClient() {
     }
   }, [browserPath])
 
-  let showShell = Shell && !pageData
+  let showLoading = Loading && !pageData
 
   const location = useMemo(() => {
     return {
@@ -232,11 +232,11 @@ export function RouterClient() {
   // console.log('virtual', virtualPath)
   // console.log('route', route)
   // console.log('pageData', pageData)
-  // console.log('shell', !!Shell)
+  // console.log('loading', !!Loading)
 
   return (
     <LocationProvider value={location}>
-      {showShell ? <Shell /> : <Page {...pageData.props} />}
+      {showLoading ? <Loading /> : <Page {...pageData.props} />}
     </LocationProvider>
   )
 }

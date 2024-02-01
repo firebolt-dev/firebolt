@@ -12,7 +12,7 @@ export default function About() {
   )
 }
 
-// export function Shell() {
+// export function Loading() {
 //   return <div>About loaidng...</div>
 // }
 
