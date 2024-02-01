@@ -16,7 +16,7 @@ export default function Sluggy() {
   )
 }
 
-export async function getMetadata() {
+export async function getPageData() {
   // await delay(1000)
   return {
     title: 'Slug!',

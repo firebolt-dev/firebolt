@@ -78,7 +78,7 @@ A lightweight react framework with all the essentials and simple documentation.
 
 ### Expire
 
-Your `getMetadata()` can return an `expire` key which determines how long (in seconds) the metadata is valid for.
+Your `getPageData()` can return an `expire` key which determines how long (in seconds) the pageData is valid for.
 
 1. If not set (undefined or null) the data never expires. Data will be loaded/fetched once and used forever.
 2. If set to 0, data expires immediately and will be re-fetched when coming back to that page
@@ -100,9 +100,9 @@ We use a custom router because we need to disconnect ACTUAL browser location fro
   - when browser path changes (virtual path hasnt)
     - resolve route
     - load route file if its missing
-    - if metadata is still valid (not expired) set virtual path to match and stop here
+    - if pageData is still valid (not expired) set virtual path to match and stop here
     - if route has a shell, set virtual path to match
-    - fetch metadata for new route and update (broadcast? or maybe its all just here now)
+    - fetch pageData for new route and update (broadcast? or maybe its all just here now)
     - if route didnt have a shell, update virtual path now
 
 ### Todos
@@ -112,10 +112,10 @@ We use a custom router because we need to disconnect ACTUAL browser location fro
 - in dev, watch files, rebuild and reload page via websocket signals (or re-hydrate root with new data?)
 - useLocation() -> { pathname, params{}, query{}, push, replace, prefetch, back, forward, reload }
 - navigation scroll to top and restoration
-- if getMetadata crashes, server should render pages/500.js
+- if getPageData crashes, server should render pages/500.js
 - if route doesnt exit, server should render pages/404.js
 - if render itself crashes, server should try pages/500.js but if that also crashes send a fallback 500 page
-- pass a request object into getMetadata with path, params and queries, and allow custom server.js to do things like inject a db into this request object
+- pass a request object into getPageData with path, params and queries, and allow custom server.js to do things like inject a db into this request object
 
 ### Architecture
 

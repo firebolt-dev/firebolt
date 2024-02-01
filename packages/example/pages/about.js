@@ -16,7 +16,7 @@ export default function About() {
 //   return <div>About loaidng...</div>
 // }
 
-export async function getMetadata() {
+export async function getPageData() {
   await delay(1000)
   return {
     title: 'About',
@@ -27,10 +27,6 @@ export async function getMetadata() {
     props: {
       test: 'TEST!',
     },
-    // data expiration
-    // - when not set, clients will only fetch metadata for each page once and re-use old data when navigating back to it, forever (unless hard refresh)
-    // - when set to 0, metadata immediately expires so clients will always re-fetch metadata when coming back to the page
-    // - when set to >0, metadata will be cached for X seconds, after that it will be re-fetched and cached again
     expire: 0,
   }
 }

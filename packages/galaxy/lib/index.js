@@ -50,24 +50,24 @@ const SSRContext = createContext()
 
 export function Meta() {
   const ssr = useContext(SSRContext)
-  const [metadata, setMetadata] = useState(() => {
-    // server provides initial metadata via context
-    if (ssr) return ssr.metadata
-    // client sources initial metadata from runtime
-    return getRuntime().getMetadata(location.pathname, true)
+  const [pageData, setPageData] = useState(() => {
+    // server provides initial pageData via context
+    if (ssr) return ssr.pageData
+    // client sources initial pageData from runtime
+    return getRuntime().getPageData(location.pathname, true)
   })
 
   useEffect(() => {
-    // subscribe to metadata changes
-    return getRuntime().onMeta(metadata => {
-      setMetadata(metadata)
+    // subscribe to pageData changes
+    return getRuntime().onMeta(pageData => {
+      setPageData(pageData)
     })
   }, [])
 
   return (
     <>
-      {metadata?.title && <title>{metadata.title}</title>}
-      {metadata?.meta?.map((meta, idx) => (
+      {pageData?.title && <title>{pageData.title}</title>}
+      {pageData?.meta?.map((meta, idx) => (
         <meta
           key={meta.key || idx}
           name={meta.name}
@@ -143,8 +143,8 @@ export function RouterClient() {
   const [virtualPath, setVirtualPath] = useState(browserPath)
   const [route, params] = getRuntime().resolveRouteAndParams(virtualPath)
   const { Page, Shell } = route
-  const [metadata, setMetadata] = useState(() => {
-    return getRuntime().getMetadata(virtualPath, true)
+  const [pageData, setPageData] = useState(() => {
+    return getRuntime().getPageData(virtualPath, true)
   })
 
   useEffect(() => {
@@ -166,43 +166,43 @@ export function RouterClient() {
     if (browserPath === virtualPath) return
     let cancelled
     const exec = async () => {
-      console.log('exec...')
+      // console.log('exec...')
       const path = browserPath
       const route = getRuntime().resolveRoute(path)
-      console.log(path, route)
+      // console.log(path, route)
       if (!route.Page) {
-        console.log('missing Page, loading it')
+        // console.log('missing Page, loading it')
         await getRuntime().loadRoute(route)
       }
       if (cancelled) {
-        console.log('cancelled')
+        // console.log('cancelled')
         return
       }
-      let metadata = getRuntime().getMetadata(path)
-      if (metadata) {
-        console.log('have metadata, setMetadata + setVirtualPath')
-        setMetadata(metadata)
-        getRuntime().notifyMeta(metadata)
+      let pageData = getRuntime().getPageData(path)
+      if (pageData) {
+        // console.log('have pageData, setPageData + setVirtualPath')
+        setPageData(pageData)
+        getRuntime().notifyMeta(pageData)
         setVirtualPath(path)
         return
       }
       if (route.Shell) {
-        console.log('route has shell, setVirtualPath')
-        setMetadata(null)
+        // console.log('route has shell, setVirtualPath')
+        setPageData(null)
         setVirtualPath(path)
       }
-      console.log('loading metadata')
-      metadata = await getRuntime().loadMetadata(path)
-      console.log('metadata', metadata)
+      // console.log('loading pageData')
+      pageData = await getRuntime().loadPageData(path)
+      // console.log('pageData', pageData)
       if (cancelled) {
-        console.log('cancelled')
+        // console.log('cancelled')
         return
       }
-      console.log('setMetadata')
-      setMetadata(metadata)
-      getRuntime().notifyMeta(metadata)
+      // console.log('setPageData')
+      setPageData(pageData)
+      getRuntime().notifyMeta(pageData)
       if (!route.Shell) {
-        console.log('route has no Shell, setVirtualPath')
+        // console.log('route has no Shell, setVirtualPath')
         setVirtualPath(path)
       }
     }
@@ -212,25 +212,25 @@ export function RouterClient() {
     }
   }, [browserPath])
 
-  let showShell = Shell && !metadata
+  let showShell = Shell && !pageData
 
   const location = useMemo(() => {
     return {
       pathname: virtualPath,
       params,
     }
-  }, [virtualPath, metadata])
+  }, [virtualPath, pageData])
 
   // console.log('---')
   // console.log('browser', browserPath)
   // console.log('virtual', virtualPath)
   // console.log('route', route)
-  // console.log('metadata', metadata)
+  // console.log('pageData', pageData)
   // console.log('shell', !!Shell)
 
   return (
     <LocationProvider value={location}>
-      {showShell ? <Shell /> : <Page {...metadata.props} />}
+      {showShell ? <Shell /> : <Page {...pageData.props} />}
     </LocationProvider>
   )
 }

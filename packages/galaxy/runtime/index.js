@@ -11,34 +11,34 @@ const runtime = stack => {
 
   const routes = []
   const routesById = {}
-  const metadataByPath = {}
-  const metadataLoaders = {} // [path]: Promise
+  const pageDataByPath = {} // [path]: Object
+  const pageDataLoaders = {} // [path]: Promise
 
   const actions = {
     routes,
-    metadataByPath,
+    pageDataByPath,
     init,
     registerPage,
     call,
     getPage,
-    getMetadata,
+    getPageData,
     resolveRoute,
     resolveRouteAndParams,
     loadRoute,
     loadRouteById,
     loadRouteByPath,
-    loadMetadata,
+    loadPageData,
     onMeta,
     notifyMeta,
   }
 
-  function init({ routes: _routes, path, metadata }) {
+  function init({ routes: _routes, path, pageData }) {
     if (hasInit) throw new Error('already initialized')
     routes.push(..._routes)
     for (const route of routes) {
       routesById[route.id] = route
     }
-    setMetadata(path, metadata)
+    setPageData(path, pageData)
     hasInit = true
   }
 
@@ -61,37 +61,36 @@ const runtime = stack => {
     return routesById[routeId].Page
   }
 
-  function setMetadata(path, metadata) {
-    if (metadata.expire === 0) {
+  function setPageData(path, pageData) {
+    if (pageData.expire === 0) {
       // expire immediately
-      metadata.expireImmediately = true
-    } else if (metadata.expire > 0) {
+      pageData.expireImmediately = true
+    } else if (pageData.expire > 0) {
       // expire in X seconds
-      metadata.expireAt = new Date().getTime() + metadata.expire * 1000
+      pageData.expireAt = new Date().getTime() + pageData.expire * 1000
     } else {
       // never expire
-      metadata.expireNever = true
+      pageData.expireNever = true
     }
-    metadataByPath[path] = metadata
-    console.log('setMetadata', metadata)
+    pageDataByPath[path] = pageData
   }
 
-  function getMetadata(path, ignoreExpire) {
-    let metadata = metadataByPath[path]
-    if (!metadata) return null
-    if (ignoreExpire) return metadata
-    if (metadata.expireNever) {
-      return metadata
-    } else if (metadata.expireImmediately) {
-      delete metadataByPath[path]
+  function getPageData(path, ignoreExpire) {
+    let pageData = pageDataByPath[path]
+    if (!pageData) return null
+    if (ignoreExpire) return pageData
+    if (pageData.expireNever) {
+      return pageData
+    } else if (pageData.expireImmediately) {
+      delete pageDataByPath[path]
       return null
     } else {
-      const expired = new Date().getTime() >= metadata.expireAt
+      const expired = new Date().getTime() >= pageData.expireAt
       if (expired) {
-        delete metadataByPath[path]
+        delete pageDataByPath[path]
         return null
       }
-      return metadata
+      return pageData
     }
   }
 
@@ -125,20 +124,20 @@ const runtime = stack => {
     return loadRoute(route)
   }
 
-  function loadMetadata(path) {
-    if (metadataLoaders[path]) return metadataLoaders[path]
+  function loadPageData(path) {
+    if (pageDataLoaders[path]) return pageDataLoaders[path]
     const promise = new Promise(async resolve => {
-      // if route has no getMetadata() then resolve with empty metadata
+      // if route has no getPageData() then resolve with empty pageData
       const route = resolveRoute(path)
-      if (!route.hasMetadata) return resolve({})
+      if (!route.hasPageData) return resolve({})
       // otherwise fetch it
-      const resp = await fetch(`/_galaxy/metadata?path=${path}`)
-      const metadata = await resp.json()
-      setMetadata(path, metadata)
-      resolve(metadata)
-      delete metadataLoaders[path]
+      const resp = await fetch(`/_galaxy/pageData?path=${path}`)
+      const pageData = await resp.json()
+      setPageData(path, pageData)
+      resolve(pageData)
+      delete pageDataLoaders[path]
     })
-    metadataLoaders[path] = promise
+    pageDataLoaders[path] = promise
     return promise
   }
 
@@ -148,9 +147,9 @@ const runtime = stack => {
     return () => metaListeners.delete(callback)
   }
 
-  function notifyMeta(metadata) {
+  function notifyMeta(pageData) {
     for (const callback of metaListeners) {
-      callback(metadata)
+      callback(pageData)
     }
   }
 

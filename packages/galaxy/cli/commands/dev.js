@@ -92,8 +92,8 @@ export async function dev() {
     route.module = core[route.id]
     route.Page = core[route.id].default
     route.Shell = core[route.id].Shell
-    route.getMetadata = core[route.id].getMetadata || defaultGetMetadata
-    route.hasMetadata = !!core[route.id].getMetadata
+    route.getPageData = core[route.id].getPageData || getEmptyObject
+    route.hasPageData = !!core[route.id].getPageData
   }
 
   // copy over runtime
@@ -168,7 +168,7 @@ export async function dev() {
         id: route.id,
         path: route.path,
         file: route.clientPath,
-        hasMetadata: route.hasMetadata,
+        hasPageData: route.hasPageData,
       }
     })
   )
@@ -189,12 +189,12 @@ export async function dev() {
   server.use(express.json())
   server.use(express.static('public'))
   server.use(express.static('.galaxy/public'))
-  server.get('/_galaxy/metadata', async (req, res) => {
+  server.get('/_galaxy/pageData', async (req, res) => {
     const path = req.query.path
     const [route, params] = resolveRoute(path)
     if (!route) return res.json({})
-    const metadata = await route.getMetadata() // todo: pass in params? request?
-    return res.json(metadata)
+    const pageData = await route.getPageData() // todo: pass in params? request?
+    return res.json(pageData)
   })
   server.use('*', async (req, res) => {
     const reqPath = req.baseUrl || '/'
@@ -205,11 +205,11 @@ export async function dev() {
       const SSRProvider = core.galaxy.SSRProvider
       const Document = core.Document
       const Page = route.Page
-      const metadata = await route.getMetadata()
+      const pageData = await route.getPageData()
       const ssr = {
         Page,
-        metadata,
-        props: metadata.props,
+        pageData,
+        props: pageData.props,
         location: {
           pathname: reqPath,
           params,
@@ -233,7 +233,7 @@ export async function dev() {
           g.call('init', {
             routes: ${routesForClient},
             path: '${reqPath}',
-            metadata: ${JSON.stringify(metadata)}
+            pageData: ${JSON.stringify(pageData)}
           })
           globalThis.$galaxy = g
         `,
@@ -250,6 +250,6 @@ export async function dev() {
   })
 }
 
-async function defaultGetMetadata() {
+async function getEmptyObject() {
   return {}
 }
