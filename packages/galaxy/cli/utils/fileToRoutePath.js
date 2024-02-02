@@ -4,8 +4,11 @@
 
 export function fileToRoutePath(filePath) {
   // remove extension
-  filePath = filePath.split('.').slice(0, -1).join('')
-  // split by /
+  filePath = filePath.split('.')
+  filePath.pop()
+  // join back with . to /
+  filePath = filePath.join('/')
+  // now split by /
   filePath = filePath.split('/')
   // conversion
   const routePath = filePath
@@ -14,25 +17,19 @@ export function fileToRoutePath(filePath) {
       if (segment === 'index') {
         return ''
       }
-      // Optional Catch-all (zero more more)
-      // converts [[...segment]] into :segment*
-      if (segment.startsWith('[[...') && segment.endsWith(']]')) {
-        segment = segment.slice(5)
-        segment = segment.slice(0, -2)
-        return `:${segment}*`
-      }
-      // Catch-all (one or more)
-      // converts [...segment] into :segment+
-      if (segment.startsWith('[...') && segment.endsWith(']')) {
-        segment = segment.slice(4)
-        segment = segment.slice(0, -1)
-        return `:${segment}+`
-      }
-      // Match
-      if (segment.startsWith('[') && segment.endsWith(']')) {
+      // dynamic
+      if (segment.startsWith('$')) {
         segment = segment.slice(1)
+        segment = ':' + segment
+      }
+      // one or more
+      if (segment.endsWith('+')) {
+        // ...
+      }
+      // zero or more
+      if (segment.endsWith('-')) {
         segment = segment.slice(0, -1)
-        return `:${segment}`
+        segment = segment + '*'
       }
       return segment
     })

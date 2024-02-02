@@ -7,15 +7,14 @@ export async function getFilePaths(baseDir) {
   async function traverse(dir) {
     const files = await fs.readdir(dir)
     for (const file of files) {
-      const fullPath = path.join(dir, file)
-      const stat = await fs.stat(fullPath)
+      const filePath = path.join(dir, file)
+      const stat = await fs.stat(filePath)
 
       if (stat.isFile()) {
-        const filePath = fullPath.replace(baseDir, '')
         filePaths.push(filePath)
       }
       if (stat.isDirectory()) {
-        await traverse(fullPath)
+        await traverse(filePath)
       }
     }
   }

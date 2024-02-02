@@ -19,12 +19,12 @@ const match = matcher()
 
 export async function dev() {
   const appDir = process.cwd()
+  const buildDir = path.join(appDir, '.galaxy')
   const pagesDir = path.join(appDir, 'pages')
-  const workDir = path.join(appDir, '.galaxy')
   const libPath = path.join(__dirname, 'lib.js')
 
-  // ensure we have an empty work directory
-  await fs.emptyDir(workDir)
+  // ensure we have an empty build directory
+  await fs.emptyDir(buildDir)
 
   // get list of route files (relative to pagesDir)
   const pageFiles = await getFilePaths(pagesDir)
@@ -33,21 +33,30 @@ export async function dev() {
   let ids = 0
   const routes = []
   for (const pageFile of pageFiles) {
+    const id = `route${++ids}`
+    const srcFile = pageFile
+    const buildFile = buildDir + '/' + pageFile.replace(pagesDir + '/', '').replace('/', '.') // prettier-ignore
+    const _path = fileToRoutePath(pageFile.replace(pagesDir, ''))
+    const buildToSrcPath = path.relative(path.dirname(buildFile), srcFile)
     routes.push({
-      id: `route${++ids}`,
-      path: fileToRoutePath(pageFile),
-      fileBase: pageFile,
-      filePath: path.join(appDir, 'pages', pageFile),
+      id,
+      srcFile,
+      buildFile,
+      path: _path,
+      buildToSrcPath,
+      // fileBase: pageFile,
+      // buildPath: path.join(buildDir, pageFile),
+      // filePath: path.join(appDir, 'pages', pageFile),
     })
   }
 
-  // sort routes so that explicit routes have priority over catch-all routes
+  // sort routes so that explicit routes have priority over dynamic routes
   routes.sort((a, b) => {
-    const isACatchAll = a.path.includes(':')
-    const isBCatchAll = b.path.includes(':')
-    if (isACatchAll && !isBCatchAll) {
+    const isDynamicA = a.path.includes(':')
+    const isDynamicB = b.path.includes(':')
+    if (isDynamicA && !isDynamicB) {
       return 1 // if 'a' is catch-all and 'b' is not, 'a' should come after 'b'
-    } else if (!isACatchAll && isBCatchAll) {
+    } else if (!isDynamicA && isDynamicB) {
       return -1 // if 'b' is catch-all and 'a' is not, 'a' should come before 'b'
     }
     return 0 // if both are catch-all or both are not, keep original order
@@ -55,15 +64,15 @@ export async function dev() {
 
   // write core (an entry into the apps code for SSR)
   const coreCode = `
-    ${routes.map(route => `export * as ${route.id} from '../pages${route.fileBase}'`).join('\n')}
+    ${routes.map(route => `export * as ${route.id} from '${route.buildToSrcPath}'`).join('\n')}
     export { Document } from '../document.js'
     export * as galaxy from 'galaxy'
   `
-  const coreFile = path.join(workDir, 'core.js')
+  const coreFile = path.join(buildDir, 'core.js')
   await fs.writeFile(coreFile, coreCode)
 
   // build core
-  const coreBuildFile = path.join(workDir, 'core.build.js')
+  const coreBuildFile = path.join(buildDir, 'core.build.js')
   await esbuild.build({
     entryPoints: [coreFile],
     outfile: coreBuildFile,
@@ -98,27 +107,26 @@ export async function dev() {
 
   // copy over runtime
   const runtimeSrc = path.join(__dirname, '../runtime')
-  const runtimeDir = path.join(workDir, 'runtime')
+  const runtimeDir = path.join(buildDir, 'runtime')
   await fs.copy(runtimeSrc, runtimeDir)
 
   // generate client page bundles
   // TODO: retain page function name?
   for (const route of routes) {
     const code = `
-      import Page from '../pages${route.fileBase}'
-      ${route.Loading && `import { Loading } from '../pages${route.fileBase}'`}
-      ${!route.Loading && `globalThis.$galaxy.call('registerPage', '${route.id}', Page)`}
-      ${route.Loading && `globalThis.$galaxy.call('registerPage', '${route.id}', Page, Loading)`}
+      import Page from '${route.buildToSrcPath}'
+      ${route.Loading ? `import { Loading } from '${route.buildToSrcPath}'` : ''}
+      ${!route.Loading ? `globalThis.$galaxy.call('registerPage', '${route.id}', Page)` : ''}
+      ${route.Loading ? `globalThis.$galaxy.call('registerPage', '${route.id}', Page, Loading)` : ''}
     `
-    route.registryPath = path.join(workDir, route.fileBase)
-    await fs.writeFile(route.registryPath, code)
+    await fs.outputFile(route.buildFile, code)
   }
 
   // build client bundles (pages + runtime)
-  const bundlesDir = path.join(workDir, 'public')
+  const bundlesDir = path.join(buildDir, 'public')
   const bundleFiles = []
   for (const route of routes) {
-    bundleFiles.push(route.registryPath)
+    bundleFiles.push(route.buildFile)
   }
   bundleFiles.push(runtimeDir)
   const bundleResult = await esbuild.build({
@@ -151,7 +159,7 @@ export async function dev() {
     const output = metafile.outputs[file]
     if (output.entryPoint) {
       const route = routes.find(route =>
-        route.registryPath.endsWith(output.entryPoint)
+        route.buildFile.endsWith(output.entryPoint)
       )
       if (route) {
         route.clientPath = file.replace('.galaxy/public', '')
@@ -190,17 +198,17 @@ export async function dev() {
   server.use(express.static('public'))
   server.use(express.static('.galaxy/public'))
   server.get('/_galaxy/pageData', async (req, res) => {
-    const path = req.query.path
-    const [route, params] = resolveRoute(path)
+    const pathname = req.query.path
+    const [route, params] = resolveRoute(pathname)
     if (!route) return res.json({})
     const pageData = await route.getPageData() // todo: pass in params? request?
     return res.json(pageData)
   })
   server.use('*', async (req, res) => {
-    const reqPath = req.baseUrl || '/'
+    const pathname = req.baseUrl || '/'
 
     // handle page requests
-    const [route, params] = resolveRoute(reqPath)
+    const [route, params] = resolveRoute(pathname)
     if (route) {
       const SSRProvider = core.galaxy.SSRProvider
       const Document = core.Document
@@ -211,7 +219,7 @@ export async function dev() {
         pageData,
         props: pageData.props,
         location: {
-          pathname: reqPath,
+          pathname,
           params,
         },
       }
@@ -232,7 +240,7 @@ export async function dev() {
           }
           g.call('init', {
             routes: ${routesForClient},
-            path: '${reqPath}',
+            path: '${pathname}',
             pageData: ${JSON.stringify(pageData)}
           })
           globalThis.$galaxy = g
