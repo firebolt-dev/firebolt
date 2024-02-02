@@ -8,10 +8,10 @@ export function matcher(makeRegexpFn = pathToRegexp) {
   const getRegexp = pattern =>
     cache[pattern] || (cache[pattern] = makeRegexpFn(pattern))
 
-  return (pattern, path) => {
-    const [pathname, query] = path.split('?')
+  return (pattern, url) => {
+    const [path, query] = url.split('?')
     const { regexp, keys } = getRegexp(pattern || '')
-    const out = regexp.exec(pathname)
+    const out = regexp.exec(path)
 
     if (!out) return [false, null]
 

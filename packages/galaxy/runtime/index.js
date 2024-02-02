@@ -106,8 +106,6 @@ const runtime = stack => {
     return []
   }
 
-  globalThis.match = match
-
   async function loadRoute(route) {
     if (!route) return
     if (route.Page) return
@@ -121,8 +119,8 @@ const runtime = stack => {
     return loadRoute(route)
   }
 
-  function loadRouteByUrl(path) {
-    const route = resolveRoute(path)
+  function loadRouteByUrl(url) {
+    const route = resolveRoute(url)
     return loadRoute(route)
   }
 

@@ -46,7 +46,7 @@ export function Link(props) {
 
   useEffect(() => {
     // prefetch
-    getRuntime().loadRouteByUrl(to)
+    getRuntime().loadRouteByUrl(href)
   }, [])
 
   return cloneElement(jsx, extraProps)
