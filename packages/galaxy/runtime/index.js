@@ -11,12 +11,12 @@ const runtime = stack => {
 
   const routes = []
   const routesById = {}
-  const pageDataByPath = {} // [path]: Object
-  const pageDataLoaders = {} // [path]: Promise
+  const pageDataByUrl = {} // [url]: Object
+  const pageDataLoaders = {} // [url]: Promise
 
   const actions = {
     routes,
-    pageDataByPath,
+    pageDataByUrl,
     init,
     registerPage,
     call,
@@ -26,19 +26,19 @@ const runtime = stack => {
     resolveRouteAndParams,
     loadRoute,
     loadRouteById,
-    loadRouteByPath,
+    loadRouteByUrl,
     loadPageData,
     onMeta,
     notifyMeta,
   }
 
-  function init({ routes: _routes, path, pageData }) {
+  function init({ routes: routes_, url, pageData }) {
     if (hasInit) throw new Error('already initialized')
-    routes.push(..._routes)
+    routes.push(...routes_)
     for (const route of routes) {
       routesById[route.id] = route
     }
-    setPageData(path, pageData)
+    setPageData(url, pageData)
     hasInit = true
   }
 
@@ -61,7 +61,7 @@ const runtime = stack => {
     return routesById[routeId].Page
   }
 
-  function setPageData(path, pageData) {
+  function setPageData(url, pageData) {
     if (pageData.expire === 0) {
       // expire immediately
       pageData.expireImmediately = true
@@ -72,39 +72,41 @@ const runtime = stack => {
       // never expire
       pageData.expireNever = true
     }
-    pageDataByPath[path] = pageData
+    pageDataByUrl[url] = pageData
   }
 
-  function getPageData(path, ignoreExpire) {
-    let pageData = pageDataByPath[path]
+  function getPageData(url, ignoreExpire) {
+    let pageData = pageDataByUrl[url]
     if (!pageData) return null
     if (ignoreExpire) return pageData
     if (pageData.expireNever) {
       return pageData
     } else if (pageData.expireImmediately) {
-      delete pageDataByPath[path]
+      delete pageDataByUrl[url]
       return null
     } else {
       const expired = new Date().getTime() >= pageData.expireAt
       if (expired) {
-        delete pageDataByPath[path]
+        delete pageDataByUrl[url]
         return null
       }
       return pageData
     }
   }
 
-  function resolveRoute(path) {
-    return routes.find(route => match(route.path, path)[0])
+  function resolveRoute(url) {
+    return routes.find(route => match(route.pattern, url)[0])
   }
 
-  function resolveRouteAndParams(path) {
+  function resolveRouteAndParams(url) {
     for (const route of routes) {
-      const [hit, params] = match(route.path, path)
+      const [hit, params] = match(route.pattern, url)
       if (hit) return [route, params]
     }
     return []
   }
+
+  globalThis.match = match
 
   async function loadRoute(route) {
     if (!route) return
@@ -119,25 +121,25 @@ const runtime = stack => {
     return loadRoute(route)
   }
 
-  function loadRouteByPath(path) {
+  function loadRouteByUrl(path) {
     const route = resolveRoute(path)
     return loadRoute(route)
   }
 
-  function loadPageData(path) {
-    if (pageDataLoaders[path]) return pageDataLoaders[path]
+  function loadPageData(url) {
+    if (pageDataLoaders[url]) return pageDataLoaders[url]
     const promise = new Promise(async resolve => {
       // if route has no getPageData() then resolve with empty pageData
-      const route = resolveRoute(path)
+      const route = resolveRoute(url)
       if (!route.hasPageData) return resolve({})
       // otherwise fetch it
-      const resp = await fetch(`/_galaxy/pageData?path=${path}`)
+      const resp = await fetch(`/_galaxy/pageData?url=${url}`)
       const pageData = await resp.json()
-      setPageData(path, pageData)
+      setPageData(url, pageData)
       resolve(pageData)
-      delete pageDataLoaders[path]
+      delete pageDataLoaders[url]
     })
-    pageDataLoaders[path] = promise
+    pageDataLoaders[url] = promise
     return promise
   }
 

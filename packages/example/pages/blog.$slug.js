@@ -1,23 +1,24 @@
 import { Link, css, useLocation } from 'galaxy'
 
-export default function Sluggy() {
+export default function BlogPost() {
   const location = useLocation()
-  // console.log('loc', location)
-  // console.log('par', location.params)
+  console.log('params', location.params)
   return (
-    <div
-      css={css`
-        color: green;
-      `}
-    >
-      <div>Slug: {location.params.slug}</div>
-      <Link to='/foobies'>FOOBIES</Link>
+    <div>
+      <div>Blog Post: {location.params.slug}</div>
+      <div>Cake: {location.params.cake}</div>
+      <div>
+        <Link to='/blog/123?cake=true'>With Cake</Link>
+      </div>
+      <div>
+        <Link to='/blog/123'>Without Cake</Link>
+      </div>
     </div>
   )
 }
 
 export async function getPageData() {
-  // await delay(1000)
+  await delay(1000)
   return {
     title: 'Slug!',
     meta: [
@@ -27,7 +28,7 @@ export async function getPageData() {
     props: {
       test: 'TEST!',
     },
-    expire: 0,
+    // expire: 2,
   }
 }
 

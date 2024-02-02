@@ -46,7 +46,7 @@ export function Link(props) {
 
   useEffect(() => {
     // prefetch
-    getRuntime().loadRouteByPath(to)
+    getRuntime().loadRouteByUrl(to)
   }, [])
 
   return cloneElement(jsx, extraProps)
@@ -60,7 +60,7 @@ export function Meta() {
     // server provides initial pageData via context
     if (ssr) return ssr.pageData
     // client sources initial pageData from runtime
-    return getRuntime().getPageData(location.pathname, true)
+    return getRuntime().getPageData(location.pathname + location.search, true)
   })
 
   useEffect(() => {
@@ -144,38 +144,39 @@ export function RouterServer({ ssr }) {
   )
 }
 
+const historyEvents = ['popstate', 'pushState', 'replaceState', 'hashchange']
 export function RouterClient() {
-  const [browserPath, setBrowserPath] = useState(globalThis.location.pathname)
-  const [virtualPath, setVirtualPath] = useState(browserPath)
-  const [route, params] = getRuntime().resolveRouteAndParams(virtualPath)
+  const [browserUrl, setBrowserUrl] = useState(globalThis.location.pathname + globalThis.location.search) // prettier-ignore
+  const [virtualUrl, setVirtualUrl] = useState(browserUrl)
+  const [route, params] = getRuntime().resolveRouteAndParams(virtualUrl)
   const { Page, Loading } = route
   const [pageData, setPageData] = useState(() => {
-    return getRuntime().getPageData(virtualPath, true)
+    return getRuntime().getPageData(virtualUrl, true)
   })
 
   useEffect(() => {
     function onChange(e) {
-      setBrowserPath(globalThis.location.pathname)
+      setBrowserUrl(globalThis.location.pathname + globalThis.location.search)
     }
-    const events = ['popstate', 'pushState', 'replaceState', 'hashchange']
-    for (const event of events) {
+
+    for (const event of historyEvents) {
       addEventListener(event, onChange)
     }
     return () => {
-      for (const event of events) {
+      for (const event of historyEvents) {
         removeEventListener(event, onChange)
       }
     }
   }, [])
 
   useEffect(() => {
-    if (browserPath === virtualPath) return
+    if (browserUrl === virtualUrl) return
     let cancelled
     const exec = async () => {
       // console.log('exec...')
-      const path = browserPath
-      const route = getRuntime().resolveRoute(path)
-      // console.log(path, route)
+      const url = browserUrl
+      const route = getRuntime().resolveRoute(url)
+      // console.log(url, route)
       if (!route.Page) {
         // console.log('missing Page, loading it')
         await getRuntime().loadRoute(route)
@@ -184,21 +185,21 @@ export function RouterClient() {
         // console.log('cancelled')
         return
       }
-      let pageData = getRuntime().getPageData(path)
+      let pageData = getRuntime().getPageData(url)
       if (pageData) {
-        // console.log('have pageData, setPageData + setVirtualPath')
+        // console.log('have pageData, setPageData + setVirtualUrl')
         setPageData(pageData)
         getRuntime().notifyMeta(pageData)
-        setVirtualPath(path)
+        setVirtualUrl(url)
         return
       }
       if (route.Loading) {
-        // console.log('route has loading component, setVirtualPath')
+        // console.log('route has loading component, setVirtualUrl')
         setPageData(null)
-        setVirtualPath(path)
+        setVirtualUrl(url)
       }
       // console.log('loading pageData')
-      pageData = await getRuntime().loadPageData(path)
+      pageData = await getRuntime().loadPageData(url)
       // console.log('pageData', pageData)
       if (cancelled) {
         // console.log('cancelled')
@@ -208,28 +209,28 @@ export function RouterClient() {
       setPageData(pageData)
       getRuntime().notifyMeta(pageData)
       if (!route.Loading) {
-        // console.log('route has no loading component, setVirtualPath')
-        setVirtualPath(path)
+        // console.log('route has no loading component, setVirtualUrl')
+        setVirtualUrl(url)
       }
     }
     exec()
     return () => {
       cancelled = true
     }
-  }, [browserPath])
+  }, [browserUrl])
 
   let showLoading = Loading && !pageData
 
   const location = useMemo(() => {
     return {
-      pathname: virtualPath,
-      params,
+      url: virtualUrl,
+      params: params,
     }
-  }, [virtualPath, pageData])
+  }, [virtualUrl, pageData])
 
   // console.log('---')
-  // console.log('browser', browserPath)
-  // console.log('virtual', virtualPath)
+  // console.log('browser', browserUrl)
+  // console.log('virtual', virtualUrl)
   // console.log('route', route)
   // console.log('pageData', pageData)
   // console.log('loading', !!Loading)

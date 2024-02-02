@@ -9,8 +9,9 @@ export function matcher(makeRegexpFn = pathToRegexp) {
     cache[pattern] || (cache[pattern] = makeRegexpFn(pattern))
 
   return (pattern, path) => {
+    const [pathname, query] = path.split('?')
     const { regexp, keys } = getRegexp(pattern || '')
-    const out = regexp.exec(path)
+    const out = regexp.exec(pathname)
 
     if (!out) return [false, null]
 
@@ -19,6 +20,14 @@ export function matcher(makeRegexpFn = pathToRegexp) {
       params[key.name] = out[i + 1]
       return params
     }, {})
+
+    // attach query params
+    const queryParams = new URLSearchParams(query)
+    for (const [key, value] of queryParams) {
+      if (!params.hasOwnProperty(key)) {
+        params[key] = value
+      }
+    }
 
     return [true, params]
   }

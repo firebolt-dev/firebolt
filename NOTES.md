@@ -107,14 +107,15 @@ We use a custom router because we need to disconnect ACTUAL browser location fro
 
 ### Todos
 
-x global styles in Document
-x rename Shell to Loading
+- [done] global styles in Document
+- [done] rename Shell to Loading
+- [done] use a flat pages folder with files like blog.$postId+.js etc
 
-- use a flat pages folder with files like blog.$postId+.js etc
   - exact: about.js
   - dynamic: blog.$postId.js
   - 1ormore: parks.$tags+.js
   - 0ormore: parks.$tags-.js
+
 - include ?foo=bar etc in params (like nextjs)
 - what about static metadata (title, meta etc?) https://nextjs.org/docs/app/building-your-application/optimizing/metadata
 - make sure you can import and use 'react' stuff in Document?

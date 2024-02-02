@@ -8,7 +8,7 @@ import { renderToPipeableStream } from 'react-dom/server'
 import React from 'react'
 
 import { getFilePaths } from '../utils/getFilePaths'
-import { fileToRoutePath } from '../utils/fileToRoutePath'
+import { fileToRoutePattern } from '../utils/fileToRoutePattern'
 import { matcher } from '../utils/matcher'
 
 const port = 4004
@@ -36,13 +36,13 @@ export async function dev() {
     const id = `route${++ids}`
     const srcFile = pageFile
     const buildFile = buildDir + '/' + pageFile.replace(pagesDir + '/', '').replace('/', '.') // prettier-ignore
-    const _path = fileToRoutePath(pageFile.replace(pagesDir, ''))
+    const pattern = fileToRoutePattern(pageFile.replace(pagesDir, ''))
     const buildToSrcPath = path.relative(path.dirname(buildFile), srcFile)
     routes.push({
       id,
       srcFile,
       buildFile,
-      path: _path,
+      pattern,
       buildToSrcPath,
       // fileBase: pageFile,
       // buildPath: path.join(buildDir, pageFile),
@@ -52,8 +52,8 @@ export async function dev() {
 
   // sort routes so that explicit routes have priority over dynamic routes
   routes.sort((a, b) => {
-    const isDynamicA = a.path.includes(':')
-    const isDynamicB = b.path.includes(':')
+    const isDynamicA = a.pattern.includes(':')
+    const isDynamicB = b.pattern.includes(':')
     if (isDynamicA && !isDynamicB) {
       return 1 // if 'a' is catch-all and 'b' is not, 'a' should come after 'b'
     } else if (!isDynamicA && isDynamicB) {
@@ -174,17 +174,17 @@ export async function dev() {
     routes.map(route => {
       return {
         id: route.id,
-        path: route.path,
+        pattern: route.pattern,
         file: route.clientPath,
         hasPageData: route.hasPageData,
       }
     })
   )
 
-  // utility to find a route from a path
-  function resolveRoute(path) {
+  // utility to find a route from a url
+  function resolveRoute(url) {
     for (const route of routes) {
-      const [hit, params] = match(route.path, path)
+      const [hit, params] = match(route.pattern, url)
       if (hit) return [route, params]
     }
     return []
@@ -198,17 +198,18 @@ export async function dev() {
   server.use(express.static('public'))
   server.use(express.static('.galaxy/public'))
   server.get('/_galaxy/pageData', async (req, res) => {
-    const pathname = req.query.path
-    const [route, params] = resolveRoute(pathname)
+    const url = req.query.url
+
+    const [route, params] = resolveRoute(url)
     if (!route) return res.json({})
     const pageData = await route.getPageData() // todo: pass in params? request?
     return res.json(pageData)
   })
   server.use('*', async (req, res) => {
-    const pathname = req.baseUrl || '/'
+    const url = req.originalUrl
 
     // handle page requests
-    const [route, params] = resolveRoute(pathname)
+    const [route, params] = resolveRoute(url)
     if (route) {
       const SSRProvider = core.galaxy.SSRProvider
       const Document = core.Document
@@ -219,7 +220,7 @@ export async function dev() {
         pageData,
         props: pageData.props,
         location: {
-          pathname,
+          url,
           params,
         },
       }
@@ -240,7 +241,7 @@ export async function dev() {
           }
           g.call('init', {
             routes: ${routesForClient},
-            path: '${pathname}',
+            url: '${url}',
             pageData: ${JSON.stringify(pageData)}
           })
           globalThis.$galaxy = g

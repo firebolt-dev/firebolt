@@ -2,7 +2,7 @@
 // see: https://github.com/molefrog/wouter/blob/main/matcher.js
 // see: https://www.npmjs.com/package/path-to-regexp
 
-export function fileToRoutePath(filePath) {
+export function fileToRoutePattern(filePath) {
   // remove extension
   filePath = filePath.split('.')
   filePath.pop()
@@ -11,7 +11,7 @@ export function fileToRoutePath(filePath) {
   // now split by /
   filePath = filePath.split('/')
   // conversion
-  const routePath = filePath
+  const pattern = filePath
     .map(segment => {
       // index -> /
       if (segment === 'index') {
@@ -34,5 +34,5 @@ export function fileToRoutePath(filePath) {
       return segment
     })
     .join('/')
-  return routePath
+  return pattern
 }
