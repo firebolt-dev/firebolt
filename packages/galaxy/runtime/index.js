@@ -1,4 +1,5 @@
 import { hydrateRoot } from 'react-dom/client'
+import { RuntimeProvider } from 'galaxy'
 
 import { Document } from '../../document.js'
 
@@ -18,6 +19,7 @@ const runtime = stack => {
     routes,
     pageDataByUrl,
     init,
+    initPageData,
     registerPage,
     call,
     getPage,
@@ -33,6 +35,7 @@ const runtime = stack => {
   }
 
   function init({ routes: routes_, url, pageData }) {
+    console.log('init')
     if (hasInit) throw new Error('already initialized')
     routes.push(...routes_)
     for (const route of routes) {
@@ -40,6 +43,11 @@ const runtime = stack => {
     }
     setPageData(url, pageData)
     hasInit = true
+  }
+
+  function initPageData(url, pageData) {
+    setPageData(url, pageData)
+    console.log('initPageData', url, pageData)
   }
 
   function registerPage(routeId, Page, Loading) {
@@ -62,15 +70,18 @@ const runtime = stack => {
   }
 
   function setPageData(url, pageData) {
-    if (pageData.expire === 0) {
-      // expire immediately
-      pageData.expireImmediately = true
-    } else if (pageData.expire > 0) {
-      // expire in X seconds
-      pageData.expireAt = new Date().getTime() + pageData.expire * 1000
-    } else {
-      // never expire
-      pageData.expireNever = true
+    console.log('setPageData', url, pageData)
+    if (pageData) {
+      if (pageData.expire === 0) {
+        // expire immediately
+        pageData.expireImmediately = true
+      } else if (pageData.expire > 0) {
+        // expire in X seconds
+        pageData.expireAt = new Date().getTime() + pageData.expire * 1000
+      } else {
+        // never expire
+        pageData.expireNever = true
+      }
     }
     pageDataByUrl[url] = pageData
   }
@@ -156,6 +167,11 @@ const runtime = stack => {
   return actions
 }
 
-globalThis.$galaxy = runtime(globalThis.$galaxy.stack)
+// globalThis.$galaxy = runtime(globalThis.$galaxy.stack)
 
-hydrateRoot(document, <Document />)
+hydrateRoot(
+  document,
+  <RuntimeProvider data={globalThis.$runtime}>
+    <Document />
+  </RuntimeProvider>
+)

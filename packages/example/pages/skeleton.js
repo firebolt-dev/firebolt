@@ -7,25 +7,17 @@ export default function Page({ serverMsg }) {
         color: blue;
       `}
     >
-      Real page! ({serverMsg || ''})
+      Skeleton Page
     </div>
   )
 }
 
 export function Loading() {
-  return (
-    <div
-      css={css`
-        color: red;
-      `}
-    >
-      Skeleton
-    </div>
-  )
+  return <div>Skeleton</div>
 }
 
 export async function getPageData() {
-  await delay(1000)
+  await delay(3000)
   return {
     title: 'Skeleton',
     meta: [{ name: 'description', content: 'Skeleton' }],
