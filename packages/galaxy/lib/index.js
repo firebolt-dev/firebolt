@@ -58,38 +58,40 @@ const RuntimeContext = createContext()
 
 export function Meta() {
   const runtime = useContext(RuntimeContext)
-  const [pageData, setPageData] = useState(() => {
+  const [metadata, setMetadata] = useState(() => {
     if (runtime.ssr) {
-      // when bots request we wait for pageData and provide it here
-      return runtime.ssr.pageData
+      // when crawlers request we wait for metadata and provide it here
+      return runtime.ssr.botMetadata
     }
   })
 
   useEffect(() => {
-    const pageData = runtime.getPageData(
+    const metadata = runtime.getMetadata(
       location.pathname + location.search,
       true
     )
-    setPageData(pageData)
-    // subscribe to pageData changes
-    return runtime.onMeta(pageData => {
-      setPageData(pageData)
+    setMetadata(metadata)
+    // subscribe to metadata changes
+    return runtime.onMeta(metadata => {
+      setMetadata(metadata)
     })
   }, [])
 
-  console.log('Meta', pageData)
-
   return (
     <>
-      {pageData?.title && <title>{pageData.title}</title>}
-      {pageData?.meta?.map((meta, idx) => (
+      {metadata?.title && <title>{metadata.title}</title>}
+      {metadata?.description && (
+        <meta name='description' content={metadata.description} />
+      )}
+
+      {/* {metadata?.meta?.map((meta, idx) => (
         <meta
           key={meta.key || idx}
           name={meta.name}
           property={meta.property}
           content={meta.content}
         />
-      ))}
+      ))} */}
     </>
   )
 }
@@ -154,7 +156,7 @@ export function Router() {
   const [browserUrl, setBrowserUrl] = useState(runtime.ssr?.url || globalThis.location.pathname + globalThis.location.search) // prettier-ignore
   const [virtualUrl, setVirtualUrl] = useState(browserUrl)
   const [route, params] = resolveRouteAndParams(runtime.routes, virtualUrl)
-  const { Page, Loading, getPageData } = route
+  const { Page, Loading, getMetadata, botMetadata } = route
 
   useEffect(() => {
     function onChange(e) {
@@ -186,12 +188,12 @@ export function Router() {
         // console.log('cancelled')
         return
       }
-      let pageData = runtime.getPageData(url, true)
-      const noPageData = !pageData || pageData.shouldExpire
-      if (!route.Loading && noPageData) {
-        // console.log('no Loading or pageData... prefetching pageData')
-        pageData = await runtime.fetchPageData(url)
-        // console.log('prefetched', pageData)
+      let metadata = runtime.getMetadata(url, true)
+      const noMetadata = !metadata || metadata.shouldExpire
+      if (!route.Loading && noMetadata) {
+        // console.log('no Loading or metadata... prefetching metadata')
+        metadata = await runtime.fetchMetadata(url)
+        // console.log('prefetched', metadata)
       }
       setVirtualUrl(url)
     }
@@ -203,18 +205,20 @@ export function Router() {
 
   const data = useMemo(() => {
     if (runtime.ssr) {
-      if (getPageData) {
-        return resource(getPageData())
+      if (botMetadata) {
+        return resource(botMetadata)
+      } else if (getMetadata) {
+        return resource(getMetadata())
       } else {
         return resource({})
       }
     } else {
-      const data = runtime.getPageData(virtualUrl)
+      const data = runtime.getMetadata(virtualUrl)
       console.log('data', data)
       if (data) {
         return resource(data)
       } else {
-        return resource(runtime.fetchPageData(virtualUrl))
+        return resource(runtime.fetchMetadata(virtualUrl))
       }
     }
   }, [virtualUrl])
@@ -244,19 +248,19 @@ export function Router() {
 
 function Route({ Page, data, ssr, url }) {
   const runtime = useContext(RuntimeContext)
-  const pageData = data?.()
-  // console.log('pageData', pageData)
+  const metadata = data?.()
+  // console.log('metadata', metadata)
   if (ssr) {
     ssr.inserts.write(`
       <script>
-        globalThis.$galaxy.push('setPageData', '${url}', ${JSON.stringify(pageData)})
+        globalThis.$galaxy.push('setMetadata', '${url}', ${JSON.stringify(metadata)})
       </script>
     `)
   }
   useEffect(() => {
-    runtime.emitMeta(pageData)
-  }, [pageData])
-  return <Page {...pageData.props} />
+    runtime.emitMeta(metadata)
+  }, [metadata])
+  return <Page {...metadata.props} />
 }
 
 function resource(dataOrPromise) {

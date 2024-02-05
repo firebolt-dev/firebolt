@@ -8,20 +8,20 @@ import { matcher } from './matcher.js'
 const match = matcher()
 
 const initRuntime = ({ routes, stack }) => {
-  const pageDataByUrl = {} // [url]: Object
-  const pageDataLoaders = {} // [url]: Promise
+  const metadataByUrl = {} // [url]: Object
+  const metadataLoaders = {} // [url]: Promise
 
   const api = {
     ssr: null,
     routes,
     push,
     registerPage,
-    setPageData,
-    getPageData,
+    setMetadata,
+    getMetadata,
     loadRoute,
     loadRouteByUrl,
     resolveRoute,
-    fetchPageData,
+    fetchMetadata,
     emitMeta,
     onMeta,
   }
@@ -36,36 +36,36 @@ const initRuntime = ({ routes, stack }) => {
     route.Loading = Loading
   }
 
-  function setPageData(url, pageData) {
-    if (pageData) {
-      if (pageData.expire === 0) {
+  function setMetadata(url, metadata) {
+    if (metadata) {
+      if (metadata.expire === 0) {
         // expire immediately
-        pageData.expireImmediately = true
-      } else if (pageData.expire > 0) {
+        metadata.expireImmediately = true
+      } else if (metadata.expire > 0) {
         // expire in X seconds
-        pageData.expireAt = new Date().getTime() + pageData.expire * 1000
+        metadata.expireAt = new Date().getTime() + metadata.expire * 1000
       } else {
         // never expire
-        pageData.expireNever = true
+        metadata.expireNever = true
       }
     }
-    pageDataByUrl[url] = pageData
+    metadataByUrl[url] = metadata
   }
 
-  function getPageData(url, skipExpire) {
-    let pageData = pageDataByUrl[url]
-    if (!pageData) return null
-    if (pageData.expireNever) {
-      pageData.shouldExpire = false
-    } else if (pageData.expireImmediately) {
-      pageData.shouldExpire = true
+  function getMetadata(url, skipExpire) {
+    let metadata = metadataByUrl[url]
+    if (!metadata) return null
+    if (metadata.expireNever) {
+      metadata.shouldExpire = false
+    } else if (metadata.expireImmediately) {
+      metadata.shouldExpire = true
     } else {
-      pageData.shouldExpire = new Date().getTime() >= pageData.expireAt
+      metadata.shouldExpire = new Date().getTime() >= metadata.expireAt
     }
-    if (pageData.shouldExpire && !skipExpire) {
-      delete pageDataByUrl[url]
+    if (metadata.shouldExpire && !skipExpire) {
+      delete metadataByUrl[url]
     }
-    return pageData
+    return metadata
   }
 
   async function loadRoute(route) {
@@ -85,29 +85,29 @@ const initRuntime = ({ routes, stack }) => {
     return routes.find(route => match(route.pattern, url)[0])
   }
 
-  function fetchPageData(url) {
-    if (pageDataLoaders[url]) return pageDataLoaders[url]
+  function fetchMetadata(url) {
+    if (metadataLoaders[url]) return metadataLoaders[url]
     const promise = new Promise(async resolve => {
-      // if route has no getPageData() then resolve with empty pageData
+      // if route has no getMetadata() then resolve with empty metadata
       const route = resolveRoute(url)
-      let pageData = null
-      if (route.hasPageData) {
-        const resp = await fetch(`/_galaxy/pageData?url=${url}`)
-        pageData = await resp.json()
-        setPageData(url, pageData)
+      let metadata = null
+      if (route.hasMetadata) {
+        const resp = await fetch(`/_galaxy/metadata?url=${url}`)
+        metadata = await resp.json()
+        setMetadata(url, metadata)
       }
-      delete pageDataLoaders[url]
-      resolve(pageData)
+      delete metadataLoaders[url]
+      resolve(metadata)
     })
-    pageDataLoaders[url] = promise
+    metadataLoaders[url] = promise
     return promise
   }
 
   const metaListeners = new Set()
 
-  function emitMeta(pageData) {
+  function emitMeta(metadata) {
     for (const listener of metaListeners) {
-      listener(pageData)
+      listener(metadata)
     }
   }
 

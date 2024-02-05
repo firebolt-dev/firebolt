@@ -6,11 +6,13 @@ import cors from 'cors'
 import compression from 'compression'
 import { renderToPipeableStream } from 'react-dom/server'
 import React from 'react'
+import { isbot } from 'isbot'
+import { cloneDeep } from 'lodash'
+import { PassThrough } from 'stream'
 
 import { getFilePaths } from '../utils/getFilePaths'
 import { fileToRoutePattern } from '../utils/fileToRoutePattern'
 import { matcher } from '../utils/matcher'
-import { PassThrough } from 'stream'
 
 const port = 4004
 const env = process.env.NODE_ENV || 'development'
@@ -102,9 +104,8 @@ export async function dev() {
     route.module = core[route.id]
     route.Page = core[route.id].default
     route.Loading = core[route.id].Loading
-    route.getPageData = core[route.id].getPageData
-    route.hasPageData = !!core[route.id].getPageData
     route.getMetadata = core[route.id].getMetadata
+    route.hasMetadata = !!core[route.id].getMetadata
   }
 
   // copy over runtime
@@ -179,8 +180,7 @@ export async function dev() {
       file: route.clientPath,
       Page: null,
       Loading: null,
-      getPageData: null,
-      hasPageData: !!core[route.id].getPageData,
+      getMetadata: null,
       hasMetadata: !!core[route.id].getMetadata,
     }
   })
@@ -193,9 +193,8 @@ export async function dev() {
       file: route.clientPath,
       Page: core[route.id].default,
       Loading: core[route.id].Loading,
-      getPageData: core[route.id].getPageData,
-      hasPageData: !!core[route.id].getPageData,
-      // hasMetadata: !!core[route.id].getMetadata,
+      getMetadata: core[route.id].getMetadata,
+      hasMetadata: !!core[route.id].getMetadata,
     }
   })
 
@@ -217,12 +216,12 @@ export async function dev() {
   server.use(express.static('.galaxy/public'))
 
   // handle requests for page data
-  server.get('/_galaxy/pageData', async (req, res) => {
+  server.get('/_galaxy/metadata', async (req, res) => {
     const url = req.query.url
     const [route, params] = resolveRoute(url)
     if (!route) return res.json({})
-    const pageData = await route.getPageData() // todo: pass in params? request?
-    return res.json(pageData)
+    const metadata = await route.getMetadata() // todo: pass in params? request?
+    return res.json(metadata)
   })
 
   // handle requests for pages and api
@@ -253,7 +252,15 @@ export async function dev() {
           params,
           inserts,
         },
-        routes: routesForServer,
+        routes: cloneDeep(routesForServer),
+      }
+
+      const isBot = isbot(req.get('user-agent') || '')
+
+      // crawlers need to pre-fetch metadata and inject it for both <Meta/> and <Router/> to consume
+      if (isBot && route.getMetadata) {
+        const r = runtime.routes.find(r => r.id === route.id)
+        r.botMetadata = await r.getMetadata({ params })
       }
 
       function Root() {
@@ -298,6 +305,7 @@ export async function dev() {
         res.end()
       })
 
+      let didError = false
       const { pipe, abort } = renderToPipeableStream(<Root />, {
         bootstrapScriptContent: `
           globalThis.$galaxy = {
@@ -311,8 +319,18 @@ export async function dev() {
         `,
         bootstrapModules: [route.clientPath, runtimeBuildFile],
         onShellReady() {
-          res.setHeader('Content-Type', 'text/html')
-          pipe(stream)
+          if (!isBot) {
+            res.statusCode = didError ? 500 : 200
+            res.setHeader('Content-Type', 'text/html')
+            pipe(stream)
+          }
+        },
+        onAllReady() {
+          if (isBot) {
+            res.statusCode = didError ? 500 : 200
+            res.setHeader('Content-Type', 'text/html')
+            pipe(res)
+          }
         },
       })
     }

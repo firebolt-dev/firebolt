@@ -21,22 +21,12 @@ export function Loading() {
   return <div>...</div>
 }
 
-export async function getMetadata({ params }) {
-  return {
-    title: 'Home',
-    description: 'Home description from getMetadata()',
-  }
-}
-
 // todo: rename -> getServerProps({ params })
-export async function getPageData() {
+export async function getMetadata() {
   await delay(2000)
   return {
     title: 'Home',
-    meta: [
-      { name: 'description', content: 'Home description' },
-      { property: 'og:title', content: 'Home OG title' },
-    ],
+    description: 'Home description',
     props: {
       test: 'TEST!',
     },

@@ -27,11 +27,11 @@ export function Loading() {
   )
 }
 
-export async function getPageData() {
+export async function getMetadata() {
   await delay(2000)
   return {
     title: 'Skeleton',
-    meta: [{ name: 'description', content: 'Skeleton' }],
+    description: 'Skeleton desc!',
     props: {
       serverMsg: 'BOOP',
     },

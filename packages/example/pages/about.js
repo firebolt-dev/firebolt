@@ -16,14 +16,11 @@ export default function About() {
 //   return <div>About loaidng...</div>
 // }
 
-export async function getPageData() {
+export async function getMetadata() {
   await delay(2000)
   return {
     title: 'About',
-    meta: [
-      { name: 'description', content: 'All about me' },
-      { property: 'og:title', content: 'Title!' },
-    ],
+    description: 'About description',
     props: {
       test: 'TEST!',
     },

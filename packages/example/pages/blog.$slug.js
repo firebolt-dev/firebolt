@@ -17,14 +17,11 @@ export default function BlogPost() {
   )
 }
 
-export async function getPageData() {
+export async function getMetadata() {
   await delay(1000)
   return {
-    title: 'Slug!',
-    meta: [
-      { name: 'description', content: 'I am a description!' },
-      { property: 'og:title', content: 'Title!' },
-    ],
+    title: 'Blog post',
+    description: `Blog post description`,
     props: {
       test: 'TEST!',
     },
