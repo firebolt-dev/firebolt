@@ -7,7 +7,6 @@ import compression from 'compression'
 import { renderToPipeableStream } from 'react-dom/server'
 import React from 'react'
 import { isbot } from 'isbot'
-import { cloneDeep } from 'lodash'
 import { PassThrough } from 'stream'
 
 import { getFilePaths } from '../utils/getFilePaths'
@@ -252,15 +251,14 @@ export async function dev() {
           params,
           inserts,
         },
-        routes: cloneDeep(routesForServer),
+        routes: routesForServer,
       }
 
       const isBot = isbot(req.get('user-agent') || '')
 
       // crawlers need to pre-fetch metadata and inject it for both <Meta/> and <Router/> to consume
       if (isBot && route.getMetadata) {
-        const r = runtime.routes.find(r => r.id === route.id)
-        r.botMetadata = await r.getMetadata({ params })
+        runtime.ssr.botMetadata = await route.getMetadata()
       }
 
       function Root() {
@@ -307,7 +305,9 @@ export async function dev() {
 
       let didError = false
       const { pipe, abort } = renderToPipeableStream(<Root />, {
-        bootstrapScriptContent: `
+        bootstrapScriptContent: isBot
+          ? ``
+          : `
           globalThis.$galaxy = {
             ssr: null,
             routes: ${JSON.stringify(routesForClient)},
@@ -317,7 +317,7 @@ export async function dev() {
             }
           }
         `,
-        bootstrapModules: [route.clientPath, runtimeBuildFile],
+        bootstrapModules: isBot ? [] : [route.clientPath, runtimeBuildFile],
         onShellReady() {
           if (!isBot) {
             res.statusCode = didError ? 500 : 200
@@ -338,8 +338,4 @@ export async function dev() {
   server.listen(port, () => {
     console.log(`server running on http://localhost:${port}`)
   })
-}
-
-function getDefaultMetadata() {
-  return {}
 }

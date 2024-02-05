@@ -83,15 +83,14 @@ export function Meta() {
       {metadata?.description && (
         <meta name='description' content={metadata.description} />
       )}
-
-      {/* {metadata?.meta?.map((meta, idx) => (
+      {metadata?.meta?.map((meta, idx) => (
         <meta
           key={meta.key || idx}
           name={meta.name}
           property={meta.property}
           content={meta.content}
         />
-      ))} */}
+      ))}
     </>
   )
 }
@@ -156,7 +155,7 @@ export function Router() {
   const [browserUrl, setBrowserUrl] = useState(runtime.ssr?.url || globalThis.location.pathname + globalThis.location.search) // prettier-ignore
   const [virtualUrl, setVirtualUrl] = useState(browserUrl)
   const [route, params] = resolveRouteAndParams(runtime.routes, virtualUrl)
-  const { Page, Loading, getMetadata, botMetadata } = route
+  const { Page, Loading, getMetadata } = route
 
   useEffect(() => {
     function onChange(e) {
@@ -205,16 +204,15 @@ export function Router() {
 
   const data = useMemo(() => {
     if (runtime.ssr) {
-      if (botMetadata) {
-        return resource(botMetadata)
+      if (runtime.ssr.botMetadata) {
+        return resource(runtime.ssr.botMetadata)
       } else if (getMetadata) {
         return resource(getMetadata())
       } else {
-        return resource({})
+        return resource(null)
       }
     } else {
       const data = runtime.getMetadata(virtualUrl)
-      console.log('data', data)
       if (data) {
         return resource(data)
       } else {
@@ -250,7 +248,7 @@ function Route({ Page, data, ssr, url }) {
   const runtime = useContext(RuntimeContext)
   const metadata = data?.()
   // console.log('metadata', metadata)
-  if (ssr) {
+  if (ssr && metadata) {
     ssr.inserts.write(`
       <script>
         globalThis.$galaxy.push('setMetadata', '${url}', ${JSON.stringify(metadata)})
@@ -260,7 +258,7 @@ function Route({ Page, data, ssr, url }) {
   useEffect(() => {
     runtime.emitMeta(metadata)
   }, [metadata])
-  return <Page {...metadata.props} />
+  return <Page {...metadata?.props} />
 }
 
 function resource(dataOrPromise) {

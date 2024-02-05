@@ -23,7 +23,7 @@ export function Loading() {
 
 // todo: rename -> getServerProps({ params })
 export async function getMetadata() {
-  await delay(2000)
+  await delay(1000)
   return {
     title: 'Home',
     description: 'Home description',

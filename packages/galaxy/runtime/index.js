@@ -131,8 +131,8 @@ hydrateRoot(
     <Document />
   </RuntimeProvider>,
   {
-    onRecoverableError(err) {
-      console.log(document.documentElement.outerHTML)
-    },
+    // onRecoverableError(err) {
+    //   console.log(document.documentElement.outerHTML)
+    // },
   }
 )
