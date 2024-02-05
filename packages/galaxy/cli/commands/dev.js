@@ -117,8 +117,8 @@ export async function dev() {
     const code = `
       import Page from '${route.buildToSrcPath}'
       ${route.Loading ? `import { Loading } from '${route.buildToSrcPath}'` : ''}
-      ${!route.Loading ? `globalThis.$runtime.registerPage('${route.id}', Page)` : ''}
-      ${route.Loading ? `globalThis.$runtime.registerPage('${route.id}', Page, Loading)` : ''}
+      ${!route.Loading ? `globalThis.$galaxy.push('registerPage', '${route.id}', Page)` : ''}
+      ${route.Loading ? `globalThis.$galaxy.push('registerPage', '${route.id}', Page, Loading)` : ''}
     `
     await fs.outputFile(route.buildFile, code)
   }
@@ -260,10 +260,6 @@ export async function dev() {
       const stream = new PassThrough()
       stream.on('data', chunk => {
         let str = chunk.toString()
-        // console.log('====')
-        // console.log(str)
-        // console.log('====')
-
         if (afterHtml) {
           // regex to match all style tags and their contents
           const regex = /<style[^>]*>[\s\S]*?<\/style>/gi
@@ -272,22 +268,13 @@ export async function dev() {
           const styles = matches.join('')
           // extract and prepend styles
           str = styles + str.replace(regex, '')
-          // extract the style tags
-          // str = str.replace(regex, '')
-          // slap the style tags onto the end
-          // str += styles
         }
-
         // append any inserts (eg suspense data)
         str += inserts.read()
-
+        // mark after html
         if (str.includes('</html>')) {
           afterHtml = true
-          // console.log('====')
-          // console.log('HTML END')
-          // console.log('====')
         }
-
         res.write(str)
         res.flush()
       })
@@ -297,25 +284,12 @@ export async function dev() {
 
       const { pipe, abort } = renderToPipeableStream(<Root />, {
         bootstrapScriptContent: `
-        const ssr = null
-        const routes = ${JSON.stringify(routesForClient)}
-        const pageData = {}
-          globalThis.$runtime = {
-            ssr,
-            routes,
-            registerPage(routeId, Page, Loading) {
-              const route = routes.find(route => route.id === routeId)
-              route.Page = Page
-              route.Loading = Loading
-            },
-            setPageData(url, data) {
-              console.log('$setPageData', url, data)
-              pageData[url] = data
-            },
-            getPageData(url) {
-              // todo: expire
-              console.log('$getPageData', url, pageData[url])
-              return pageData[url]
+          globalThis.$galaxy = {
+            ssr: null,
+            routes: ${JSON.stringify(routesForClient)},
+            stack: [],
+            push(action, ...args) {
+              this.stack.push({ action, args })
             }
           }
         `,

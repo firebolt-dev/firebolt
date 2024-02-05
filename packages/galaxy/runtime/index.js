@@ -3,9 +3,112 @@ import { RuntimeProvider } from 'galaxy'
 
 import { Document } from '../../document.js'
 
-// import { matcher } from './matcher.js'
+import { matcher } from './matcher.js'
 
-// const match = matcher()
+const match = matcher()
+
+const initRuntime = ({ routes, stack }) => {
+  const pageDataByUrl = {} // [url]: Object
+  const pageDataLoaders = {} // [url]: Promise
+
+  const api = {
+    ssr: null,
+    routes,
+    push,
+    registerPage,
+    setPageData,
+    getPageData,
+    loadRoute,
+    loadRouteByUrl,
+    resolveRoute,
+    fetchPageData,
+  }
+
+  function push(action, ...args) {
+    api[action](...args)
+  }
+
+  function registerPage(routeId, Page, Loading) {
+    const route = routes.find(route => route.id === routeId)
+    route.Page = Page
+    route.Loading = Loading
+  }
+
+  function setPageData(url, pageData) {
+    if (pageData) {
+      if (pageData.expire === 0) {
+        // expire immediately
+        pageData.expireImmediately = true
+      } else if (pageData.expire > 0) {
+        // expire in X seconds
+        pageData.expireAt = new Date().getTime() + pageData.expire * 1000
+      } else {
+        // never expire
+        pageData.expireNever = true
+      }
+    }
+    pageDataByUrl[url] = pageData
+  }
+
+  function getPageData(url, skipExpire) {
+    let pageData = pageDataByUrl[url]
+    if (!pageData) return null
+    if (pageData.expireNever) {
+      pageData.shouldExpire = false
+    } else if (pageData.expireImmediately) {
+      pageData.shouldExpire = true
+    } else {
+      pageData.shouldExpire = new Date().getTime() >= pageData.expireAt
+    }
+    if (pageData.shouldExpire && !skipExpire) {
+      delete pageDataByUrl[url]
+    }
+    return pageData
+  }
+
+  async function loadRoute(route) {
+    if (!route) return
+    if (route.Page) return
+    if (route.loader) return await route.loader
+    route.loader = import(route.file)
+    await route.loader
+  }
+
+  function loadRouteByUrl(url) {
+    const route = resolveRoute(url)
+    return loadRoute(route)
+  }
+
+  function resolveRoute(url) {
+    return routes.find(route => match(route.pattern, url)[0])
+  }
+
+  function fetchPageData(url) {
+    if (pageDataLoaders[url]) return pageDataLoaders[url]
+    const promise = new Promise(async resolve => {
+      // if route has no getPageData() then resolve with empty pageData
+      const route = resolveRoute(url)
+      let pageData = null
+      if (route.hasPageData) {
+        const resp = await fetch(`/_galaxy/pageData?url=${url}`)
+        pageData = await resp.json()
+        setPageData(url, pageData)
+      }
+      delete pageDataLoaders[url]
+      resolve(pageData)
+    })
+    pageDataLoaders[url] = promise
+    return promise
+  }
+
+  for (const item of stack) {
+    push(item.action, ...item.args)
+  }
+
+  return api
+}
+
+globalThis.$galaxy = initRuntime(globalThis.$galaxy)
 
 // const runtime = stack => {
 //   let hasInit
@@ -135,22 +238,22 @@ import { Document } from '../../document.js'
 //     return loadRoute(route)
 //   }
 
-//   function loadPageData(url) {
-//     if (pageDataLoaders[url]) return pageDataLoaders[url]
-//     const promise = new Promise(async resolve => {
-//       // if route has no getPageData() then resolve with empty pageData
-//       const route = resolveRoute(url)
-//       if (!route.hasPageData) return resolve({})
-//       // otherwise fetch it
-//       const resp = await fetch(`/_galaxy/pageData?url=${url}`)
-//       const pageData = await resp.json()
-//       setPageData(url, pageData)
-//       resolve(pageData)
-//       delete pageDataLoaders[url]
-//     })
-//     pageDataLoaders[url] = promise
-//     return promise
-//   }
+// function loadPageData(url) {
+//   if (pageDataLoaders[url]) return pageDataLoaders[url]
+//   const promise = new Promise(async resolve => {
+//     // if route has no getPageData() then resolve with empty pageData
+//     const route = resolveRoute(url)
+//     if (!route.hasPageData) return resolve({})
+//     // otherwise fetch it
+//     const resp = await fetch(`/_galaxy/pageData?url=${url}`)
+//     const pageData = await resp.json()
+//     setPageData(url, pageData)
+//     resolve(pageData)
+//     delete pageDataLoaders[url]
+//   })
+//   pageDataLoaders[url] = promise
+//   return promise
+// }
 
 //   let metaListeners = new Set()
 //   function onMeta(callback) {
@@ -171,7 +274,7 @@ import { Document } from '../../document.js'
 
 hydrateRoot(
   document,
-  <RuntimeProvider data={globalThis.$runtime}>
+  <RuntimeProvider data={globalThis.$galaxy}>
     <Document />
   </RuntimeProvider>,
   {

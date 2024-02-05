@@ -17,7 +17,7 @@ export default function About() {
 // }
 
 export async function getPageData() {
-  await delay(1000)
+  await delay(2000)
   return {
     title: 'About',
     meta: [
@@ -27,7 +27,7 @@ export async function getPageData() {
     props: {
       test: 'TEST!',
     },
-    expire: 0,
+    expire: 2,
   }
 }
 

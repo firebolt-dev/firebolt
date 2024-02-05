@@ -16,11 +16,19 @@ export default function Page({ serverMsg }) {
 }
 
 export function Loading() {
-  return <div>Skeleton</div>
+  return (
+    <div
+      css={css`
+        color: green;
+      `}
+    >
+      Skeleton
+    </div>
+  )
 }
 
 export async function getPageData() {
-  await delay(3000)
+  await delay(2000)
   return {
     title: 'Skeleton',
     meta: [{ name: 'description', content: 'Skeleton' }],
