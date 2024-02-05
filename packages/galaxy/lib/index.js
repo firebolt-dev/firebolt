@@ -211,7 +211,7 @@ export function Router() {
 function Route({ Page, data, ssr, url }) {
   if (ssr) {
     const pageData = data?.()
-    ssr.stream.write(`
+    ssr.inserts.write(`
       <script>
         globalThis.$runtime.setPageData('${url}', ${JSON.stringify(pageData)})
       </script>

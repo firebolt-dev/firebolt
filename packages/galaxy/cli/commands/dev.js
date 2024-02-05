@@ -226,49 +226,28 @@ export async function dev() {
     if (route) {
       const RuntimeProvider = core.galaxy.RuntimeProvider
       const Document = core.Document
-      const Page = route.Page
-      const Loading = route.Loading
-      const getPageData = route.getPageData
-      let ssr
-      if (!Loading) {
-        let pageData
-        if (getPageData) {
-          pageData = getPageData()
-          if (pageData instanceof Promise) {
-            pageData = await pageData
-          }
-        }
-        ssr = {
-          Page,
-          Loading: null,
-          pageData,
-          getPageData: null,
-          location: {
-            url,
-            params,
-          },
-        }
-      } else {
-        ssr = {
-          Page,
-          Loading,
-          pageData: null,
-          getPageData,
-          location: {
-            url,
-            params,
-          },
-        }
+
+      const inserts = {
+        value: '',
+        read() {
+          const str = this.value
+          this.value = ''
+          return str
+        },
+        write(str) {
+          this.value += str
+        },
       }
-      const stream = new PassThrough()
+
       const runtime = {
         ssr: {
           url,
           params,
-          stream,
+          inserts,
         },
         routes: routesForServer,
       }
+
       function Root() {
         return (
           <RuntimeProvider data={runtime}>
@@ -276,6 +255,46 @@ export async function dev() {
           </RuntimeProvider>
         )
       }
+
+      let afterHtml
+      const stream = new PassThrough()
+      stream.on('data', chunk => {
+        let str = chunk.toString()
+        // console.log('====')
+        // console.log(str)
+        // console.log('====')
+
+        if (afterHtml) {
+          // regex to match all style tags and their contents
+          const regex = /<style[^>]*>[\s\S]*?<\/style>/gi
+          // find all style tags and their contents
+          const matches = str.match(regex) || []
+          const styles = matches.join('')
+          // extract and prepend styles
+          str = styles + str.replace(regex, '')
+          // extract the style tags
+          // str = str.replace(regex, '')
+          // slap the style tags onto the end
+          // str += styles
+        }
+
+        // append any inserts (eg suspense data)
+        str += inserts.read()
+
+        if (str.includes('</html>')) {
+          afterHtml = true
+          // console.log('====')
+          // console.log('HTML END')
+          // console.log('====')
+        }
+
+        res.write(str)
+        res.flush()
+      })
+      stream.on('end', () => {
+        res.end()
+      })
+
       const { pipe, abort } = renderToPipeableStream(<Root />, {
         bootstrapScriptContent: `
         const ssr = null
@@ -299,24 +318,11 @@ export async function dev() {
               return pageData[url]
             }
           }
-
-          // const g = {
-          //   stack: [],
-          //   call(action, ...args) {
-          //     g.stack.push({ action, args })
-          //   }
-          // }
-          // g.call('init', {
-          //   routes: ${routesForClient},
-          //   url: '${url}',
-          // })
-          // globalThis.$galaxy = g
         `,
         bootstrapModules: [route.clientPath, runtimeBuildFile],
         onShellReady() {
           res.setHeader('Content-Type', 'text/html')
-          stream.pipe(res)
-          pipe(res)
+          pipe(stream)
         },
       })
     }

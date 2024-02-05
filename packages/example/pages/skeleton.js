@@ -1,13 +1,16 @@
 import { css } from 'galaxy'
+import { useState } from 'react'
 
 export default function Page({ serverMsg }) {
+  const [foo, setFoo] = useState()
   return (
     <div
       css={css`
-        color: blue;
+        color: ${foo ? 'red' : 'blue'};
       `}
+      onClick={() => setFoo(!foo)}
     >
-      Skeleton Page
+      Skeleton Page ({serverMsg})
     </div>
   )
 }
