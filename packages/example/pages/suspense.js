@@ -68,3 +68,30 @@ function wrapPromise(promise) {
   }
   return { read }
 }
+
+// another way to do it
+// see: https://dev.to/roggc/react-18-streaming-ssr-with-suspense-and-data-fetching-on-the-server-how-to-39jh
+function createServerData() {
+  let done = false
+  let promise = null
+  let value
+  return {
+    read: () => {
+      if (done) {
+        return value
+      }
+      if (promise) {
+        throw promise
+      }
+      promise = new Promise(resolve => {
+        setTimeout(() => {
+          done = true
+          promise = null
+          value = { comments: ['a', 'b', 'c'] }
+          resolve()
+        }, 6000)
+      })
+      throw promise
+    },
+  }
+}

@@ -10,6 +10,7 @@ import React from 'react'
 import { getFilePaths } from '../utils/getFilePaths'
 import { fileToRoutePattern } from '../utils/fileToRoutePattern'
 import { matcher } from '../utils/matcher'
+import { PassThrough } from 'stream'
 
 const port = 4004
 const env = process.env.NODE_ENV || 'development'
@@ -101,7 +102,7 @@ export async function dev() {
     route.module = core[route.id]
     route.Page = core[route.id].default
     route.Loading = core[route.id].Loading
-    route.getPageData = core[route.id].getPageData || getEmptyObject
+    route.getPageData = core[route.id].getPageData
     route.hasPageData = !!core[route.id].getPageData
   }
 
@@ -116,8 +117,8 @@ export async function dev() {
     const code = `
       import Page from '${route.buildToSrcPath}'
       ${route.Loading ? `import { Loading } from '${route.buildToSrcPath}'` : ''}
-      ${!route.Loading ? `globalThis.$galaxy.call('registerPage', '${route.id}', Page)` : ''}
-      ${route.Loading ? `globalThis.$galaxy.call('registerPage', '${route.id}', Page, Loading)` : ''}
+      ${!route.Loading ? `globalThis.$galaxy.push('registerPage', '${route.id}', Page)` : ''}
+      ${route.Loading ? `globalThis.$galaxy.push('registerPage', '${route.id}', Page, Loading)` : ''}
     `
     await fs.outputFile(route.buildFile, code)
   }
@@ -170,16 +171,29 @@ export async function dev() {
   }
 
   // build route definitions to be sent to client
-  const routesForClient = JSON.stringify(
-    routes.map(route => {
-      return {
-        id: route.id,
-        pattern: route.pattern,
-        file: route.clientPath,
-        hasPageData: route.hasPageData,
-      }
-    })
-  )
+  const routesForClient = routes.map(route => {
+    return {
+      id: route.id,
+      pattern: route.pattern,
+      file: route.clientPath,
+      Page: null,
+      Loading: null,
+      getPageData: null,
+      hasPageData: !!core[route.id].getPageData,
+    }
+  })
+
+  const routesForServer = routes.map(route => {
+    return {
+      id: route.id,
+      pattern: route.pattern,
+      file: route.clientPath,
+      Page: core[route.id].default,
+      Loading: core[route.id].Loading,
+      getPageData: core[route.id].getPageData,
+      hasPageData: !!core[route.id].getPageData,
+    }
+  })
 
   // utility to find a route from a url
   function resolveRoute(url) {
@@ -199,7 +213,6 @@ export async function dev() {
   server.use(express.static('.galaxy/public'))
   server.get('/_galaxy/pageData', async (req, res) => {
     const url = req.query.url
-
     const [route, params] = resolveRoute(url)
     if (!route) return res.json({})
     const pageData = await route.getPageData() // todo: pass in params? request?
@@ -211,45 +224,79 @@ export async function dev() {
     // handle page requests
     const [route, params] = resolveRoute(url)
     if (route) {
-      const SSRProvider = core.galaxy.SSRProvider
+      const RuntimeProvider = core.galaxy.RuntimeProvider
       const Document = core.Document
-      const Page = route.Page
-      const pageData = await route.getPageData()
-      const ssr = {
-        Page,
-        pageData,
-        props: pageData.props,
-        location: {
-          url,
-          params,
+
+      const inserts = {
+        value: '',
+        read() {
+          const str = this.value
+          this.value = ''
+          return str
+        },
+        write(str) {
+          this.value += str
         },
       }
+
+      const runtime = {
+        ssr: {
+          url,
+          params,
+          inserts,
+        },
+        routes: routesForServer,
+      }
+
       function Root() {
         return (
-          <SSRProvider value={ssr}>
+          <RuntimeProvider data={runtime}>
             <Document />
-          </SSRProvider>
+          </RuntimeProvider>
         )
       }
+
+      let afterHtml
+      const stream = new PassThrough()
+      stream.on('data', chunk => {
+        let str = chunk.toString()
+        if (afterHtml) {
+          // regex to match all style tags and their contents
+          const regex = /<style[^>]*>[\s\S]*?<\/style>/gi
+          // find all style tags and their contents
+          const matches = str.match(regex) || []
+          const styles = matches.join('')
+          // extract and prepend styles
+          str = styles + str.replace(regex, '')
+        }
+        // append any inserts (eg suspense data)
+        str += inserts.read()
+        // mark after html
+        if (str.includes('</html>')) {
+          afterHtml = true
+        }
+        res.write(str)
+        res.flush()
+      })
+      stream.on('end', () => {
+        res.end()
+      })
+
       const { pipe, abort } = renderToPipeableStream(<Root />, {
         bootstrapScriptContent: `
-          const g = {
+          globalThis.$galaxy = {
+            ssr: null,
+            routes: ${JSON.stringify(routesForClient)},
             stack: [],
-            call(action, ...args) {
-              g.stack.push({ action, args })
+            push(action, ...args) {
+              this.stack.push({ action, args })
             }
           }
-          g.call('init', {
-            routes: ${routesForClient},
-            url: '${url}',
-            pageData: ${JSON.stringify(pageData)}
-          })
-          globalThis.$galaxy = g
         `,
         bootstrapModules: [route.clientPath, runtimeBuildFile],
         onShellReady() {
           res.setHeader('Content-Type', 'text/html')
-          pipe(res)
+          pipe(stream)
         },
       })
     }
@@ -257,8 +304,4 @@ export async function dev() {
   server.listen(port, () => {
     console.log(`server running on http://localhost:${port}`)
   })
-}
-
-async function getEmptyObject() {
-  return {}
 }

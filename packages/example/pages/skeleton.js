@@ -1,13 +1,16 @@
 import { css } from 'galaxy'
+import { useState } from 'react'
 
 export default function Page({ serverMsg }) {
+  const [foo, setFoo] = useState()
   return (
     <div
       css={css`
-        color: blue;
+        color: ${foo ? 'red' : 'blue'};
       `}
+      onClick={() => setFoo(!foo)}
     >
-      Real page! ({serverMsg || ''})
+      Skeleton Page ({serverMsg})
     </div>
   )
 }
@@ -16,7 +19,7 @@ export function Loading() {
   return (
     <div
       css={css`
-        color: red;
+        color: green;
       `}
     >
       Skeleton
@@ -25,7 +28,7 @@ export function Loading() {
 }
 
 export async function getPageData() {
-  await delay(1000)
+  await delay(2000)
   return {
     title: 'Skeleton',
     meta: [{ name: 'description', content: 'Skeleton' }],
