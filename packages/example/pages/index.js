@@ -17,13 +17,25 @@ export default function Home({ test }) {
   )
 }
 
+export function Loading() {
+  return <div>...</div>
+}
+
+export async function getMetadata({ params }) {
+  return {
+    title: 'Home',
+    description: 'Home description from getMetadata()',
+  }
+}
+
+// todo: rename -> getServerProps({ params })
 export async function getPageData() {
-  // await delay(1000)
+  await delay(2000)
   return {
     title: 'Home',
     meta: [
-      { name: 'description', content: 'I am description!' },
-      { property: 'og:title', content: 'Title!' },
+      { name: 'description', content: 'Home description' },
+      { property: 'og:title', content: 'Home OG title' },
     ],
     props: {
       test: 'TEST!',

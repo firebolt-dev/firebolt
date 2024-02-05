@@ -45,9 +45,6 @@ export async function dev() {
       buildFile,
       pattern,
       buildToSrcPath,
-      // fileBase: pageFile,
-      // buildPath: path.join(buildDir, pageFile),
-      // filePath: path.join(appDir, 'pages', pageFile),
     })
   }
 
@@ -56,11 +53,14 @@ export async function dev() {
     const isDynamicA = a.pattern.includes(':')
     const isDynamicB = b.pattern.includes(':')
     if (isDynamicA && !isDynamicB) {
-      return 1 // if 'a' is catch-all and 'b' is not, 'a' should come after 'b'
+      // if 'a' is catch-all and 'b' is not, 'a' should come after 'b'
+      return 1
     } else if (!isDynamicA && isDynamicB) {
-      return -1 // if 'b' is catch-all and 'a' is not, 'a' should come before 'b'
+      // if 'b' is catch-all and 'a' is not, 'a' should come before 'b'
+      return -1
     }
-    return 0 // if both are catch-all or both are not, keep original order
+    // if both are catch-all or both are not, keep original order
+    return 0
   })
 
   // write core (an entry into the apps code for SSR)
@@ -104,6 +104,7 @@ export async function dev() {
     route.Loading = core[route.id].Loading
     route.getPageData = core[route.id].getPageData
     route.hasPageData = !!core[route.id].getPageData
+    route.getMetadata = core[route.id].getMetadata
   }
 
   // copy over runtime
@@ -180,9 +181,11 @@ export async function dev() {
       Loading: null,
       getPageData: null,
       hasPageData: !!core[route.id].getPageData,
+      hasMetadata: !!core[route.id].getMetadata,
     }
   })
 
+  // build route definitions to be used on server
   const routesForServer = routes.map(route => {
     return {
       id: route.id,
@@ -192,6 +195,7 @@ export async function dev() {
       Loading: core[route.id].Loading,
       getPageData: core[route.id].getPageData,
       hasPageData: !!core[route.id].getPageData,
+      // hasMetadata: !!core[route.id].getMetadata,
     }
   })
 
@@ -211,6 +215,8 @@ export async function dev() {
   server.use(express.json())
   server.use(express.static('public'))
   server.use(express.static('.galaxy/public'))
+
+  // handle requests for page data
   server.get('/_galaxy/pageData', async (req, res) => {
     const url = req.query.url
     const [route, params] = resolveRoute(url)
@@ -218,6 +224,8 @@ export async function dev() {
     const pageData = await route.getPageData() // todo: pass in params? request?
     return res.json(pageData)
   })
+
+  // handle requests for pages and api
   server.use('*', async (req, res) => {
     const url = req.originalUrl
 
@@ -256,10 +264,14 @@ export async function dev() {
         )
       }
 
+      // transform stream to:
+      // 1. insert suspense data
+      // 2. extract and prepend inlined emotion styles
       let afterHtml
       const stream = new PassThrough()
       stream.on('data', chunk => {
         let str = chunk.toString()
+        // prepend any inlined emotion styles
         if (afterHtml) {
           // regex to match all style tags and their contents
           const regex = /<style[^>]*>[\s\S]*?<\/style>/gi
@@ -270,11 +282,15 @@ export async function dev() {
           str = styles + str.replace(regex, '')
         }
         // append any inserts (eg suspense data)
-        str += inserts.read()
+        if (afterHtml) {
+          str += inserts.read()
+        }
         // mark after html
         if (str.includes('</html>')) {
           afterHtml = true
         }
+        console.log('---')
+        console.log(str)
         res.write(str)
         res.flush()
       })
@@ -304,4 +320,8 @@ export async function dev() {
   server.listen(port, () => {
     console.log(`server running on http://localhost:${port}`)
   })
+}
+
+function getDefaultMetadata() {
+  return {}
 }

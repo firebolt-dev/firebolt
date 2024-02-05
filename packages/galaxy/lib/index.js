@@ -19,11 +19,10 @@ export function Style(props) {
   return <style>{props.children.styles}</style>
 }
 
-const getRuntime = () => globalThis.$galaxy
-
 export function Link(props) {
-  const runtime = useContext(RuntimeContext)
   const { to, href = to, replace, onClick, children } = props
+
+  const runtime = useContext(RuntimeContext)
 
   const jsx = isValidElement(children) ? children : <a {...props} />
 
@@ -48,7 +47,7 @@ export function Link(props) {
   }
 
   useEffect(() => {
-    // prefetch
+    // prefetch routes
     runtime.loadRouteByUrl(href)
   }, [])
 
@@ -60,20 +59,25 @@ const RuntimeContext = createContext()
 export function Meta() {
   const runtime = useContext(RuntimeContext)
   const [pageData, setPageData] = useState(() => {
-    // TODO: work with runtime
-    return {}
-    // server provides initial pageData via context
-    if (runtime.ssr) runtime.ssr.pageData
-    // client sources initial pageData from runtime
-    return getRuntime().getPageData(location.pathname + location.search, true)
+    if (runtime.ssr) {
+      // when bots request we wait for pageData and provide it here
+      return runtime.ssr.pageData
+    }
   })
 
   useEffect(() => {
+    const pageData = runtime.getPageData(
+      location.pathname + location.search,
+      true
+    )
+    setPageData(pageData)
     // subscribe to pageData changes
-    return getRuntime().onMeta(pageData => {
+    return runtime.onMeta(pageData => {
       setPageData(pageData)
     })
   }, [])
+
+  console.log('Meta', pageData)
 
   return (
     <>
@@ -239,6 +243,7 @@ export function Router() {
 }
 
 function Route({ Page, data, ssr, url }) {
+  const runtime = useContext(RuntimeContext)
   const pageData = data?.()
   // console.log('pageData', pageData)
   if (ssr) {
@@ -248,6 +253,9 @@ function Route({ Page, data, ssr, url }) {
       </script>
     `)
   }
+  useEffect(() => {
+    runtime.emitMeta(pageData)
+  }, [pageData])
   return <Page {...pageData.props} />
 }
 

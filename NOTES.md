@@ -116,19 +116,31 @@ We use a custom router because we need to disconnect ACTUAL browser location fro
   - 1ormore: parks.$tags+.js
   - 0ormore: parks.$tags-.js
 
-- include ?foo=bar etc in params (like nextjs)
+- [done] include ?foo=bar etc in params (like nextjs)
+- [done] make sure you can import and use 'react' stuff in Document?
+- rename getPageData to getMetadata
+  - can use this for instant/static metadata OR fetch stuff
+    {
+    title
+    description
+    ...etc
+    props
+    }
 - what about static metadata (title, meta etc?) https://nextjs.org/docs/app/building-your-application/optimizing/metadata
-- make sure you can import and use 'react' stuff in Document?
 - api routes
+- calling api routes from getPageData ?
 - custom server.js
+- server.js inject db into requests?
 - in dev, watch files, rebuild and reload page via websocket signals (or re-hydrate root with new data?)
 - useLocation() -> { pathname, params{}, query{}, push, replace, prefetch, back, forward, reload }
 - navigation scroll to top and restoration
-- if getPageData crashes, server should render pages/500.js
-- if route doesnt exit, server should render pages/404.js
+- render 500.js if getPageData or render throws (500 status???)
+- render 404.js if cant find page (404 status)
 - if render itself crashes, server should try pages/500.js but if that also crashes send a fallback 500 page
 - pass a request object into getPageData with path, params and queries, and allow custom server.js to do things like inject a db into this request object
+  - https://developer.mozilla.org/en-US/docs/Web/API/Request
 - full renders for bots
+- should everything be /app ?
 
 ### Neat Ideas
 
@@ -149,3 +161,8 @@ We use a custom router because we need to disconnect ACTUAL browser location fro
     - all from app/pages/\*
     - Document from app/document.js
     - - as galaxy (aliased bui)
+
+### Loading (SSR)
+
+- if there is no Loading component, wait for getPageData (if any) first, then stream
+- if there is a Loading component, inject getPageData and then stream suspending
