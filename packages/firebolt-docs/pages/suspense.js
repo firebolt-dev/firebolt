@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useMemo, useState } from 'react'
-import { css, Link } from 'galaxy'
+import { css, Link } from 'firebolt'
 
 export default function Page() {
   const resource = wrapPromise(fetchData())

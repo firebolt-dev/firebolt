@@ -1,5 +1,5 @@
 import { hydrateRoot } from 'react-dom/client'
-import { RuntimeProvider } from 'galaxy'
+import { RuntimeProvider } from 'firebolt'
 
 import { Document } from '../../document.js'
 
@@ -92,7 +92,7 @@ const initRuntime = ({ routes, stack }) => {
       const route = resolveRoute(url)
       let metadata = null
       if (route.hasMetadata) {
-        const resp = await fetch(`/_galaxy/metadata?url=${url}`)
+        const resp = await fetch(`/_firebolt/metadata?url=${url}`)
         metadata = await resp.json()
         setMetadata(url, metadata)
       }
@@ -123,11 +123,11 @@ const initRuntime = ({ routes, stack }) => {
   return api
 }
 
-globalThis.$galaxy = initRuntime(globalThis.$galaxy)
+globalThis.$firebolt = initRuntime(globalThis.$firebolt)
 
 hydrateRoot(
   document,
-  <RuntimeProvider data={globalThis.$galaxy}>
+  <RuntimeProvider data={globalThis.$firebolt}>
     <Document />
   </RuntimeProvider>,
   {

@@ -251,7 +251,7 @@ function Route({ Page, data, ssr, url }) {
   if (ssr && metadata) {
     ssr.inserts.write(`
       <script>
-        globalThis.$galaxy.push('setMetadata', '${url}', ${JSON.stringify(metadata)})
+        globalThis.$firebolt.push('setMetadata', '${url}', ${JSON.stringify(metadata)})
       </script>
     `)
   }

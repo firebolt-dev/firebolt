@@ -14,6 +14,8 @@ const options = {
 
 let server
 
+console.log("=============== DELETE THIS IF YOU DONT SEE IT ===============")
+
 async function build() {
   log('build...')
   await esbuild.build({

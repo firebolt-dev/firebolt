@@ -1,4 +1,4 @@
-# Galaxy
+# Firebolt
 
 A lightweight react framework with all the essentials and simple documentation.
 
@@ -78,7 +78,7 @@ A lightweight react framework with all the essentials and simple documentation.
 
 ### Expire
 
-Your `getPageData()` can return an `expire` key which determines how long (in seconds) the pageData is valid for.
+Your `getMetadata()` can return an `expire` key which determines how long (in seconds) the metadata is valid for.
 
 1. If not set (undefined or null) the data never expires. Data will be loaded/fetched once and used forever.
 2. If set to 0, data expires immediately and will be re-fetched when coming back to that page
@@ -100,9 +100,9 @@ We use a custom router because we need to disconnect ACTUAL browser location fro
   - when browser path changes (virtual path hasnt)
     - resolve route
     - load route file if its missing
-    - if pageData is still valid (not expired) set virtual path to match and stop here
+    - if metadata is still valid (not expired) set virtual path to match and stop here
     - if route has a loading component, set virtual path to match
-    - fetch pageData for new route and update (broadcast? or maybe its all just here now)
+    - fetch metadata for new route and update (broadcast? or maybe its all just here now)
     - if route didnt have a loading component, update virtual path now
 
 ### Todos
@@ -118,7 +118,7 @@ We use a custom router because we need to disconnect ACTUAL browser location fro
 
 - [done] include ?foo=bar etc in params (like nextjs)
 - [done] make sure you can import and use 'react' stuff in Document?
-- rename getPageData to getMetadata
+- [done] getMetadata simple returns
   - can use this for instant/static metadata OR fetch stuff
     {
     title
@@ -126,20 +126,20 @@ We use a custom router because we need to disconnect ACTUAL browser location fro
     ...etc
     props
     }
-- what about static metadata (title, meta etc?) https://nextjs.org/docs/app/building-your-application/optimizing/metadata
+- [done] full renders for bots
+- support metadata og tags etc
 - api routes
-- calling api routes from getPageData ?
+- calling api routes from getMetadata ?
 - custom server.js
 - server.js inject db into requests?
 - in dev, watch files, rebuild and reload page via websocket signals (or re-hydrate root with new data?)
 - useLocation() -> { pathname, params{}, query{}, push, replace, prefetch, back, forward, reload }
 - navigation scroll to top and restoration
-- render 500.js if getPageData or render throws (500 status???)
+- render 500.js if getMetadata or render throws (500 status???)
 - render 404.js if cant find page (404 status)
 - if render itself crashes, server should try pages/500.js but if that also crashes send a fallback 500 page
-- pass a request object into getPageData with path, params and queries, and allow custom server.js to do things like inject a db into this request object
+- pass a request object into getMetadata with path, params and queries, and allow custom server.js to do things like inject a db into this request object
   - https://developer.mozilla.org/en-US/docs/Web/API/Request
-- full renders for bots
 - should everything be /app ?
 
 ### Neat Ideas
@@ -152,17 +152,17 @@ We use a custom router because we need to disconnect ACTUAL browser location fro
 ### Architecture
 
 - build (and watch)
-  - build the `galaxy` lib (used by both server and client)
-  - build the cli (galaxy dev, galaxy build, galaxy start)
+  - build the `firebolt` lib (used by both server and client)
+  - build the cli (firebolt dev, firebolt build, firebolt start)
   - build the bootstrapper (runtime + hydrate)
 - server
   - builds lib
   - exports
     - all from app/pages/\*
     - Document from app/document.js
-    - - as galaxy (aliased bui)
+    - - as firebolt (aliased bui)
 
 ### Loading (SSR)
 
-- if there is no Loading component, wait for getPageData (if any) first, then stream
-- if there is a Loading component, inject getPageData and then stream suspending
+- if there is no Loading component, wait for getMetadata (if any) first, then stream
+- if there is a Loading component, inject getMetadata and then stream suspending

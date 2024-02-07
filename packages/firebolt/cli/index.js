@@ -6,7 +6,7 @@ import { start } from './commands/start'
 
 const program = new Command()
 
-program.name('galaxy').description('A description').version('1.0.0')
+program.name('firebolt').description('A description').version('1.0.0')
 
 program.command('dev').action(dev)
 program.command('build').action(build)

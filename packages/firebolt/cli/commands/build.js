@@ -1,3 +1,3 @@
 export async function build() {
-  console.log('[galaxy] build')
+  console.log('[firebolt] build')
 }

@@ -1,4 +1,4 @@
-import { Link, css, useLocation } from 'galaxy'
+import { Link, css, useLocation } from 'firebolt'
 
 export default function BlogPost() {
   const location = useLocation()

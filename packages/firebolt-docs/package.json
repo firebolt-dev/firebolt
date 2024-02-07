@@ -1,14 +1,14 @@
 {
-  "name": "example",
+  "name": "firebolt-docs",
   "version": "1.0.0",
   "main": "src/index.js",
   "scripts": {
-    "dev": "galaxy dev",
-    "build": "galaxy build",
-    "start": "galaxy start"
+    "dev": "firebolt dev",
+    "build": "firebolt build",
+    "start": "firebolt start"
   },
   "devDependencies": {
-    "galaxy": "*",
+    "firebolt": "*",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   }

@@ -1,7 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import compression from 'compression'
-import { server } from 'galaxy'
+import { server } from 'firebolt'
 
 const app = express()
 

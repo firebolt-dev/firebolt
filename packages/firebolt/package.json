@@ -1,9 +1,9 @@
 {
-  "name": "galaxy",
+  "name": "firebolt",
   "version": "1.0.0",
   "description": "",
   "bin": {
-    "galaxy": "build/cli.js"
+    "firebolt": "build/cli.js"
   },
   "scripts": {
     "dev": "node ./build.mjs --watch",

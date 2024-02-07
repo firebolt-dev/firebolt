@@ -1,4 +1,4 @@
-import { Meta, Router, Style, css } from 'galaxy'
+import { Meta, Router, Style, css } from 'firebolt'
 
 export function Document() {
   return (

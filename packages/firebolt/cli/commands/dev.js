@@ -21,7 +21,7 @@ const match = matcher()
 
 export async function dev() {
   const appDir = process.cwd()
-  const buildDir = path.join(appDir, '.galaxy')
+  const buildDir = path.join(appDir, '.firebolt')
   const pagesDir = path.join(appDir, 'pages')
   const libPath = path.join(__dirname, 'lib.js')
 
@@ -68,7 +68,7 @@ export async function dev() {
   const coreCode = `
     ${routes.map(route => `export * as ${route.id} from '${route.buildToSrcPath}'`).join('\n')}
     export { Document } from '../document.js'
-    export * as galaxy from 'galaxy'
+    export * as firebolt from 'firebolt'
   `
   const coreFile = path.join(buildDir, 'core.js')
   await fs.writeFile(coreFile, coreCode)
@@ -85,7 +85,7 @@ export async function dev() {
     platform: 'node',
     external: ['react', 'react-dom', '@emotion/react'],
     alias: {
-      galaxy: libPath,
+      firebolt: libPath,
     },
     define: {
       'process.env.NODE_ENV': JSON.stringify(env),
@@ -118,8 +118,8 @@ export async function dev() {
     const code = `
       import Page from '${route.buildToSrcPath}'
       ${route.Loading ? `import { Loading } from '${route.buildToSrcPath}'` : ''}
-      ${!route.Loading ? `globalThis.$galaxy.push('registerPage', '${route.id}', Page)` : ''}
-      ${route.Loading ? `globalThis.$galaxy.push('registerPage', '${route.id}', Page, Loading)` : ''}
+      ${!route.Loading ? `globalThis.$firebolt.push('registerPage', '${route.id}', Page)` : ''}
+      ${route.Loading ? `globalThis.$firebolt.push('registerPage', '${route.id}', Page, Loading)` : ''}
     `
     await fs.outputFile(route.buildFile, code)
   }
@@ -144,7 +144,7 @@ export async function dev() {
     minify: prod,
     metafile: true,
     alias: {
-      galaxy: libPath,
+      firebolt: libPath,
     },
     define: {
       'process.env.NODE_ENV': JSON.stringify(env),
@@ -164,9 +164,9 @@ export async function dev() {
         route.buildFile.endsWith(output.entryPoint)
       )
       if (route) {
-        route.clientPath = file.replace('.galaxy/public', '')
+        route.clientPath = file.replace('.firebolt/public', '')
       } else {
-        runtimeBuildFile = file.replace('.galaxy/public', '')
+        runtimeBuildFile = file.replace('.firebolt/public', '')
       }
     }
   }
@@ -212,10 +212,10 @@ export async function dev() {
   server.use(compression())
   server.use(express.json())
   server.use(express.static('public'))
-  server.use(express.static('.galaxy/public'))
+  server.use(express.static('.firebolt/public'))
 
   // handle requests for page data
-  server.get('/_galaxy/metadata', async (req, res) => {
+  server.get('/_firebolt/metadata', async (req, res) => {
     const url = req.query.url
     const [route, params] = resolveRoute(url)
     if (!route) return res.json({})
@@ -230,7 +230,7 @@ export async function dev() {
     // handle page requests
     const [route, params] = resolveRoute(url)
     if (route) {
-      const RuntimeProvider = core.galaxy.RuntimeProvider
+      const RuntimeProvider = core.firebolt.RuntimeProvider
       const Document = core.Document
 
       const inserts = {
@@ -308,7 +308,7 @@ export async function dev() {
         bootstrapScriptContent: isBot
           ? ``
           : `
-          globalThis.$galaxy = {
+          globalThis.$firebolt = {
             ssr: null,
             routes: ${JSON.stringify(routesForClient)},
             stack: [],

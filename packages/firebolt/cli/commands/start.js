@@ -1,3 +1,3 @@
 export async function start() {
-  console.log('[galaxy] start')
+  console.log('[firebolt] start')
 }

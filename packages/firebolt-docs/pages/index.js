@@ -1,4 +1,4 @@
-import { css, Link } from 'galaxy'
+import { css, Link } from 'firebolt'
 
 export default function Home({ test }) {
   return (
