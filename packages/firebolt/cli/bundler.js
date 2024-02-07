@@ -28,17 +28,19 @@ export async function bundler(opts) {
   const wrapperBuildDir = path.join(appDir, '.firebolt', 'tmp', 'wrappers')
   const libFile = path.join(__dirname, 'lib.js')
   const coreBuildFile = path.join(buildDir, 'core.js')
-  const infoFile = path.join(buildDir, 'info.txt')
+  const manifestFile = path.join(buildDir, 'manifest.json')
 
   let core
-  let info
+  let manifest
 
   async function build() {
+    console.log('building...')
+
     // ensure we have an empty build directory
     await fs.emptyDir(buildDir)
 
-    // initialize info file
-    info = {
+    // initialize manifest
+    manifest = {
       clientPaths: {},
       runtimeBuildFile: null,
     }
@@ -197,17 +199,46 @@ export async function bundler(opts) {
           const route = core.routes.find(route => {
             return route.wrapperFileName === wrapperFileName
           })
-          info.clientPaths[route.id] = file.replace(
+          manifest.clientPaths[route.id] = file.replace(
             '.firebolt/public',
             '/_firebolt'
           )
         }
         if (output.entryPoint === '.firebolt/tmp/runtime/index.js') {
-          info.runtimeBuildFile = file.replace('.firebolt/public', '/_firebolt') // prettier-ignore
+          manifest.runtimeBuildFile = file.replace('.firebolt/public', '/_firebolt') // prettier-ignore
         }
       }
     }
-    await fs.outputFile(infoFile, JSON.stringify(info, null, 2))
+    await fs.outputFile(manifestFile, JSON.stringify(manifest, null, 2))
+
+    // build server
+    // await esbuild.build({
+    //   entryPoints: [serverFile],
+    //   outfile: serverBuildFile,
+    //   bundle: true,
+    //   treeShaking: true,
+    //   sourcemap: true,
+    //   minify: prod,
+    //   platform: 'node',
+    //   packages: 'external',
+    //   alias: {
+    //     firebolt: libFile,
+    //   },
+    //   define: {
+    //     'process.env.NODE_ENV': JSON.stringify(env),
+    //   },
+    //   loader: {
+    //     '.js': 'jsx',
+    //   },
+    //   jsx: 'automatic',
+    //   jsxImportSource: '@emotion/react',
+    // })
+
+    console.log('build complete')
+  }
+
+  async function serve() {
+    // ...
   }
 
   if (opts.build) {
@@ -219,15 +250,15 @@ export async function bundler(opts) {
     core = await import(coreBuildFile)
   }
 
-  // import build info
-  if (!info) {
-    info = await fs.readJSON(infoFile)
+  // import manifest
+  if (!manifest) {
+    manifest = await fs.readJSON(manifestFile)
   }
 
-  // hydrate build info
-  const runtimeBuildFile = info.runtimeBuildFile
+  // hydrate manifest
+  const runtimeBuildFile = manifest.runtimeBuildFile
   for (const route of core.routes) {
-    route.file = info.clientPaths[route.id]
+    route.file = manifest.clientPaths[route.id]
   }
 
   // build route definitions to be sent to client
@@ -339,8 +370,8 @@ export async function bundler(opts) {
         if (str.includes('</html>')) {
           afterHtml = true
         }
-        // console.log('---')
-        // console.log(str)
+        console.log('---')
+        console.log(str)
         res.write(str)
         res.flush()
       })

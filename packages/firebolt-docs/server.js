@@ -1,12 +1,12 @@
 import express from 'express'
 import cors from 'cors'
 import compression from 'compression'
-import { server } from 'firebolt'
+import { fireboltHandler } from 'firebolt'
 
 const app = express()
 
 app.use(cors())
 app.use(compression())
-app.use(server())
+app.use(fireboltHandler)
 
 app.listen(3000)

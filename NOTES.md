@@ -107,6 +107,7 @@ We use a custom router because we need to disconnect ACTUAL browser location fro
 
 ### Todos
 
+- drop support for nested page folders? they shouldnt be used
 - .firebolt structure
   - instead of public, use a public prefix like /\_firebolt/\* for client bundles
 - [done] global styles in Document
@@ -168,3 +169,8 @@ We use a custom router because we need to disconnect ACTUAL browser location fro
 
 - if there is no Loading component, wait for getMetadata (if any) first, then stream
 - if there is a Loading component, inject getMetadata and then stream suspending
+
+### Links
+
+- google rich results ssr link tester
+  - https://search.google.com/test/rich-results/result?id=pvSASzePp3ThAGCw9W9A_A
