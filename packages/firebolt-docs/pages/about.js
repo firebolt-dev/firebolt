@@ -1,5 +1,4 @@
 import { css } from 'firebolt'
-import { useId } from 'react'
 
 export default function About() {
   return (

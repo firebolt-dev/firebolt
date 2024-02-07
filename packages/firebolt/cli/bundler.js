@@ -9,9 +9,9 @@ import React from 'react'
 import { isbot } from 'isbot'
 import { PassThrough } from 'stream'
 
-import { getFilePaths } from '../utils/getFilePaths'
-import { fileToRoutePattern } from '../utils/fileToRoutePattern'
-import { matcher } from '../utils/matcher'
+import { getFilePaths } from './utils/getFilePaths'
+import { fileToRoutePattern } from './utils/fileToRoutePattern'
+import { matcher } from './utils/matcher'
 
 const port = 4004
 const env = process.env.NODE_ENV || 'development'
@@ -19,7 +19,7 @@ const prod = env === 'production'
 
 const match = matcher()
 
-export async function dev() {
+export async function bundler(opts) {
   const appDir = process.cwd()
   const buildDir = path.join(appDir, '.firebolt')
   const pagesDir = path.join(appDir, 'pages')
@@ -66,10 +66,10 @@ export async function dev() {
 
   // write core (an entry into the apps code for SSR)
   const coreCode = `
-    ${routes.map(route => `export * as ${route.id} from '${route.buildToSrcPath}'`).join('\n')}
-    export { Document } from '../document.js'
-    export * as firebolt from 'firebolt'
-  `
+        ${routes.map(route => `export * as ${route.id} from '${route.buildToSrcPath}'`).join('\n')}
+        export { Document } from '../document.js'
+        export * as firebolt from 'firebolt'
+      `
   const coreFile = path.join(buildDir, 'core.js')
   await fs.writeFile(coreFile, coreCode)
 
@@ -116,11 +116,11 @@ export async function dev() {
   // TODO: retain page function name?
   for (const route of routes) {
     const code = `
-      import Page from '${route.buildToSrcPath}'
-      ${route.Loading ? `import { Loading } from '${route.buildToSrcPath}'` : ''}
-      ${!route.Loading ? `globalThis.$firebolt.push('registerPage', '${route.id}', Page)` : ''}
-      ${route.Loading ? `globalThis.$firebolt.push('registerPage', '${route.id}', Page, Loading)` : ''}
-    `
+          import Page from '${route.buildToSrcPath}'
+          ${route.Loading ? `import { Loading } from '${route.buildToSrcPath}'` : ''}
+          ${!route.Loading ? `globalThis.$firebolt.push('registerPage', '${route.id}', Page)` : ''}
+          ${route.Loading ? `globalThis.$firebolt.push('registerPage', '${route.id}', Page, Loading)` : ''}
+        `
     await fs.outputFile(route.buildFile, code)
   }
 
