@@ -1,7 +1,7 @@
 import { hydrateRoot } from 'react-dom/client'
 import { RuntimeProvider } from 'firebolt'
 
-import { Document } from '../../document.js'
+import { Document } from '../../../document.js'
 
 import { matcher } from './matcher.js'
 
@@ -92,7 +92,7 @@ const initRuntime = ({ routes, stack }) => {
       const route = resolveRoute(url)
       let metadata = null
       if (route.hasMetadata) {
-        const resp = await fetch(`/_firebolt/metadata?url=${url}`)
+        const resp = await fetch(`/_firebolt_metadata?url=${url}`)
         metadata = await resp.json()
         setMetadata(url, metadata)
       }

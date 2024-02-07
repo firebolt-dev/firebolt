@@ -107,6 +107,8 @@ We use a custom router because we need to disconnect ACTUAL browser location fro
 
 ### Todos
 
+- .firebolt structure
+  - instead of public, use a public prefix like /\_firebolt/\* for client bundles
 - [done] global styles in Document
 - [done] rename Shell to Loading
 - [done] use a flat pages folder with files like blog.$postId+.js etc

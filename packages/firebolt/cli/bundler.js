@@ -21,31 +21,40 @@ const match = matcher()
 
 export async function bundler(opts) {
   const appDir = process.cwd()
-  const buildDir = path.join(appDir, '.firebolt')
   const pagesDir = path.join(appDir, 'pages')
-  const libPath = path.join(__dirname, 'lib.js')
+  const apiDir = path.join(appDir, 'api')
+
+  const buildDir = path.join(appDir, '.firebolt')
+  const wrapperBuildDir = path.join(appDir, '.firebolt', 'tmp', 'wrappers')
+  const libFile = path.join(__dirname, 'lib.js')
+
+  // ===== TODO: START BUILD FN =====
 
   // ensure we have an empty build directory
   await fs.emptyDir(buildDir)
 
-  // get list of route files (relative to pagesDir)
+  // get a list of page files
   const pageFiles = await getFilePaths(pagesDir)
 
-  // generate route details
+  // generate route info
   let ids = 0
   const routes = []
   for (const pageFile of pageFiles) {
     const id = `route${++ids}`
     const srcFile = pageFile
-    const buildFile = buildDir + '/' + pageFile.replace(pagesDir + '/', '').replace('/', '.') // prettier-ignore
+    const srcFileBase = path.relative(pagesDir, pageFile)
+    const wrapperFile = path.join(wrapperBuildDir, srcFileBase.replace('/', '.')) // prettier-ignore
+    const wrapperFileName = path.relative(path.dirname(wrapperFile), wrapperFile) // prettier-ignore
     const pattern = fileToRoutePattern(pageFile.replace(pagesDir, ''))
-    const buildToSrcPath = path.relative(path.dirname(buildFile), srcFile)
+    const relBuildToPageFile = path.relative(buildDir, srcFile)
+    const relWrapperToPageFile = path.relative(path.dirname(wrapperFile), srcFile) // prettier-ignore
     routes.push({
       id,
-      srcFile,
-      buildFile,
       pattern,
-      buildToSrcPath,
+      wrapperFile,
+      wrapperFileName,
+      relBuildToPageFile,
+      relWrapperToPageFile,
     })
   }
 
@@ -66,15 +75,36 @@ export async function bundler(opts) {
 
   // write core (an entry into the apps code for SSR)
   const coreCode = `
-        ${routes.map(route => `export * as ${route.id} from '${route.buildToSrcPath}'`).join('\n')}
-        export { Document } from '../document.js'
-        export * as firebolt from 'firebolt'
-      `
-  const coreFile = path.join(buildDir, 'core.js')
+    ${routes.map(route => `import * as ${route.id} from '${route.relBuildToPageFile}'`).join('\n')}
+    export const routes = [
+      ${routes
+        .map(route => {
+          return `
+          {
+            module: ${route.id},
+            id: '${route.id}',
+            pattern: '${route.pattern}',
+            wrapperFile: '${route.wrapperFile}',
+            wrapperFileName: '${route.wrapperFileName}',
+            relBuildToPageFile: '${route.relBuildToPageFile}',
+            relWrapperToPageFile: '${route.relWrapperToPageFile}',
+            Page: ${route.id}.default,
+            Loading: ${route.id}?.Loading,
+            getMetadata: ${route.id}?.getMetadata,
+            hasMetadata: !!${route.id}?.getMetadata,
+          },
+        `
+        })
+        .join('\n')}
+    ]
+    export { Document } from '../document.js'
+    export * as firebolt from 'firebolt'
+  `
+  const coreFile = path.join(buildDir, 'core.raw.js')
   await fs.writeFile(coreFile, coreCode)
 
   // build core
-  const coreBuildFile = path.join(buildDir, 'core.build.js')
+  const coreBuildFile = path.join(buildDir, 'core.js')
   await esbuild.build({
     entryPoints: [coreFile],
     outfile: coreBuildFile,
@@ -85,7 +115,7 @@ export async function bundler(opts) {
     platform: 'node',
     external: ['react', 'react-dom', '@emotion/react'],
     alias: {
-      firebolt: libPath,
+      firebolt: libFile,
     },
     define: {
       'process.env.NODE_ENV': JSON.stringify(env),
@@ -99,42 +129,35 @@ export async function bundler(opts) {
 
   // import core
   const core = await import(coreBuildFile)
-  for (const route of routes) {
-    route.module = core[route.id]
-    route.Page = core[route.id].default
-    route.Loading = core[route.id].Loading
-    route.getMetadata = core[route.id].getMetadata
-    route.hasMetadata = !!core[route.id].getMetadata
-  }
 
   // copy over runtime
   const runtimeSrc = path.join(__dirname, '../runtime')
-  const runtimeDir = path.join(buildDir, 'runtime')
+  const runtimeDir = path.join(buildDir, 'tmp', 'runtime')
   await fs.copy(runtimeSrc, runtimeDir)
 
   // generate client page bundles
   // TODO: retain page function name?
-  for (const route of routes) {
+  for (const route of core.routes) {
     const code = `
-          import Page from '${route.buildToSrcPath}'
-          ${route.Loading ? `import { Loading } from '${route.buildToSrcPath}'` : ''}
-          ${!route.Loading ? `globalThis.$firebolt.push('registerPage', '${route.id}', Page)` : ''}
-          ${route.Loading ? `globalThis.$firebolt.push('registerPage', '${route.id}', Page, Loading)` : ''}
-        `
-    await fs.outputFile(route.buildFile, code)
+      import Page from '${route.relWrapperToPageFile}'
+      ${route.Loading ? `import { Loading } from '${route.relWrapperToPageFile}'` : ''}
+      ${!route.Loading ? `globalThis.$firebolt.push('registerPage', '${route.id}', Page)` : ''}
+      ${route.Loading ? `globalThis.$firebolt.push('registerPage', '${route.id}', Page, Loading)` : ''}
+    `
+    await fs.outputFile(route.wrapperFile, code)
   }
 
   // build client bundles (pages + runtime)
-  const bundlesDir = path.join(buildDir, 'public')
-  const bundleFiles = []
-  for (const route of routes) {
-    bundleFiles.push(route.buildFile)
+  const publicDir = path.join(buildDir, 'public')
+  const publicFiles = []
+  for (const route of core.routes) {
+    publicFiles.push(route.wrapperFile)
   }
-  bundleFiles.push(runtimeDir)
+  publicFiles.push(runtimeDir)
   const bundleResult = await esbuild.build({
-    entryPoints: bundleFiles,
+    entryPoints: publicFiles,
     entryNames: '/[name]-[hash]',
-    outdir: bundlesDir,
+    outdir: publicDir,
     bundle: true,
     treeShaking: true,
     sourcemap: true,
@@ -144,7 +167,7 @@ export async function bundler(opts) {
     minify: prod,
     metafile: true,
     alias: {
-      firebolt: libPath,
+      firebolt: libFile,
     },
     define: {
       'process.env.NODE_ENV': JSON.stringify(env),
@@ -160,46 +183,48 @@ export async function bundler(opts) {
   for (const file in metafile.outputs) {
     const output = metafile.outputs[file]
     if (output.entryPoint) {
-      const route = routes.find(route =>
-        route.buildFile.endsWith(output.entryPoint)
-      )
-      if (route) {
-        route.clientPath = file.replace('.firebolt/public', '')
-      } else {
-        runtimeBuildFile = file.replace('.firebolt/public', '')
+      // page wrappers
+      if (output.entryPoint.startsWith('.firebolt/tmp/wrappers/')) {
+        const wrapperFileName = output.entryPoint.replace('.firebolt/tmp/wrappers/', '') // prettier-ignore
+        const route = core.routes.find(route => {
+          return route.wrapperFileName === wrapperFileName
+        })
+        route.clientPath = file.replace('.firebolt/public', '/_firebolt')
+      }
+      if (output.entryPoint === '.firebolt/tmp/runtime/index.js') {
+        runtimeBuildFile = file.replace('.firebolt/public', '/_firebolt')
       }
     }
   }
 
   // build route definitions to be sent to client
-  const routesForClient = routes.map(route => {
+  const routesForClient = core.routes.map(route => {
     return {
       id: route.id,
       pattern: route.pattern,
       file: route.clientPath,
       Page: null,
       Loading: null,
-      getMetadata: null,
-      hasMetadata: !!core[route.id].getMetadata,
+      hasMetadata: route.hasMetadata,
     }
   })
 
   // build route definitions to be used on server
-  const routesForServer = routes.map(route => {
+  const routesForServer = core.routes.map(route => {
     return {
       id: route.id,
       pattern: route.pattern,
       file: route.clientPath,
-      Page: core[route.id].default,
-      Loading: core[route.id].Loading,
-      getMetadata: core[route.id].getMetadata,
-      hasMetadata: !!core[route.id].getMetadata,
+      Page: route.Page,
+      Loading: route.Loading,
+      getMetadata: route.getMetadata,
+      hasMetadata: route.hasMetadata,
     }
   })
 
   // utility to find a route from a url
   function resolveRoute(url) {
-    for (const route of routes) {
+    for (const route of core.routes) {
       const [hit, params] = match(route.pattern, url)
       if (hit) return [route, params]
     }
@@ -212,10 +237,10 @@ export async function bundler(opts) {
   server.use(compression())
   server.use(express.json())
   server.use(express.static('public'))
-  server.use(express.static('.firebolt/public'))
+  server.use('/_firebolt', express.static('.firebolt/public'))
 
   // handle requests for page data
-  server.get('/_firebolt/metadata', async (req, res) => {
+  server.get('/_firebolt_metadata', async (req, res) => {
     const url = req.query.url
     const [route, params] = resolveRoute(url)
     if (!route) return res.json({})
@@ -294,8 +319,8 @@ export async function bundler(opts) {
         if (str.includes('</html>')) {
           afterHtml = true
         }
-        console.log('---')
-        console.log(str)
+        // console.log('---')
+        // console.log(str)
         res.write(str)
         res.flush()
       })
