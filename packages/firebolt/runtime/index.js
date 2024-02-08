@@ -8,8 +8,6 @@ import { matcher } from './matcher.js'
 const match = matcher()
 
 const initRuntime = ({ routes, stack }) => {
-  const metadataByUrl = {} // [url]: Object
-  const metadataLoaders = {} // [url]: Promise
   let headTags = []
   const headListeners = new Set()
 
@@ -18,12 +16,9 @@ const initRuntime = ({ routes, stack }) => {
     routes,
     push,
     registerPage,
-    setMetadata,
-    getMetadata,
     loadRoute,
     loadRouteByUrl,
     resolveRoute,
-    fetchMetadata,
     getHeadTags,
     insertHeadTags,
     onHeadTags,
@@ -36,42 +31,9 @@ const initRuntime = ({ routes, stack }) => {
     api[action](...args)
   }
 
-  function registerPage(routeId, Page, Loading) {
+  function registerPage(routeId, Page) {
     const route = routes.find(route => route.id === routeId)
     route.Page = Page
-    route.Loading = Loading
-  }
-
-  function setMetadata(url, metadata) {
-    if (metadata) {
-      if (metadata.expire === 0) {
-        // expire immediately
-        metadata.expireImmediately = true
-      } else if (metadata.expire > 0) {
-        // expire in X seconds
-        metadata.expireAt = new Date().getTime() + metadata.expire * 1000
-      } else {
-        // never expire
-        metadata.expireNever = true
-      }
-    }
-    metadataByUrl[url] = metadata
-  }
-
-  function getMetadata(url, skipExpire) {
-    let metadata = metadataByUrl[url]
-    if (!metadata) return null
-    if (metadata.expireNever) {
-      metadata.shouldExpire = false
-    } else if (metadata.expireImmediately) {
-      metadata.shouldExpire = true
-    } else {
-      metadata.shouldExpire = new Date().getTime() >= metadata.expireAt
-    }
-    if (metadata.shouldExpire && !skipExpire) {
-      delete metadataByUrl[url]
-    }
-    return metadata
   }
 
   async function loadRoute(route) {
@@ -91,23 +53,23 @@ const initRuntime = ({ routes, stack }) => {
     return routes.find(route => match(route.pattern, url)[0])
   }
 
-  function fetchMetadata(url) {
-    if (metadataLoaders[url]) return metadataLoaders[url]
-    const promise = new Promise(async resolve => {
-      // if route has no getMetadata() then resolve with empty metadata
-      const route = resolveRoute(url)
-      let metadata = null
-      if (route.hasMetadata) {
-        const resp = await fetch(`/_firebolt_metadata?url=${url}`)
-        metadata = await resp.json()
-        setMetadata(url, metadata)
-      }
-      delete metadataLoaders[url]
-      resolve(metadata)
-    })
-    metadataLoaders[url] = promise
-    return promise
-  }
+  // function fetchMetadata(url) {
+  //   if (metadataLoaders[url]) return metadataLoaders[url]
+  //   const promise = new Promise(async resolve => {
+  //     // if route has no getMetadata() then resolve with empty metadata
+  //     const route = resolveRoute(url)
+  //     let metadata = null
+  //     if (route.hasMetadata) {
+  //       const resp = await fetch(`/_firebolt_metadata?url=${url}`)
+  //       metadata = await resp.json()
+  //       setMetadata(url, metadata)
+  //     }
+  //     delete metadataLoaders[url]
+  //     resolve(metadata)
+  //   })
+  //   metadataLoaders[url] = promise
+  //   return promise
+  // }
 
   function getHeadTags() {
     return headTags

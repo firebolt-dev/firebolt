@@ -139,9 +139,6 @@ export async function bundler(opts) {
               relBuildToPageFile: '${route.relBuildToPageFile}',
               relWrapperToPageFile: '${route.relWrapperToPageFile}',
               Page: ${route.id}.default,
-              Loading: ${route.id}?.Loading,
-              getMetadata: ${route.id}?.getMetadata,
-              hasMetadata: !!${route.id}?.getMetadata,
             },
           `
           })
@@ -189,9 +186,7 @@ export async function bundler(opts) {
     for (const route of core.routes) {
       const code = `
         import Page from '${route.relWrapperToPageFile}'
-        ${route.Loading ? `import { Loading } from '${route.relWrapperToPageFile}'` : ''}
-        ${!route.Loading ? `globalThis.$firebolt.push('registerPage', '${route.id}', Page)` : ''}
-        ${route.Loading ? `globalThis.$firebolt.push('registerPage', '${route.id}', Page, Loading)` : ''}
+        globalThis.$firebolt.push('registerPage', '${route.id}', Page)
       `
       await fs.outputFile(route.wrapperFile, code)
     }
@@ -328,8 +323,6 @@ export async function bundler(opts) {
       pattern: route.pattern,
       file: route.file,
       Page: null,
-      Loading: null,
-      hasMetadata: route.hasMetadata,
     }
   })
 
@@ -351,13 +344,13 @@ export async function bundler(opts) {
   server.use('/_firebolt', express.static('.firebolt/public'))
 
   // handle requests for page data
-  server.get('/_firebolt_metadata', async (req, res) => {
-    const url = req.query.url
-    const [route, params] = resolveRoute(url)
-    if (!route) return res.json({})
-    const metadata = await route.getMetadata() // todo: pass in params? request?
-    return res.json(metadata)
-  })
+  // server.get('/_firebolt_metadata', async (req, res) => {
+  //   const url = req.query.url
+  //   const [route, params] = resolveRoute(url)
+  //   if (!route) return res.json({})
+  //   const metadata = await route.getMetadata() // todo: pass in params? request?
+  //   return res.json(metadata)
+  // })
 
   // handle requests for pages and api
   server.use('*', async (req, res) => {
@@ -416,11 +409,6 @@ export async function bundler(opts) {
       }
 
       const isBot = isbot(req.get('user-agent') || '')
-
-      // crawlers need to pre-fetch metadata and inject it for both <Meta/> and <Router/> to consume
-      if (isBot && route.getMetadata) {
-        runtime.ssr.botMetadata = await route.getMetadata()
-      }
 
       function Root() {
         return (

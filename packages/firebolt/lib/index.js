@@ -212,13 +212,6 @@ export function Router() {
         console.log('cancelled')
         return
       }
-      let metadata = runtime.getMetadata(url, true)
-      const noMetadata = !metadata || metadata.shouldExpire
-      if (!route.Loading && noMetadata) {
-        console.log('no Loading or metadata... prefetching metadata')
-        metadata = await runtime.fetchMetadata(url)
-        console.log('prefetched', metadata)
-      }
       setCurrentUrl(url)
     }
     exec()
@@ -226,25 +219,6 @@ export function Router() {
       cancelled = true
     }
   }, [browserUrl])
-
-  // const data = useMemo(() => {
-  //   if (runtime.ssr) {
-  //     if (runtime.ssr.botMetadata) {
-  //       return createResource(runtime.ssr.botMetadata)
-  //     } else if (getMetadata) {
-  //       return createResource(getMetadata())
-  //     } else {
-  //       return createResource(null)
-  //     }
-  //   } else {
-  //     const data = runtime.getMetadata(currentUrl)
-  //     if (data) {
-  //       return createResource(data)
-  //     } else {
-  //       return createResource(runtime.fetchMetadata(currentUrl))
-  //     }
-  //   }
-  // }, [currentUrl])
 
   const location = useMemo(() => {
     return {
@@ -273,7 +247,6 @@ export function Router() {
 
 export function useSuspense(fn, ...args) {
   const runtime = useContext(RuntimeContext)
-  console.log('runtime', runtime)
   const key = args.join('|')
   let resource = runtime.getResource(key)
   if (!resource) {
