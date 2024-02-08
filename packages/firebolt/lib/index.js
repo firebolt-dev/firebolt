@@ -1,19 +1,43 @@
 import React, {
+  Children,
+  cloneElement,
   createContext,
   isValidElement,
   useContext,
   useEffect,
   useState,
-  cloneElement,
   useRef,
   useInsertionEffect,
   useMemo,
   Suspense,
+  useLayoutEffect,
+  useId,
 } from 'react'
 import { css } from '@emotion/react'
 import { matcher } from './matcher'
 
 export { css }
+
+export const mergeChildSets = sets => {
+  const flattened = []
+  for (const set of sets) {
+    flattened.push(...Children.toArray(set))
+  }
+  const merged = []
+  flattened.forEach(elem => {
+    if (elem.key) {
+      const idx = merged.findIndex(c => c.key === elem.key)
+      if (idx !== -1) {
+        merged[idx] = elem
+      } else {
+        merged.push(elem)
+      }
+    } else {
+      merged.push(elem)
+    }
+  })
+  return merged
+}
 
 export function Style(props) {
   return <style>{props.children.styles}</style>
@@ -56,43 +80,44 @@ export function Link(props) {
 
 const RuntimeContext = createContext()
 
-export function Meta() {
+export function Head({ children }) {
   const runtime = useContext(RuntimeContext)
-  const [metadata, setMetadata] = useState(() => {
-    if (runtime.ssr) {
-      // when crawlers request we wait for metadata and provide it here
-      return runtime.ssr.botMetadata
-    }
-  })
-
+  // server renders empty head and registers children to be inserted on first flush
+  if (runtime.ssr) {
+    runtime.insertHeadMain(children)
+    return <head />
+  }
+  // client first renders server provided head to match and then subscribes to changes
+  const [tags, setTags] = useState(() => runtime.getHeadTags())
   useEffect(() => {
-    const metadata = runtime.getMetadata(
-      location.pathname + location.search,
-      true
-    )
-    setMetadata(metadata)
-    // subscribe to metadata changes
-    return runtime.onMeta(metadata => {
-      setMetadata(metadata)
+    return runtime.onHeadTags(tags => {
+      setTags(tags)
     })
   }, [])
-
+  if (!globalThis.__fireboldHeadHydrated) {
+    globalThis.__fireboldHeadHydrated = true
+    return (
+      <head dangerouslySetInnerHTML={{ __html: document.head.innerHTML }} />
+    )
+  }
   return (
-    <>
-      {metadata?.title && <title>{metadata.title}</title>}
-      {metadata?.description && (
-        <meta name='description' content={metadata.description} />
-      )}
-      {metadata?.meta?.map((meta, idx) => (
-        <meta
-          key={meta.key || idx}
-          name={meta.name}
-          property={meta.property}
-          content={meta.content}
-        />
-      ))}
-    </>
+    <head>
+      {mergeChildSets(tags)}
+      {children}
+    </head>
   )
+}
+
+export function Meta({ children }) {
+  const runtime = useContext(RuntimeContext)
+  // server inserts immediately for injection
+  if (runtime.ssr) {
+    runtime.insertHeadTags(children)
+  }
+  // client inserts on mount (post hydration)
+  useLayoutEffect(() => {
+    return runtime.insertHeadTags(children)
+  }, [children])
 }
 
 export function RuntimeProvider({ data, children }) {
@@ -153,9 +178,9 @@ function resolveRouteAndParams(routes, url) {
 export function Router() {
   const runtime = useContext(RuntimeContext)
   const [browserUrl, setBrowserUrl] = useState(runtime.ssr?.url || globalThis.location.pathname + globalThis.location.search) // prettier-ignore
-  const [virtualUrl, setVirtualUrl] = useState(browserUrl)
-  const [route, params] = resolveRouteAndParams(runtime.routes, virtualUrl)
-  const { Page, Loading, getMetadata } = route
+  const [currentUrl, setCurrentUrl] = useState(browserUrl)
+  const [route, params] = resolveRouteAndParams(runtime.routes, currentUrl)
+  const { Page } = route
 
   useEffect(() => {
     function onChange(e) {
@@ -172,29 +197,29 @@ export function Router() {
   }, [])
 
   useEffect(() => {
-    if (browserUrl === virtualUrl) return
+    if (browserUrl === currentUrl) return
     let cancelled
     const exec = async () => {
-      // console.log('browserUrl changed:', url)
       const url = browserUrl
+      console.log('browserUrl changed:', url)
       const route = runtime.resolveRoute(url)
-      // console.log('route', route)
+      console.log('route', route)
       if (!route.Page) {
-        // console.log('missing Page, loading it')
+        console.log('missing Page, loading it')
         await runtime.loadRoute(route)
       }
       if (cancelled) {
-        // console.log('cancelled')
+        console.log('cancelled')
         return
       }
       let metadata = runtime.getMetadata(url, true)
       const noMetadata = !metadata || metadata.shouldExpire
       if (!route.Loading && noMetadata) {
-        // console.log('no Loading or metadata... prefetching metadata')
+        console.log('no Loading or metadata... prefetching metadata')
         metadata = await runtime.fetchMetadata(url)
-        // console.log('prefetched', metadata)
+        console.log('prefetched', metadata)
       }
-      setVirtualUrl(url)
+      setCurrentUrl(url)
     }
     exec()
     return () => {
@@ -202,66 +227,75 @@ export function Router() {
     }
   }, [browserUrl])
 
-  const data = useMemo(() => {
-    if (runtime.ssr) {
-      if (runtime.ssr.botMetadata) {
-        return resource(runtime.ssr.botMetadata)
-      } else if (getMetadata) {
-        return resource(getMetadata())
-      } else {
-        return resource(null)
-      }
-    } else {
-      const data = runtime.getMetadata(virtualUrl)
-      if (data) {
-        return resource(data)
-      } else {
-        return resource(runtime.fetchMetadata(virtualUrl))
-      }
-    }
-  }, [virtualUrl])
+  // const data = useMemo(() => {
+  //   if (runtime.ssr) {
+  //     if (runtime.ssr.botMetadata) {
+  //       return createResource(runtime.ssr.botMetadata)
+  //     } else if (getMetadata) {
+  //       return createResource(getMetadata())
+  //     } else {
+  //       return createResource(null)
+  //     }
+  //   } else {
+  //     const data = runtime.getMetadata(currentUrl)
+  //     if (data) {
+  //       return createResource(data)
+  //     } else {
+  //       return createResource(runtime.fetchMetadata(currentUrl))
+  //     }
+  //   }
+  // }, [currentUrl])
 
   const location = useMemo(() => {
     return {
-      url: virtualUrl,
+      url: currentUrl,
       params,
     }
-  }, [virtualUrl, params])
+  }, [currentUrl, params])
 
   // console.log('-')
   // console.log('browserUrl', browserUrl)
-  // console.log('virtualUrl', virtualUrl)
+  // console.log('currentUrl', currentUrl)
   // console.log('runtime', runtime)
   // console.log('route', route, params)
   // console.log('-')
 
+  // todo: remove Loading components now
+
   return (
     <LocationProvider value={location}>
-      <Suspense fallback={Loading && <Loading />}>
-        <Route Page={Page} data={data} ssr={runtime.ssr} url={virtualUrl} />
+      <Suspense fallback={<div>Loading temp...</div>}>
+        <Page />
       </Suspense>
     </LocationProvider>
   )
 }
 
-function Route({ Page, data, ssr, url }) {
+export function useSuspense(fn, ...args) {
   const runtime = useContext(RuntimeContext)
-  const metadata = data?.()
-  // console.log('metadata', metadata)
-  if (ssr && metadata) {
-    ssr.inserts.write(`
-      <script>
-        globalThis.$firebolt.push('setMetadata', '${url}', ${JSON.stringify(metadata)})
-      </script>
-    `)
+  console.log('runtime', runtime)
+  const key = args.join('|')
+  let resource = runtime.getResource(key)
+  if (!resource) {
+    const resolve = async (...args) => {
+      const data = await fn(...args)
+      if (runtime.ssr) {
+        runtime.ssr.inserts.write(`
+          <script>
+            globalThis.$firebolt.setResourceData(${key}, ${JSON.stringify(data)})
+          </script>
+        `)
+      }
+      return data
+    }
+    const res = createResource(resolve(...args))
+    runtime.setResource(key, res)
+    resource = res
   }
-  useEffect(() => {
-    runtime.emitMeta(metadata)
-  }, [metadata])
-  return <Page {...metadata?.props} />
+  return resource()
 }
 
-function resource(dataOrPromise) {
+function createResource(dataOrPromise) {
   let value
   let status
   let promise

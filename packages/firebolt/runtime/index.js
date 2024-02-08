@@ -1,5 +1,5 @@
 import { hydrateRoot } from 'react-dom/client'
-import { RuntimeProvider } from 'firebolt'
+import { RuntimeProvider, Router } from 'firebolt'
 
 import { Document } from '../../../document.js'
 
@@ -10,6 +10,8 @@ const match = matcher()
 const initRuntime = ({ routes, stack }) => {
   const metadataByUrl = {} // [url]: Object
   const metadataLoaders = {} // [url]: Promise
+  let headTags = []
+  const headListeners = new Set()
 
   const api = {
     ssr: null,
@@ -22,8 +24,12 @@ const initRuntime = ({ routes, stack }) => {
     loadRouteByUrl,
     resolveRoute,
     fetchMetadata,
-    emitMeta,
-    onMeta,
+    getHeadTags,
+    insertHeadTags,
+    onHeadTags,
+    getResource,
+    setResource,
+    setResourceData,
   }
 
   function push(action, ...args) {
@@ -103,17 +109,40 @@ const initRuntime = ({ routes, stack }) => {
     return promise
   }
 
-  const metaListeners = new Set()
+  function getHeadTags() {
+    return headTags
+  }
 
-  function emitMeta(metadata) {
-    for (const listener of metaListeners) {
-      listener(metadata)
+  function insertHeadTags(tags) {
+    headTags = [...headTags, tags]
+    for (const callback of headListeners) {
+      callback(headTags)
+    }
+    return () => {
+      headTags = headTags.filter(t => t !== tags)
+      for (const callback of headListeners) {
+        callback(headTags)
+      }
     }
   }
 
-  function onMeta(listener) {
-    metaListeners.add(listener)
-    return () => metaListeners.delete(listener)
+  function onHeadTags(callback) {
+    headListeners.add(callback)
+    return () => headListeners.delete(callback)
+  }
+
+  const resources = {}
+
+  function getResource(key) {
+    return resources[key]
+  }
+
+  function setResource(key, resource) {
+    resources[key] = resource
+  }
+
+  function setResourceData(key, data) {
+    resources[key] = () => data
   }
 
   for (const item of stack) {
@@ -128,7 +157,9 @@ globalThis.$firebolt = initRuntime(globalThis.$firebolt)
 hydrateRoot(
   document,
   <RuntimeProvider data={globalThis.$firebolt}>
-    <Document />
+    <Document>
+      <Router />
+    </Document>
   </RuntimeProvider>,
   {
     // onRecoverableError(err) {

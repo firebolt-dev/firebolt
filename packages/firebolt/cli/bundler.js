@@ -4,20 +4,27 @@ import * as esbuild from 'esbuild'
 import express from 'express'
 import cors from 'cors'
 import compression from 'compression'
-import { renderToPipeableStream } from 'react-dom/server'
+import { renderToPipeableStream, renderToStaticMarkup } from 'react-dom/server'
 import React from 'react'
 import { isbot } from 'isbot'
 import { PassThrough } from 'stream'
+import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 
 import { getFilePaths } from './utils/getFilePaths'
 import { fileToRoutePattern } from './utils/fileToRoutePattern'
 import { matcher } from './utils/matcher'
+import { defaultsDeep } from 'lodash'
 
 const port = 4004
 const env = process.env.NODE_ENV || 'development'
 const prod = env === 'production'
 
 const match = matcher()
+
+// suppress React warning about useLayoutEffect on server, this is nonsense because useEffect
+// is similar and doesn't warn and is allowed in SSR
+// see: https://gist.github.com/gaearon/e7d97cdf38a2907924ea12e4ebdf3c85
+React.useLayoutEffect = React.useEffect
 
 export async function bundler(opts) {
   const appDir = process.cwd()
@@ -26,6 +33,8 @@ export async function bundler(opts) {
 
   const buildDir = path.join(appDir, '.firebolt')
   const wrapperBuildDir = path.join(appDir, '.firebolt', 'tmp', 'wrappers')
+  const configSrcFile = path.join(appDir, '.firebolt', 'tmp', 'config.js') // prettier-ignore
+  const configBuildFile = path.join(appDir, '.firebolt', 'tmp', 'config.build.js') // prettier-ignore
   const libFile = path.join(__dirname, 'lib.js')
   const coreBuildFile = path.join(buildDir, 'core.js')
   const manifestFile = path.join(buildDir, 'manifest.json')
@@ -38,6 +47,35 @@ export async function bundler(opts) {
 
     // ensure we have an empty build directory
     await fs.emptyDir(buildDir)
+
+    // build and import config
+    const configScript = `
+      export { default as config } from '../../firebolt.config.js'
+    `
+    await fs.outputFile(configSrcFile, configScript)
+    await esbuild.build({
+      entryPoints: [configSrcFile],
+      outfile: configBuildFile,
+      bundle: true,
+      treeShaking: true,
+      sourcemap: false,
+      minify: false,
+      platform: 'node',
+      packages: 'external',
+      define: {
+        'process.env.NODE_ENV': JSON.stringify(env),
+      },
+      loader: {
+        '.js': 'jsx',
+      },
+      jsx: 'automatic',
+      jsxImportSource: '@emotion/react',
+    })
+    const configModule = await import(`${configBuildFile}?v=${Date.now()}`)
+    const config = configModule.config()
+    defaultsDeep(config, {
+      external: [],
+    })
 
     // initialize manifest
     manifest = {
@@ -124,7 +162,8 @@ export async function bundler(opts) {
       sourcemap: true,
       minify: prod,
       platform: 'node',
-      external: ['react', 'react-dom', '@emotion/react'],
+      packages: 'external',
+      // external: ['react', 'react-dom', '@emotion/react', ...config.external],
       alias: {
         firebolt: libFile,
       },
@@ -147,7 +186,6 @@ export async function bundler(opts) {
     await fs.copy(runtimeSrc, runtimeDir)
 
     // generate client page bundles
-    // TODO: retain page function name?
     for (const route of core.routes) {
       const code = `
         import Page from '${route.relWrapperToPageFile}'
@@ -174,6 +212,8 @@ export async function bundler(opts) {
       sourcemap: true,
       splitting: true,
       platform: 'browser',
+      // mainFields: ["browser", "module", "main"],
+      // external: ['fs', 'path', 'util', /*...config.external*/],
       format: 'esm',
       minify: prod,
       metafile: true,
@@ -188,6 +228,26 @@ export async function bundler(opts) {
       },
       jsx: 'automatic',
       jsxImportSource: '@emotion/react',
+      plugins: [
+        // polyfill fs, path etc for browser environment
+        polyfillNode({}),
+        // ensure pages are marked side-effect free for tree shaking
+        {
+          name: 'no-side-effects',
+          setup(build) {
+            build.onResolve({ filter: /.*/ }, async args => {
+              // ignore this if we called ourselves
+              if (args.pluginData) return
+              const { path, ...rest } = args
+              // avoid infinite recursion
+              rest.pluginData = true
+              const result = await build.resolve(path, rest)
+              result.sideEffects = false
+              return result
+            })
+          },
+        },
+      ],
     })
     const metafile = bundleResult.metafile
     for (const file in metafile.outputs) {
@@ -307,6 +367,8 @@ export async function bundler(opts) {
     const [route, params] = resolveRoute(url)
     if (route) {
       const RuntimeProvider = core.firebolt.RuntimeProvider
+      const Router = core.firebolt.Router
+      const mergeChildSets = core.firebolt.mergeChildSets
       const Document = core.Document
 
       const inserts = {
@@ -321,6 +383,10 @@ export async function bundler(opts) {
         },
       }
 
+      let headTags = []
+      let headMain
+      const resources = {}
+
       const runtime = {
         ssr: {
           url,
@@ -328,6 +394,25 @@ export async function bundler(opts) {
           inserts,
         },
         routes: core.routes,
+        getHeadTags() {
+          return [] // irrelevent
+        },
+        insertHeadMain(children) {
+          headMain = children
+        },
+        insertHeadTags(children) {
+          headTags.push(children)
+        },
+        getHeadContent() {
+          const elems = mergeChildSets([...headTags, headMain])
+          return renderToStaticMarkup(elems) || ''
+        },
+        getResource(key) {
+          return resources[key]
+        },
+        setResource(key, resource) {
+          resources[key] = resource
+        },
       }
 
       const isBot = isbot(req.get('user-agent') || '')
@@ -340,14 +425,17 @@ export async function bundler(opts) {
       function Root() {
         return (
           <RuntimeProvider data={runtime}>
-            <Document />
+            <Document>
+              <Router />
+            </Document>
           </RuntimeProvider>
         )
       }
 
       // transform stream to:
-      // 1. insert suspense data
-      // 2. extract and prepend inlined emotion styles
+      // 1. insert head content
+      // 2. insert streamed suspense resource data
+      // 3. extract and prepend inlined emotion styles
       let afterHtml
       const stream = new PassThrough()
       stream.on('data', chunk => {
@@ -369,11 +457,15 @@ export async function bundler(opts) {
         // mark after html
         if (str.includes('</html>')) {
           afterHtml = true
+          // inject head content
+          str = str.replace('<head>', '<head>' + runtime.getHeadContent())
         }
-        console.log('---')
-        console.log(str)
+        // console.log('---')
+        // console.log(str)
         res.write(str)
-        res.flush()
+        if (afterHtml) {
+          res.flush()
+        }
       })
       stream.on('end', () => {
         res.end()
@@ -382,7 +474,7 @@ export async function bundler(opts) {
       let didError = false
       const { pipe, abort } = renderToPipeableStream(<Root />, {
         bootstrapScriptContent: isBot
-          ? ``
+          ? undefined
           : `
           globalThis.$firebolt = {
             ssr: null,
@@ -405,7 +497,8 @@ export async function bundler(opts) {
           if (isBot) {
             res.statusCode = didError ? 500 : 200
             res.setHeader('Content-Type', 'text/html')
-            pipe(res)
+            // pipe(res)
+            pipe(stream)
           }
         },
       })

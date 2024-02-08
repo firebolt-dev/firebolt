@@ -8,6 +8,7 @@
     "start": "firebolt start"
   },
   "devDependencies": {
+    "better-sqlite3": "^9.4.0",
     "firebolt": "*",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
