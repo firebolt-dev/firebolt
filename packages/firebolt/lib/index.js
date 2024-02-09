@@ -222,6 +222,7 @@ export function Router() {
 
   const location = useMemo(() => {
     return {
+      routeId: route.id,
       url: currentUrl,
       params,
     }
@@ -239,60 +240,64 @@ export function Router() {
   return (
     <LocationProvider value={location}>
       <Suspense fallback={<div>Loading temp...</div>}>
-        <Page />
+        <Page /*key={currentUrl}*/ />
       </Suspense>
     </LocationProvider>
   )
 }
 
-export function useSuspense(fn, ...args) {
+export function useData(fnName, ...args) {
+  const { routeId } = useLocation()
   const runtime = useContext(RuntimeContext)
-  const key = args.join('|')
-  let resource = runtime.getResource(key)
-  if (!resource) {
-    const resolve = async (...args) => {
-      const data = await fn(...args)
-      if (runtime.ssr) {
-        runtime.ssr.inserts.write(`
-          <script>
-            globalThis.$firebolt.setResourceData(${key}, ${JSON.stringify(data)})
-          </script>
-        `)
-      }
-      return data
-    }
-    const res = createResource(resolve(...args))
-    runtime.setResource(key, res)
-    resource = res
-  }
-  return resource()
+  const loader = runtime.getLoader(routeId, fnName, args)
+  return loader
 }
 
-function createResource(dataOrPromise) {
-  let value
-  let status
-  let promise
-  if (dataOrPromise instanceof Promise) {
-    value = null
-    status = 'pending'
-    promise = dataOrPromise.then(
-      resp => {
-        status = 'success'
-        value = resp
-      },
-      err => {
-        status = 'error'
-        value = err
-      }
-    )
-  } else {
-    value = dataOrPromise
-    status = 'success'
-    promise = null
-  }
-  return () => {
-    if (status === 'success') return value
-    if (status === 'pending') throw promise
-    if (status === 'error') throw value
-  }
-}
+// function createResource(promise) {
+//   let status = 'pending'
+//   let value
+//   promise = promise.then(
+//     resp => {
+//       status = 'success'
+//       value = resp
+//     },
+//     err => {
+//       status = 'error'
+//       value = err
+//     }
+//   )
+//   return () => {
+//     if (status === 'success') return value
+//     if (status === 'pending') throw promise
+//     if (status === 'error') throw value
+//   }
+// }
+
+// function _createResource(dataOrPromise) {
+//   let value
+//   let status
+//   let promise
+//   if (dataOrPromise instanceof Promise) {
+//     value = null
+//     status = 'pending'
+//     promise = dataOrPromise.then(
+//       resp => {
+//         status = 'success'
+//         value = resp
+//       },
+//       err => {
+//         status = 'error'
+//         value = err
+//       }
+//     )
+//   } else {
+//     value = dataOrPromise
+//     status = 'success'
+//     promise = null
+//   }
+//   return () => {
+//     if (status === 'success') return value
+//     if (status === 'pending') throw promise
+//     if (status === 'error') throw value
+//   }
+// }

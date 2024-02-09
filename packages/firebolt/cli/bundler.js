@@ -335,6 +335,21 @@ export async function bundler(opts) {
     return []
   }
 
+  // utility to call route functions (data and actions)
+  async function callRouteFn(routeId, fnName, args) {
+    // TODO: req needs to exist
+    const req = {}
+    const route = core.routes.find(r => r.id === routeId)
+    if (!route) throw new Error('Route not found')
+    const fn = route.module[fnName]
+    if (!fn) throw new Error('Invalid function')
+    let result = fn(req, ...args)
+    if (result instanceof Promise) {
+      result = await result
+    }
+    return result
+  }
+
   // start server
   const server = express()
   server.use(cors())
@@ -343,14 +358,17 @@ export async function bundler(opts) {
   server.use(express.static('public'))
   server.use('/_firebolt', express.static('.firebolt/public'))
 
-  // handle requests for page data
-  // server.get('/_firebolt_metadata', async (req, res) => {
-  //   const url = req.query.url
-  //   const [route, params] = resolveRoute(url)
-  //   if (!route) return res.json({})
-  //   const metadata = await route.getMetadata() // todo: pass in params? request?
-  //   return res.json(metadata)
-  // })
+  // handle data and action function calls
+  server.post('/_firebolt_fn', async (req, res) => {
+    const { routeId, fnName, args } = req.body
+    let result
+    try {
+      result = await callRouteFn(routeId, fnName, args)
+    } catch (err) {
+      return res.status(400).send(err.message)
+    }
+    res.status(200).json(result)
+  })
 
   // handle requests for pages and api
   server.use('*', async (req, res) => {
@@ -364,6 +382,8 @@ export async function bundler(opts) {
       const mergeChildSets = core.firebolt.mergeChildSets
       const Document = core.Document
 
+      console.log(core)
+
       const inserts = {
         value: '',
         read() {
@@ -376,9 +396,21 @@ export async function bundler(opts) {
         },
       }
 
+      // const ssr = {
+      //   url,
+      //   params,
+      //   inserts,
+      // }
+
+      // const runtime = createRuntime({ ssr, routes: core.routes })
+
       let headTags = []
       let headMain
+      const loaders = {}
       const resources = {}
+
+      // TODO: somehow import and use same initRuntime as client
+      // and inject the ssr object
 
       const runtime = {
         ssr: {
@@ -400,12 +432,58 @@ export async function bundler(opts) {
           const elems = mergeChildSets([...headTags, headMain])
           return renderToStaticMarkup(elems) || ''
         },
+        getLoader(routeId, fnName, args) {
+          const key = `${routeId}|${fnName}|${args.join('|')}`
+          if (loaders[key]) return loaders[key]
+          const loader = {
+            key,
+            get() {
+              let resource = runtime.getResource(key)
+              if (!resource) {
+                const resolve = async () => {
+                  const data = await runtime.callRouteFn(routeId, fnName, args)
+                  inserts.write(`
+                    <script>
+                      globalThis.$firebolt.setResourceData('${key}', ${JSON.stringify(data)})
+                    </script>
+                  `)
+                  return data
+                }
+                resource = runtime.createResource(resolve())
+                runtime.setResource(key, resource)
+              }
+              return resource().data
+            },
+          }
+          loaders[key] = loader
+          return loader
+        },
+        createResource(promise) {
+          let status = 'pending'
+          let value
+          promise = promise.then(
+            resp => {
+              status = 'success'
+              value = resp
+            },
+            err => {
+              status = 'error'
+              value = err
+            }
+          )
+          return () => {
+            if (status === 'success') return value
+            if (status === 'pending') throw promise
+            if (status === 'error') throw value
+          }
+        },
         getResource(key) {
           return resources[key]
         },
         setResource(key, resource) {
           resources[key] = resource
         },
+        callRouteFn,
       }
 
       const isBot = isbot(req.get('user-agent') || '')

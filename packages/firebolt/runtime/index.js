@@ -7,12 +7,12 @@ import { matcher } from './matcher.js'
 
 const match = matcher()
 
-const initRuntime = ({ routes, stack }) => {
+const createRuntime = ({ ssr, routes, stack }) => {
   let headTags = []
   const headListeners = new Set()
 
   const api = {
-    ssr: null,
+    ssr,
     routes,
     push,
     registerPage,
@@ -22,6 +22,8 @@ const initRuntime = ({ routes, stack }) => {
     getHeadTags,
     insertHeadTags,
     onHeadTags,
+    callRouteFn,
+    getLoader,
     getResource,
     setResource,
     setResourceData,
@@ -53,24 +55,6 @@ const initRuntime = ({ routes, stack }) => {
     return routes.find(route => match(route.pattern, url)[0])
   }
 
-  // function fetchMetadata(url) {
-  //   if (metadataLoaders[url]) return metadataLoaders[url]
-  //   const promise = new Promise(async resolve => {
-  //     // if route has no getMetadata() then resolve with empty metadata
-  //     const route = resolveRoute(url)
-  //     let metadata = null
-  //     if (route.hasMetadata) {
-  //       const resp = await fetch(`/_firebolt_metadata?url=${url}`)
-  //       metadata = await resp.json()
-  //       setMetadata(url, metadata)
-  //     }
-  //     delete metadataLoaders[url]
-  //     resolve(metadata)
-  //   })
-  //   metadataLoaders[url] = promise
-  //   return promise
-  // }
-
   function getHeadTags() {
     return headTags
   }
@@ -93,18 +77,83 @@ const initRuntime = ({ routes, stack }) => {
     return () => headListeners.delete(callback)
   }
 
-  const resources = {}
+  async function callRouteFn(routeId, fnName, args) {
+    const resp = await fetch('/_firebolt_fn', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        routeId,
+        fnName,
+        args,
+      }),
+    })
+    const result = await resp.json()
+    return result
+  }
+
+  const loaders = {} // [key]: loader
+
+  function getLoader(routeId, fnName, args) {
+    // IMPORTANT: mirrored in SSR runtime
+    const key = `${routeId}|${fnName}|${args.join('|')}`
+    console.log('getLoader', key, !!loaders[key])
+    if (loaders[key]) return loaders[key]
+    const loader = {
+      key,
+      get() {
+        let resource = getResource(key)
+        if (!resource) {
+          const resolve = async () => {
+            const data = await callRouteFn(routeId, fnName, args)
+            return data
+          }
+          resource = createResource(resolve())
+          setResource(key, resource)
+        }
+        return resource().data
+      },
+    }
+    loaders[key] = loader
+    return loader
+  }
+
+  const resources = {} // [key]: resource
 
   function getResource(key) {
+    console.log('getResource', key, resources[key])
     return resources[key]
   }
 
   function setResource(key, resource) {
+    console.log('setResource', key, resource)
     resources[key] = resource
   }
 
   function setResourceData(key, data) {
+    console.log('setResourceData', key, data)
     resources[key] = () => data
+  }
+
+  function createResource(promise) {
+    let status = 'pending'
+    let value
+    promise = promise.then(
+      resp => {
+        status = 'success'
+        value = resp
+      },
+      err => {
+        status = 'error'
+        value = err
+      }
+    )
+    return () => {
+      if (status === 'success') return value
+      if (status === 'pending') throw promise
+      if (status === 'error') throw value
+    }
   }
 
   for (const item of stack) {
@@ -114,7 +163,7 @@ const initRuntime = ({ routes, stack }) => {
   return api
 }
 
-globalThis.$firebolt = initRuntime(globalThis.$firebolt)
+globalThis.$firebolt = createRuntime(globalThis.$firebolt)
 
 hydrateRoot(
   document,
