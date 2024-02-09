@@ -17,6 +17,7 @@ export function createRuntime({ ssr, routes, stack = [] }) {
     loadRoute,
     loadRouteByUrl,
     resolveRoute,
+    resolveRouteWithParams,
     getHeadMain,
     insertHeadMain,
     getHeadTags,
@@ -56,6 +57,14 @@ export function createRuntime({ ssr, routes, stack = [] }) {
 
   function resolveRoute(url) {
     return routes.find(route => match(route.pattern, url)[0])
+  }
+
+  function resolveRouteWithParams(url) {
+    for (const route of routes) {
+      const [hit, params] = match(route.pattern, url)
+      if (hit) return [route, params]
+    }
+    return []
   }
 
   function getHeadMain() {
@@ -154,22 +163,18 @@ export function createRuntime({ ssr, routes, stack = [] }) {
             loader.notify()
           })
         }
-        return resource.read().data
+        return resource.read()
       },
       set(data) {
         const resource = getResource(key)
-        const value = resource.read(false)
-        const newValue = produce(value, draft => {
-          draft.data = data
-        })
-        resource.write(newValue)
+        resource.write(data)
         loader.notify()
       },
       edit(fn) {
         const resource = getResource(key)
         const value = resource.read(false)
         const newValue = produce(value, draft => {
-          fn(draft.data)
+          fn(draft)
         })
         resource.write(newValue)
         loader.notify()

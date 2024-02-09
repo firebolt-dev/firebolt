@@ -1,13 +1,13 @@
 import { Suspense, useState } from 'react'
-import { Meta, Link, useLocation, useData, useAction, useCache } from 'firebolt'
+import { Head, Link, useLocation, useData, useAction, useCache } from 'firebolt'
 
 export default function Page() {
   return (
     <Suspense fallback={<Loading />}>
       <Item id={'1'} />
-      <Item id={'1'} />
+      {/* <Item id={'1'} />
       <Item id={'2'} />
-      <Item id={'3'} />
+      <Item id={'3'} /> */}
     </Suspense>
   )
 }
@@ -21,7 +21,7 @@ function Item({ id }) {
   const data = useData('getItem', id)
   const item = data.get()
   const update = useAction('updateItem')
-  const cache = useCache()
+  // const cache = useCache()
   const save = async () => {
     const resp = await update(item)
     console.log('saved!', resp)
@@ -30,9 +30,9 @@ function Item({ id }) {
   }
   return (
     <>
-      <Meta>
-        <title>{item.name}</title>
-      </Meta>
+      <Head>
+        <title key='title'>{item.name}</title>
+      </Head>
       <div>Name</div>
       <input
         type='text'
@@ -74,7 +74,7 @@ export async function getItem(req, id) {
     }
     await req.db('items').insert(item)
   }
-  return { data: item, expire: null }
+  return item
 }
 
 export async function updateItem(req, data) {

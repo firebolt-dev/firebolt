@@ -8,16 +8,13 @@ import { renderToPipeableStream, renderToStaticMarkup } from 'react-dom/server'
 import React from 'react'
 import { isbot } from 'isbot'
 import { PassThrough } from 'stream'
+import { debounce, defaultsDeep } from 'lodash'
 import { polyfillNode } from 'esbuild-plugin-polyfill-node'
+import chokidar from 'chokidar'
 
 import { getFilePaths } from './utils/getFilePaths'
 import { fileToRoutePattern } from './utils/fileToRoutePattern'
 import { matcher } from './utils/matcher'
-import { defaultsDeep } from 'lodash'
-
-const port = 4004
-const env = process.env.NODE_ENV || 'development'
-const prod = env === 'production'
 
 const match = matcher()
 
@@ -27,6 +24,10 @@ const match = matcher()
 React.useLayoutEffect = React.useEffect
 
 export async function bundler(opts) {
+  const port = opts.port || 4004
+  const prod = !!opts.production
+  const env = prod ? 'production' : 'development'
+
   const appDir = process.cwd()
   const pagesDir = path.join(appDir, 'pages')
   const apiDir = path.join(appDir, 'api')
@@ -38,9 +39,6 @@ export async function bundler(opts) {
   const libFile = path.join(__dirname, 'lib.js')
   const coreBuildFile = path.join(buildDir, 'core.js')
   const manifestFile = path.join(buildDir, 'manifest.json')
-
-  let core
-  let manifest
 
   async function build() {
     console.log('building...')
@@ -57,7 +55,7 @@ export async function bundler(opts) {
       entryPoints: [configSrcFile],
       outfile: configBuildFile,
       bundle: true,
-      treeShaking: true,
+      treeShaking: false,
       sourcemap: false,
       minify: false,
       platform: 'node',
@@ -78,7 +76,7 @@ export async function bundler(opts) {
     })
 
     // initialize manifest
-    manifest = {
+    const manifest = {
       clientPaths: {},
       bootstrapFile: null,
     }
@@ -182,7 +180,7 @@ export async function bundler(opts) {
     })
 
     // import core
-    core = await import(`${coreBuildFile}?v=${Date.now()}`)
+    const core = await reimport(coreBuildFile)
 
     // generate client page bundles
     for (const route of core.routes) {
@@ -269,209 +267,182 @@ export async function bundler(opts) {
     }
     await fs.outputFile(manifestFile, JSON.stringify(manifest, null, 2))
 
-    // build server
-    // await esbuild.build({
-    //   entryPoints: [serverFile],
-    //   outfile: serverBuildFile,
-    //   bundle: true,
-    //   treeShaking: true,
-    //   sourcemap: true,
-    //   minify: prod,
-    //   platform: 'node',
-    //   packages: 'external',
-    //   alias: {
-    //     firebolt: libFile,
-    //   },
-    //   define: {
-    //     'process.env.NODE_ENV': JSON.stringify(env),
-    //   },
-    //   loader: {
-    //     '.js': 'jsx',
-    //   },
-    //   jsx: 'automatic',
-    //   jsxImportSource: '@emotion/react',
-    // })
-
     console.log('build complete')
   }
 
+  let server
+
   async function serve() {
-    // ...
-  }
-
-  if (opts.build) {
-    await build()
-  }
-
-  // import server core
-  if (!core) {
-    core = await import(coreBuildFile)
-  }
-
-  // import manifest
-  if (!manifest) {
-    manifest = await fs.readJSON(manifestFile)
-  }
-
-  // hydrate manifest
-  const bootstrapFile = manifest.bootstrapFile
-  for (const route of core.routes) {
-    route.file = manifest.clientPaths[route.id]
-  }
-
-  // build route definitions to be sent to client
-  const routesForClient = core.routes.map(route => {
-    return {
-      id: route.id,
-      pattern: route.pattern,
-      file: route.file,
-      Page: null,
+    // close any running server
+    if (server) {
+      await new Promise(resolve => server.close(resolve))
+      server = null
     }
-  })
 
-  // utility to find a route from a url
-  function resolveRoute(url) {
+    // import server core
+    const core = await reimport(coreBuildFile)
+
+    // import manifest
+    const manifest = await fs.readJSON(manifestFile)
+
+    // hydrate manifest
+    const bootstrapFile = manifest.bootstrapFile
     for (const route of core.routes) {
-      const [hit, params] = match(route.pattern, url)
-      if (hit) return [route, params]
+      route.file = manifest.clientPaths[route.id]
     }
-    return []
-  }
 
-  // utility to call route functions (data and actions)
-  async function callRouteFn(routeId, fnName, args) {
-    // TODO: req needs to exist
-    const req = {}
-    await core.middleware(req)
-    const route = core.routes.find(r => r.id === routeId)
-    if (!route) throw new Error('Route not found')
-    const fn = route.module[fnName]
-    if (!fn) throw new Error('Invalid function')
-    let result = fn(req, ...args)
-    if (result instanceof Promise) {
-      result = await result
+    // build route definitions to be sent to client
+    const routesForClient = core.routes.map(route => {
+      return {
+        id: route.id,
+        pattern: route.pattern,
+        file: route.file,
+      }
+    })
+
+    // utility to find a route from a url
+    function resolveRouteWithParams(url) {
+      for (const route of core.routes) {
+        const [hit, params] = match(route.pattern, url)
+        if (hit) return [route, params]
+      }
+      return []
     }
-    return result
-  }
 
-  // start server
-  const server = express()
-  server.use(cors())
-  server.use(compression())
-  server.use(express.json())
-  server.use(express.static('public'))
-  server.use('/_firebolt', express.static('.firebolt/public'))
-
-  // handle route fn calls (useData and useAction)
-  server.post('/_firebolt_fn', async (req, res) => {
-    const { routeId, fnName, args } = req.body
-    let result
-    try {
-      result = await callRouteFn(routeId, fnName, args)
-    } catch (err) {
-      return res.status(400).send(err.message)
+    // utility to call route functions (data and actions)
+    async function callRouteFn(routeId, fnName, args) {
+      // TODO: req needs to exist
+      const req = {}
+      await core.middleware(req)
+      const route = core.routes.find(r => r.id === routeId)
+      if (!route) throw new Error('Route not found')
+      const fn = route.module[fnName]
+      if (!fn) throw new Error('Invalid function')
+      let result = fn(req, ...args)
+      if (result instanceof Promise) {
+        result = await result
+      }
+      return result
     }
-    res.status(200).json(result)
-  })
 
-  // handle requests for pages and api
-  server.use('*', async (req, res) => {
-    const url = req.originalUrl
+    // start server
+    const app = express()
+    app.use(cors())
+    app.use(compression())
+    app.use(express.json())
+    app.use(express.static('public'))
+    app.use('/_firebolt', express.static('.firebolt/public'))
 
-    // handle page requests
-    const [route, params] = resolveRoute(url)
-    if (route) {
-      const RuntimeProvider = core.lib.RuntimeProvider
-      const Router = core.lib.Router
-      const mergeChildSets = core.lib.mergeChildSets
-      const Document = core.Document
-      const createRuntime = core.createRuntime
-
-      const inserts = {
-        value: '',
-        read() {
-          const str = this.value
-          this.value = ''
-          return str
-        },
-        write(str) {
-          this.value += str
-        },
+    // handle route fn calls (useData and useAction)
+    app.post('/_firebolt_fn', async (req, res) => {
+      const { routeId, fnName, args } = req.body
+      let result
+      try {
+        result = await callRouteFn(routeId, fnName, args)
+      } catch (err) {
+        return res.status(400).send(err.message)
       }
+      res.status(200).json(result)
+    })
 
-      const runtime = createRuntime({
-        ssr: {
-          url,
-          params,
-          inserts,
-          callRouteFn,
-        },
-        routes: core.routes,
-      })
+    // handle requests for pages and api
+    app.use('*', async (req, res) => {
+      const url = req.originalUrl
 
-      function getHeadContent() {
-        const headTags = runtime.getHeadTags()
-        const headMain = runtime.getHeadMain()
-        const elems = mergeChildSets([...headTags, headMain])
-        return renderToStaticMarkup(elems) || ''
-      }
+      // handle page requests
+      const [route, params] = resolveRouteWithParams(url)
+      if (route) {
+        const RuntimeProvider = core.lib.RuntimeProvider
+        const Router = core.lib.Router
+        const mergeHeadGroups = core.lib.mergeHeadGroups
+        const Document = core.Document
+        const createRuntime = core.createRuntime
 
-      const isBot = isbot(req.get('user-agent') || '')
-
-      function Root() {
-        return (
-          <RuntimeProvider data={runtime}>
-            <Document>
-              <Router />
-            </Document>
-          </RuntimeProvider>
-        )
-      }
-
-      // transform stream to:
-      // 1. insert head content
-      // 2. insert streamed suspense resource data
-      // 3. extract and prepend inlined emotion styles
-      let afterHtml
-      const stream = new PassThrough()
-      stream.on('data', chunk => {
-        let str = chunk.toString()
-        // prepend any inlined emotion styles
-        if (afterHtml) {
-          // regex to match all style tags and their contents
-          const regex = /<style[^>]*>[\s\S]*?<\/style>/gi
-          // find all style tags and their contents
-          const matches = str.match(regex) || []
-          const styles = matches.join('')
-          // extract and prepend styles
-          str = styles + str.replace(regex, '')
+        const inserts = {
+          value: '',
+          read() {
+            const str = this.value
+            this.value = ''
+            return str
+          },
+          write(str) {
+            this.value += str
+          },
         }
-        // append any inserts (eg suspense data)
-        if (afterHtml) {
-          str += inserts.read()
-        }
-        // mark after html
-        if (str.includes('</html>')) {
-          afterHtml = true
-          // inject head content
-          str = str.replace('<head>', '<head>' + getHeadContent())
-        }
-        // console.log('---')
-        // console.log(str)
-        res.write(str)
-        if (afterHtml) {
-          res.flush()
-        }
-      })
-      stream.on('end', () => {
-        res.end()
-      })
 
-      let didError = false
-      const { pipe, abort } = renderToPipeableStream(<Root />, {
-        bootstrapScriptContent: isBot
-          ? undefined
-          : `
+        const runtime = createRuntime({
+          ssr: {
+            url,
+            params,
+            inserts,
+            callRouteFn,
+          },
+          routes: core.routes,
+        })
+
+        function getHeadContent() {
+          const headTags = runtime.getHeadTags()
+          const headMain = runtime.getHeadMain()
+          const elems = mergeHeadGroups(headMain, ...headTags)
+          return renderToStaticMarkup(elems) || ''
+        }
+
+        const isBot = isbot(req.get('user-agent') || '')
+
+        function Root() {
+          return (
+            <RuntimeProvider data={runtime}>
+              <Document>
+                <Router />
+              </Document>
+            </RuntimeProvider>
+          )
+        }
+
+        // transform stream to:
+        // 1. insert head content
+        // 2. insert streamed suspense resource data
+        // 3. extract and prepend inlined emotion styles
+        let afterHtml
+        const stream = new PassThrough()
+        stream.on('data', chunk => {
+          let str = chunk.toString()
+          // prepend any inlined emotion styles
+          if (afterHtml) {
+            // regex to match all style tags and their contents
+            const regex = /<style[^>]*>[\s\S]*?<\/style>/gi
+            // find all style tags and their contents
+            const matches = str.match(regex) || []
+            const styles = matches.join('')
+            // extract and prepend styles
+            str = styles + str.replace(regex, '')
+          }
+          // append any inserts (eg suspense data)
+          if (afterHtml) {
+            str += inserts.read()
+          }
+          // mark after html
+          if (str.includes('</html>')) {
+            afterHtml = true
+            // inject head content
+            str = str.replace('<head>', '<head>' + getHeadContent())
+          }
+          // console.log('---')
+          // console.log(str)
+          res.write(str)
+          if (afterHtml) {
+            res.flush()
+          }
+        })
+        stream.on('end', () => {
+          res.end()
+        })
+
+        let didError = false
+        const { pipe, abort } = renderToPipeableStream(<Root />, {
+          bootstrapScriptContent: isBot
+            ? undefined
+            : `
           globalThis.$firebolt = {
             ssr: null,
             routes: ${JSON.stringify(routesForClient)},
@@ -481,26 +452,60 @@ export async function bundler(opts) {
             }
           }
         `,
-        bootstrapModules: isBot ? [] : [route.file, bootstrapFile],
-        onShellReady() {
-          if (!isBot) {
-            res.statusCode = didError ? 500 : 200
-            res.setHeader('Content-Type', 'text/html')
-            pipe(stream)
-          }
-        },
-        onAllReady() {
-          if (isBot) {
-            res.statusCode = didError ? 500 : 200
-            res.setHeader('Content-Type', 'text/html')
-            // pipe(res)
-            pipe(stream)
-          }
-        },
-      })
+          bootstrapModules: isBot ? [] : [route.file, bootstrapFile],
+          onShellReady() {
+            if (!isBot) {
+              res.statusCode = didError ? 500 : 200
+              res.setHeader('Content-Type', 'text/html')
+              pipe(stream)
+            }
+          },
+          onAllReady() {
+            if (isBot) {
+              res.statusCode = didError ? 500 : 200
+              res.setHeader('Content-Type', 'text/html')
+              // pipe(res)
+              pipe(stream)
+            }
+          },
+        })
+      }
+    })
+
+    server = app.listen(port, () => {
+      console.log(`server running on http://localhost:${port}`)
+    })
+  }
+
+  if (opts.build) {
+    await build()
+  }
+
+  if (opts.serve) {
+    await serve()
+  }
+
+  if (opts.watch) {
+    const watchOptions = {
+      ignoreInitial: true,
+      ignored: ['**/.firebolt/**'],
     }
-  })
-  server.listen(port, () => {
-    console.log(`server running on http://localhost:${port}`)
-  })
+    const watcher = chokidar.watch([appDir], watchOptions)
+    const onChange = async (type, path) => {
+      console.log('file change')
+      console.log({ type, path })
+      if (opts.build) {
+        await build()
+      }
+      if (opts.serve) {
+        await serve()
+      }
+    }
+    watcher.on('all', debounce(onChange))
+  }
+}
+
+function reimport(module) {
+  delete require.cache[module]
+  return import(`${module}?v=${Date.now()}`)
 }

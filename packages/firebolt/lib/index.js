@@ -11,32 +11,31 @@ import React, {
   useMemo,
   Suspense,
   useLayoutEffect,
-  useId,
 } from 'react'
 import { css } from '@emotion/react'
-import { matcher } from './matcher'
 
 export { css }
 
-export const mergeChildSets = sets => {
+export const mergeHeadGroups = (...groups) => {
   const flattened = []
-  for (const set of sets) {
-    flattened.push(...Children.toArray(set))
+  for (const children of groups) {
+    flattened.push(...Children.toArray(children))
   }
+  console.log(flattened)
   const merged = []
-  flattened.forEach(elem => {
-    if (elem.key && elem.key.startsWith('.$')) {
-      const idx = merged.findIndex(c => c.key === elem.key)
+  flattened.forEach(child => {
+    if (child.key && child.key.startsWith('.$')) {
+      const idx = merged.findIndex(c => c.key === child.key)
       if (idx !== -1) {
-        merged[idx] = elem
+        merged[idx] = child
       } else {
-        merged.push(elem)
+        merged.push(child)
       }
     } else {
-      merged.push(elem)
+      merged.push(child)
     }
   })
-  return merged
+  return merged.map((child, idx) => cloneElement(child, { key: `.$fb${idx}` }))
 }
 
 export function Style(props) {
@@ -81,6 +80,14 @@ export function Link(props) {
 const RuntimeContext = createContext()
 
 export function Head({ children }) {
+  const location = useLocation()
+  // if location is defined then we are a child of the router
+  if (location) return <PageHead>{children}</PageHead>
+  // otherwise we must be the document head
+  return <DocHead>{children}</DocHead>
+}
+
+function DocHead({ children }) {
   const runtime = useContext(RuntimeContext)
   // server renders empty head and registers children to be inserted on first flush
   if (runtime.ssr) {
@@ -100,15 +107,12 @@ export function Head({ children }) {
       <head dangerouslySetInnerHTML={{ __html: document.head.innerHTML }} />
     )
   }
-  return (
-    <head>
-      {mergeChildSets(tags)}
-      {children}
-    </head>
-  )
+  // TODO: rename getHeadTags/getHeadMain -> getPageTags/getHeadTags
+  const allTags = mergeHeadGroups(children, ...tags)
+  return <head>{allTags}</head>
 }
 
-export function Meta({ children }) {
+function PageHead({ children }) {
   const runtime = useContext(RuntimeContext)
   // server inserts immediately for injection
   if (runtime.ssr) {
@@ -166,20 +170,11 @@ export function useLocation() {
 
 const historyEvents = ['popstate', 'pushState', 'replaceState', 'hashchange']
 
-const match = matcher()
-
-function resolveRouteAndParams(routes, url) {
-  for (const route of routes) {
-    const [hit, params] = match(route.pattern, url)
-    if (hit) return [route, params]
-  }
-}
-
 export function Router() {
   const runtime = useContext(RuntimeContext)
   const [browserUrl, setBrowserUrl] = useState(runtime.ssr?.url || globalThis.location.pathname + globalThis.location.search) // prettier-ignore
   const [currentUrl, setCurrentUrl] = useState(browserUrl)
-  const [route, params] = resolveRouteAndParams(runtime.routes, currentUrl)
+  const [route, params] = runtime.resolveRouteWithParams(currentUrl)
   const { Page } = route
 
   useEffect(() => {
