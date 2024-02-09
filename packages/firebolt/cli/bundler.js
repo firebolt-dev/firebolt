@@ -80,7 +80,7 @@ export async function bundler(opts) {
     // initialize manifest
     manifest = {
       clientPaths: {},
-      runtimeBuildFile: null,
+      bootstrapFile: null,
     }
 
     // get a list of page files
@@ -123,6 +123,11 @@ export async function bundler(opts) {
       return 0
     })
 
+    // copy over templates
+    const templatesSrc = path.join(__dirname, '../templates')
+    const templatesDir = path.join(buildDir, 'tmp', 'templates')
+    await fs.copy(templatesSrc, templatesDir)
+
     // write core (an entry into the apps code for SSR)
     const coreCode = `
       ${routes.map(route => `import * as ${route.id} from '${route.relBuildToPageFile}'`).join('\n')}
@@ -145,6 +150,7 @@ export async function bundler(opts) {
           .join('\n')}
       ]
       export { Document } from '../document.js'
+      export { createRuntime } from './tmp/templates/runtime.js'
       export * as firebolt from 'firebolt'
     `
     const coreFile = path.join(buildDir, 'core.raw.js')
@@ -177,11 +183,6 @@ export async function bundler(opts) {
     // import core
     core = await import(`${coreBuildFile}?v=${Date.now()}`)
 
-    // copy over runtime
-    const runtimeSrc = path.join(__dirname, '../runtime')
-    const runtimeDir = path.join(buildDir, 'tmp', 'runtime')
-    await fs.copy(runtimeSrc, runtimeDir)
-
     // generate client page bundles
     for (const route of core.routes) {
       const code = `
@@ -197,7 +198,7 @@ export async function bundler(opts) {
     for (const route of core.routes) {
       publicFiles.push(route.wrapperFile)
     }
-    publicFiles.push(runtimeDir)
+    publicFiles.push(path.join(templatesDir, 'bootstrap.js'))
     const bundleResult = await esbuild.build({
       entryPoints: publicFiles,
       entryNames: '/[name]-[hash]',
@@ -259,8 +260,8 @@ export async function bundler(opts) {
             '/_firebolt'
           )
         }
-        if (output.entryPoint === '.firebolt/tmp/runtime/index.js') {
-          manifest.runtimeBuildFile = file.replace('.firebolt/public', '/_firebolt') // prettier-ignore
+        if (output.entryPoint === '.firebolt/tmp/templates/bootstrap.js') {
+          manifest.bootstrapFile = file.replace('.firebolt/public', '/_firebolt') // prettier-ignore
         }
       }
     }
@@ -311,7 +312,7 @@ export async function bundler(opts) {
   }
 
   // hydrate manifest
-  const runtimeBuildFile = manifest.runtimeBuildFile
+  const bootstrapFile = manifest.bootstrapFile
   for (const route of core.routes) {
     route.file = manifest.clientPaths[route.id]
   }
@@ -381,8 +382,7 @@ export async function bundler(opts) {
       const Router = core.firebolt.Router
       const mergeChildSets = core.firebolt.mergeChildSets
       const Document = core.Document
-
-      console.log(core)
+      const createRuntime = core.createRuntime
 
       const inserts = {
         value: '',
@@ -396,94 +396,22 @@ export async function bundler(opts) {
         },
       }
 
-      // const ssr = {
-      //   url,
-      //   params,
-      //   inserts,
-      // }
-
-      // const runtime = createRuntime({ ssr, routes: core.routes })
-
-      let headTags = []
-      let headMain
-      const loaders = {}
-      const resources = {}
-
-      // TODO: somehow import and use same initRuntime as client
-      // and inject the ssr object
-
-      const runtime = {
+      const runtime = createRuntime({
         ssr: {
           url,
           params,
           inserts,
+          callRouteFn,
         },
         routes: core.routes,
-        getHeadTags() {
-          return [] // irrelevent
-        },
-        insertHeadMain(children) {
-          headMain = children
-        },
-        insertHeadTags(children) {
-          headTags.push(children)
-        },
-        getHeadContent() {
-          const elems = mergeChildSets([...headTags, headMain])
-          return renderToStaticMarkup(elems) || ''
-        },
-        getLoader(routeId, fnName, args) {
-          const key = `${routeId}|${fnName}|${args.join('|')}`
-          if (loaders[key]) return loaders[key]
-          const loader = {
-            key,
-            get() {
-              let resource = runtime.getResource(key)
-              if (!resource) {
-                const resolve = async () => {
-                  const data = await runtime.callRouteFn(routeId, fnName, args)
-                  inserts.write(`
-                    <script>
-                      globalThis.$firebolt.setResourceData('${key}', ${JSON.stringify(data)})
-                    </script>
-                  `)
-                  return data
-                }
-                resource = runtime.createResource(resolve())
-                runtime.setResource(key, resource)
-              }
-              return resource().data
-            },
-          }
-          loaders[key] = loader
-          return loader
-        },
-        createResource(promise) {
-          let status = 'pending'
-          let value
-          promise = promise.then(
-            resp => {
-              status = 'success'
-              value = resp
-            },
-            err => {
-              status = 'error'
-              value = err
-            }
-          )
-          return () => {
-            if (status === 'success') return value
-            if (status === 'pending') throw promise
-            if (status === 'error') throw value
-          }
-        },
-        getResource(key) {
-          return resources[key]
-        },
-        setResource(key, resource) {
-          resources[key] = resource
-        },
-        callRouteFn,
+      })
+
+      function getHeadContent() {
+        const elems = mergeChildSets([
+          ...runtime.getHeadTags(),
+          runtime.getHeadMain(),
+        ])
+        return renderToStaticMarkup(elems) || ''
       }
 
       const isBot = isbot(req.get('user-agent') || '')
@@ -524,7 +452,7 @@ export async function bundler(opts) {
         if (str.includes('</html>')) {
           afterHtml = true
           // inject head content
-          str = str.replace('<head>', '<head>' + runtime.getHeadContent())
+          str = str.replace('<head>', '<head>' + getHeadContent())
         }
         // console.log('---')
         // console.log(str)
@@ -551,7 +479,7 @@ export async function bundler(opts) {
             }
           }
         `,
-        bootstrapModules: isBot ? [] : [route.file, runtimeBuildFile],
+        bootstrapModules: isBot ? [] : [route.file, bootstrapFile],
         onShellReady() {
           if (!isBot) {
             res.statusCode = didError ? 500 : 200

@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { Meta, Link, useLocation, useData } from 'firebolt'
 
 import { db } from '../db.js'
+import { Test } from '../components/Test.js'
 
 export default function Page() {
   return (
@@ -26,6 +27,7 @@ function Item() {
       </Meta>
       <div>Name: {item.name}</div>
       <div>Desc: {item.desc}</div>
+      <Test />
       <div>
         <Link href='/new/123'>Go 123</Link>
       </div>
