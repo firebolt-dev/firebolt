@@ -503,6 +503,11 @@ export async function bundler(opts) {
     }
     watcher.on('all', debounce(onChange))
   }
+
+  // todo: something is preventing the process from self-exiting
+  if (!opts.serve && !opts.watch) {
+    process.exit()
+  }
 }
 
 function reimport(module) {
