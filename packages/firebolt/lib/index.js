@@ -25,7 +25,7 @@ export const mergeChildSets = sets => {
   }
   const merged = []
   flattened.forEach(elem => {
-    if (elem.key) {
+    if (elem.key && elem.key.startsWith('.$')) {
       const idx = merged.findIndex(c => c.key === elem.key)
       if (idx !== -1) {
         merged[idx] = elem
@@ -226,7 +226,7 @@ export function Router() {
       url: currentUrl,
       params,
     }
-  }, [currentUrl, params])
+  }, [currentUrl])
 
   // console.log('-')
   // console.log('browserUrl', browserUrl)
@@ -239,65 +239,39 @@ export function Router() {
 
   return (
     <LocationProvider value={location}>
-      <Suspense fallback={<div>Loading temp...</div>}>
-        <Page /*key={currentUrl}*/ />
+      <Suspense /*fallback={<div>Loading temp...</div>}*/>
+        <Page />
       </Suspense>
     </LocationProvider>
   )
 }
 
-export function useData(fnName, ...args) {
+function useForceUpdate() {
+  const [n, setN] = useState(0)
+  return useMemo(() => {
+    return () => setN(n => n + 1)
+  }, [])
+}
+
+export function useData(...args) {
   const { routeId } = useLocation()
+  const forceUpdate = useForceUpdate()
   const runtime = useContext(RuntimeContext)
-  const loader = runtime.getLoader(routeId, fnName, args)
+  const loader = runtime.getLoader(routeId, args)
+  useEffect(() => {
+    return runtime.watchLoader(loader, forceUpdate)
+  }, [])
   return loader
 }
 
-// function createResource(promise) {
-//   let status = 'pending'
-//   let value
-//   promise = promise.then(
-//     resp => {
-//       status = 'success'
-//       value = resp
-//     },
-//     err => {
-//       status = 'error'
-//       value = err
-//     }
-//   )
-//   return () => {
-//     if (status === 'success') return value
-//     if (status === 'pending') throw promise
-//     if (status === 'error') throw value
-//   }
-// }
+export function useAction(fnName) {
+  const { routeId } = useLocation()
+  const runtime = useContext(RuntimeContext)
+  const action = runtime.getAction(routeId, fnName)
+  return action
+}
 
-// function _createResource(dataOrPromise) {
-//   let value
-//   let status
-//   let promise
-//   if (dataOrPromise instanceof Promise) {
-//     value = null
-//     status = 'pending'
-//     promise = dataOrPromise.then(
-//       resp => {
-//         status = 'success'
-//         value = resp
-//       },
-//       err => {
-//         status = 'error'
-//         value = err
-//       }
-//     )
-//   } else {
-//     value = dataOrPromise
-//     status = 'success'
-//     promise = null
-//   }
-//   return () => {
-//     if (status === 'success') return value
-//     if (status === 'pending') throw promise
-//     if (status === 'error') throw value
-//   }
-// }
+export function useCache() {
+  const runtime = useContext(RuntimeContext)
+  return runtime.getCache()
+}

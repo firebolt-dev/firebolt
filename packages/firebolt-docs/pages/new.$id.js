@@ -1,13 +1,13 @@
-import { Suspense } from 'react'
-import { Meta, Link, useLocation, useData } from 'firebolt'
-
-import { db } from '../db.js'
-import { Test } from '../components/Test.js'
+import { Suspense, useState } from 'react'
+import { Meta, Link, useLocation, useData, useAction, useCache } from 'firebolt'
 
 export default function Page() {
   return (
     <Suspense fallback={<Loading />}>
-      <Item />
+      <Item id={'1'} />
+      <Item id={'1'} />
+      <Item id={'2'} />
+      <Item id={'3'} />
     </Suspense>
   )
 }
@@ -16,16 +16,41 @@ function Loading() {
   return <div>Loading...</div>
 }
 
-function Item() {
-  const { id } = useLocation().params
+function Item({ id }) {
+  // const { id } = useLocation().params
   const data = useData('getItem', id)
   const item = data.get()
+  const update = useAction('updateItem')
+  const cache = useCache()
+  const save = async () => {
+    const resp = await update(item)
+    console.log('saved!', resp)
+    data.invalidate()
+    // cache.invalidate(args => args[0] === 'getItem' && args[1] === '1')
+  }
   return (
     <>
       <Meta>
         <title>{item.name}</title>
       </Meta>
-      <div>Name: {item.name}</div>
+      <div>Name</div>
+      <input
+        type='text'
+        value={item.name}
+        onChange={e => data.edit(item => (item.name = e.target.value))}
+      />
+      <div>Desc</div>
+      <input
+        type='text'
+        value={item.desc}
+        onChange={e => data.edit(item => (item.desc = e.target.value))}
+      />
+      <div>Version: {item.version}</div>
+      <div>ID: {item.id}</div>
+      <div>Fetching: {data.fetching ? 'Yes' : 'No'}</div>
+      <div onClick={save}>Save</div>
+      <div>--------</div>
+      {/* <div>Name: {item.name}</div>
       <div>Desc: {item.desc}</div>
       <Test />
       <div>
@@ -33,39 +58,48 @@ function Item() {
       </div>
       <div>
         <Link href='/new/456'>Go 456</Link>
-      </div>
+      </div> */}
     </>
   )
 }
 
-// fetched on server during SSR
-// fetched from server during CSR
-// triggers suspense
 export async function getItem(req, id) {
-  await new Promise(resolve => setTimeout(resolve, 1000))
-  return {
-    data: { name: `Foobars ${id}`, desc: 'They are good' },
-    expire: null,
+  let item = await req.db('items').where({ id }).first()
+  if (!item) {
+    item = {
+      id,
+      name: `Name ${id}`,
+      desc: `Desc ${id}`,
+      version: 0,
+    }
+    await req.db('items').insert(item)
   }
-  // const auth = req.headers.get('x-auth-token')
-  // const item = await db('users').where({ id }).first()
-  // return {
-  //   data: item,
-  //   expire: 0, // 0=now, null=never, X=seconds
-  // }
+  return { data: item, expire: null }
+}
+
+export async function updateItem(req, data) {
+  const { id } = data
+  const item = await req.db('items').where({ id }).first()
+  item.name = data.name
+  item.desc = data.desc
+  item.version++
+  await req.db('items').where({ id }).update(item)
+  return item
 }
 
 async function examples() {
-  // get a data handle
-  const data = useData('getItem', '123')
-  // read the data or suspend while it loads
-  const item = data.get()
-  // can also be used as a regular promise
-  await data.load()
-  // invalidate data
-  data.invalidate()
+  // get a loader
+  const loader = useData('getItem', '123')
+  // read the loader or suspend while it loads
+  const item = loader.get()
+  // check if the loader is refetching in the background
+  loader.refetching
+  // invalidate loader (background refetch)
+  loader.invalidate()
+  // update loader manually
+  loader.set({ name: 'YUP!' })
 
-  // get an action handle
+  // get an action
   const save = useAction('saveItem')
   // call the action
   const newItem = await save({ name: 'Milk' })

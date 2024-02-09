@@ -1,3 +1,25 @@
-import sqlite3 from 'better-sqlite3'
+import knex from 'knex'
 
-export const db = sqlite3('./db')
+const db = knex({
+  client: 'better-sqlite3',
+  connection: {
+    filename: './docs.db',
+  },
+  useNullAsDefault: true,
+})
+
+const init = async () => {
+  const exists = await db.schema.hasTable('items')
+  if (!exists) {
+    await db.schema.createTable('items', table => {
+      table.string('id').primary()
+      table.string('name')
+      table.string('desc')
+      table.integer('version')
+    })
+    console.log('created items table')
+  }
+}
+init()
+
+export { db }

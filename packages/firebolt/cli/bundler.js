@@ -150,8 +150,9 @@ export async function bundler(opts) {
           .join('\n')}
       ]
       export { Document } from '../document.js'
+      export { middleware } from '../middleware.js'
       export { createRuntime } from './tmp/templates/runtime.js'
-      export * as firebolt from 'firebolt'
+      export * as lib from 'firebolt'
     `
     const coreFile = path.join(buildDir, 'core.raw.js')
     await fs.writeFile(coreFile, coreCode)
@@ -226,23 +227,24 @@ export async function bundler(opts) {
       jsxImportSource: '@emotion/react',
       plugins: [
         // polyfill fs, path etc for browser environment
-        polyfillNode({}),
+        // polyfillNode({}),
         // ensure pages are marked side-effect free for tree shaking
-        {
-          name: 'no-side-effects',
-          setup(build) {
-            build.onResolve({ filter: /.*/ }, async args => {
-              // ignore this if we called ourselves
-              if (args.pluginData) return
-              const { path, ...rest } = args
-              // avoid infinite recursion
-              rest.pluginData = true
-              const result = await build.resolve(path, rest)
-              result.sideEffects = false
-              return result
-            })
-          },
-        },
+        // {
+        //   name: 'no-side-effects',
+        //   setup(build) {
+        //     build.onResolve({ filter: /.*/ }, async args => {
+        //       // ignore this if we called ourselves
+        //       if (args.pluginData) return
+        //       console.log(args.path)
+        //       const { path, ...rest } = args
+        //       // avoid infinite recursion
+        //       rest.pluginData = true
+        //       const result = await build.resolve(path, rest)
+        //       result.sideEffects = false
+        //       return result
+        //     })
+        //   },
+        // },
       ],
     })
     const metafile = bundleResult.metafile
@@ -340,6 +342,7 @@ export async function bundler(opts) {
   async function callRouteFn(routeId, fnName, args) {
     // TODO: req needs to exist
     const req = {}
+    await core.middleware(req)
     const route = core.routes.find(r => r.id === routeId)
     if (!route) throw new Error('Route not found')
     const fn = route.module[fnName]
@@ -359,7 +362,7 @@ export async function bundler(opts) {
   server.use(express.static('public'))
   server.use('/_firebolt', express.static('.firebolt/public'))
 
-  // handle data and action function calls
+  // handle route fn calls (useData and useAction)
   server.post('/_firebolt_fn', async (req, res) => {
     const { routeId, fnName, args } = req.body
     let result
@@ -378,9 +381,9 @@ export async function bundler(opts) {
     // handle page requests
     const [route, params] = resolveRoute(url)
     if (route) {
-      const RuntimeProvider = core.firebolt.RuntimeProvider
-      const Router = core.firebolt.Router
-      const mergeChildSets = core.firebolt.mergeChildSets
+      const RuntimeProvider = core.lib.RuntimeProvider
+      const Router = core.lib.Router
+      const mergeChildSets = core.lib.mergeChildSets
       const Document = core.Document
       const createRuntime = core.createRuntime
 
@@ -407,10 +410,9 @@ export async function bundler(opts) {
       })
 
       function getHeadContent() {
-        const elems = mergeChildSets([
-          ...runtime.getHeadTags(),
-          runtime.getHeadMain(),
-        ])
+        const headTags = runtime.getHeadTags()
+        const headMain = runtime.getHeadMain()
+        const elems = mergeChildSets([...headTags, headMain])
         return renderToStaticMarkup(elems) || ''
       }
 
