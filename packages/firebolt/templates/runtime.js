@@ -5,9 +5,9 @@ import { matcher } from './matcher.js'
 const match = matcher()
 
 export function createRuntime({ ssr, routes, stack = [] }) {
-  let headMain
-  let headTags = []
-  const headListeners = new Set()
+  let docHead
+  let pageHeads = []
+  const headWatchers = new Set()
 
   const methods = {
     ssr,
@@ -18,11 +18,11 @@ export function createRuntime({ ssr, routes, stack = [] }) {
     loadRouteByUrl,
     resolveRoute,
     resolveRouteWithParams,
-    getHeadMain,
-    insertHeadMain,
-    getHeadTags,
-    insertHeadTags,
-    onHeadTags,
+    insertDocHead,
+    insertPageHead,
+    getPageHeads,
+    getDocHead,
+    watchPageHeads,
     callRouteFn,
     getLoader,
     watchLoader,
@@ -67,36 +67,35 @@ export function createRuntime({ ssr, routes, stack = [] }) {
     return []
   }
 
-  function getHeadMain() {
-    // ssr
-    return headMain
+  // ssr
+  function insertDocHead(children) {
+    docHead = children
   }
 
-  function insertHeadMain(children) {
-    // ssr
-    headMain = children
+  function getDocHead() {
+    return docHead
   }
 
-  function getHeadTags() {
-    return headTags
-  }
-
-  function insertHeadTags(children) {
-    headTags = [...headTags, children]
-    for (const callback of headListeners) {
-      callback(headTags)
+  function insertPageHead(children) {
+    pageHeads = [...pageHeads, children]
+    for (const callback of headWatchers) {
+      callback(pageHeads)
     }
     return () => {
-      headTags = headTags.filter(t => t !== children)
-      for (const callback of headListeners) {
-        callback(headTags)
+      pageHeads = pageHeads.filter(t => t !== children)
+      for (const callback of headWatchers) {
+        callback(pageHeads)
       }
     }
   }
 
-  function onHeadTags(callback) {
-    headListeners.add(callback)
-    return () => headListeners.delete(callback)
+  function getPageHeads() {
+    return pageHeads
+  }
+
+  function watchPageHeads(callback) {
+    headWatchers.add(callback)
+    return () => headWatchers.delete(callback)
   }
 
   async function callRouteFn(routeId, fnName, args) {

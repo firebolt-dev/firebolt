@@ -381,10 +381,10 @@ export async function bundler(opts) {
         })
 
         function getHeadContent() {
-          const headTags = runtime.getHeadTags()
-          const headMain = runtime.getHeadMain()
-          const elems = mergeHeadGroups(headMain, ...headTags)
-          return renderToStaticMarkup(elems) || ''
+          const docHead = runtime.getDocHead()
+          const pageHeads = runtime.getPageHeads()
+          const elem = mergeHeadGroups(docHead, ...pageHeads)
+          return renderToStaticMarkup(elem) || ''
         }
 
         const isBot = isbot(req.get('user-agent') || '')

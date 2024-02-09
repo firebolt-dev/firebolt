@@ -21,7 +21,6 @@ export const mergeHeadGroups = (...groups) => {
   for (const children of groups) {
     flattened.push(...Children.toArray(children))
   }
-  console.log(flattened)
   const merged = []
   flattened.forEach(child => {
     if (child.key && child.key.startsWith('.$')) {
@@ -91,14 +90,14 @@ function DocHead({ children }) {
   const runtime = useContext(RuntimeContext)
   // server renders empty head and registers children to be inserted on first flush
   if (runtime.ssr) {
-    runtime.insertHeadMain(children)
+    runtime.insertDocHead(children)
     return <head />
   }
   // client first renders server provided head to match and then subscribes to changes
-  const [tags, setTags] = useState(() => runtime.getHeadTags())
+  const [pageHeads, setPageHeads] = useState(() => runtime.getPageHeads())
   useEffect(() => {
-    return runtime.onHeadTags(tags => {
-      setTags(tags)
+    return runtime.watchPageHeads(pageHeads => {
+      setPageHeads(pageHeads)
     })
   }, [])
   if (!globalThis.__fireboldHeadHydrated) {
@@ -107,20 +106,19 @@ function DocHead({ children }) {
       <head dangerouslySetInnerHTML={{ __html: document.head.innerHTML }} />
     )
   }
-  // TODO: rename getHeadTags/getHeadMain -> getPageTags/getHeadTags
-  const allTags = mergeHeadGroups(children, ...tags)
-  return <head>{allTags}</head>
+  const tags = mergeHeadGroups(children, ...pageHeads)
+  return <head>{tags}</head>
 }
 
 function PageHead({ children }) {
   const runtime = useContext(RuntimeContext)
   // server inserts immediately for injection
   if (runtime.ssr) {
-    runtime.insertHeadTags(children)
+    runtime.insertPageHead(children)
   }
   // client inserts on mount (post hydration)
   useLayoutEffect(() => {
-    return runtime.insertHeadTags(children)
+    return runtime.insertPageHead(children)
   }, [children])
 }
 
