@@ -5,9 +5,9 @@ export default function Page() {
   return (
     <Suspense fallback={<Loading />}>
       <Item id={'1'} />
-      {/* <Item id={'1'} />
+      <Item id={'1'} />
       <Item id={'2'} />
-      <Item id={'3'} /> */}
+      <Item id={'3'} />
     </Suspense>
   )
 }

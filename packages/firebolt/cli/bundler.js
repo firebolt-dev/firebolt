@@ -15,6 +15,7 @@ import chokidar from 'chokidar'
 import { getFilePaths } from './utils/getFilePaths'
 import { fileToRoutePattern } from './utils/fileToRoutePattern'
 import { matcher } from './utils/matcher'
+import { virtualModule } from './utils/virtualModule'
 
 const match = matcher()
 
@@ -29,16 +30,22 @@ export async function bundler(opts) {
   const env = prod ? 'production' : 'development'
 
   const appDir = process.cwd()
-  const pagesDir = path.join(appDir, 'pages')
-  const apiDir = path.join(appDir, 'api')
+  const appPagesDir = path.join(appDir, 'pages')
+  const appApiDir = path.join(appDir, 'api')
 
   const buildDir = path.join(appDir, '.firebolt')
-  const wrapperBuildDir = path.join(appDir, '.firebolt', 'tmp', 'wrappers')
-  const configSrcFile = path.join(appDir, '.firebolt', 'tmp', 'config.js') // prettier-ignore
-  const configBuildFile = path.join(appDir, '.firebolt', 'tmp', 'config.build.js') // prettier-ignore
+  const buildPageShimsDir = path.join(appDir, '.firebolt/page-shims')
+  const buildCoreVirtual = path.join(appDir, '.firebolt/core.virtual.js')
+  const buildCoreFile = path.join(appDir, '.firebolt/core.js')
+  const buildConfigVirtual = path.join(appDir, '.firebolt/config.virtual.js')
+  const buildConfigFile = path.join(appDir, '.firebolt/config.js')
+  const buildManifestFile = path.join(appDir, '.firebolt/manifest.json')
+
+  const extrasSrcDir = path.join(__dirname, '../extras')
+  const extrasDir = path.join(appDir, '.firebolt/extras')
+  const extrasBoostrapFile = path.join(appDir, '.firebolt/extras/bootstrap.js')
+
   const libFile = path.join(__dirname, 'lib.js')
-  const coreBuildFile = path.join(buildDir, 'core.js')
-  const manifestFile = path.join(buildDir, 'manifest.json')
 
   async function build() {
     console.log('building...')
@@ -47,13 +54,9 @@ export async function bundler(opts) {
     await fs.emptyDir(buildDir)
 
     // build and import config
-    const configScript = `
-      export { default as config } from '../../firebolt.config.js'
-    `
-    await fs.outputFile(configSrcFile, configScript)
     await esbuild.build({
-      entryPoints: [configSrcFile],
-      outfile: configBuildFile,
+      entryPoints: [buildConfigVirtual],
+      outfile: buildConfigFile,
       bundle: true,
       treeShaking: false,
       sourcemap: false,
@@ -68,41 +71,50 @@ export async function bundler(opts) {
       },
       jsx: 'automatic',
       jsxImportSource: '@emotion/react',
+      plugins: [
+        virtualModule([
+          {
+            path: buildConfigVirtual,
+            contents: `
+              export { default as config } from '../firebolt.config.js'
+            `,
+          },
+        ]),
+      ],
     })
-    const configModule = await import(`${configBuildFile}?v=${Date.now()}`)
-    const config = configModule.config()
+    const configMod = await import(`${buildConfigFile}?v=${Date.now()}`)
+    const config = configMod.config()
     defaultsDeep(config, {
       external: [],
     })
 
     // initialize manifest
     const manifest = {
-      clientPaths: {},
+      pageFiles: {},
       bootstrapFile: null,
     }
 
     // get a list of page files
-    const pageFiles = await getFilePaths(pagesDir)
+    const pageFiles = await getFilePaths(appPagesDir)
 
     // generate route info
     let ids = 0
     const routes = []
     for (const pageFile of pageFiles) {
       const id = `route${++ids}`
-      const srcFile = pageFile
-      const srcFileBase = path.relative(pagesDir, pageFile)
-      const wrapperFile = path.join(wrapperBuildDir, srcFileBase.replace('/', '.')) // prettier-ignore
-      const wrapperFileName = path.relative(path.dirname(wrapperFile), wrapperFile) // prettier-ignore
-      const pattern = fileToRoutePattern(pageFile.replace(pagesDir, ''))
-      const relBuildToPageFile = path.relative(buildDir, srcFile)
-      const relWrapperToPageFile = path.relative(path.dirname(wrapperFile), srcFile) // prettier-ignore
+      const pageFileBase = path.relative(appPagesDir, pageFile)
+      const shimFile = path.join(buildPageShimsDir, pageFileBase.replace('/', '.')) // prettier-ignore
+      const shimFileName = path.relative(path.dirname(shimFile), shimFile) // prettier-ignore
+      const pattern = fileToRoutePattern('/' + pageFileBase)
+      const relBuildToPageFile = path.relative(buildDir, pageFile)
+      const relShimToPageFile = path.relative(path.dirname(shimFile), pageFile) // prettier-ignore
       routes.push({
         id,
         pattern,
-        wrapperFile,
-        wrapperFileName,
+        shimFile,
+        shimFileName,
         relBuildToPageFile,
-        relWrapperToPageFile,
+        relShimToPageFile,
       })
     }
 
@@ -111,54 +123,20 @@ export async function bundler(opts) {
       const isDynamicA = a.pattern.includes(':')
       const isDynamicB = b.pattern.includes(':')
       if (isDynamicA && !isDynamicB) {
-        // if 'a' is catch-all and 'b' is not, 'a' should come after 'b'
         return 1
       } else if (!isDynamicA && isDynamicB) {
-        // if 'b' is catch-all and 'a' is not, 'a' should come before 'b'
         return -1
       }
-      // if both are catch-all or both are not, keep original order
       return 0
     })
 
-    // copy over templates
-    const templatesSrc = path.join(__dirname, '../templates')
-    const templatesDir = path.join(buildDir, 'tmp', 'templates')
-    await fs.copy(templatesSrc, templatesDir)
-
-    // write core (an entry into the apps code for SSR)
-    const coreCode = `
-      ${routes.map(route => `import * as ${route.id} from '${route.relBuildToPageFile}'`).join('\n')}
-      export const routes = [
-        ${routes
-          .map(route => {
-            return `
-            {
-              module: ${route.id},
-              id: '${route.id}',
-              pattern: '${route.pattern}',
-              wrapperFile: '${route.wrapperFile}',
-              wrapperFileName: '${route.wrapperFileName}',
-              relBuildToPageFile: '${route.relBuildToPageFile}',
-              relWrapperToPageFile: '${route.relWrapperToPageFile}',
-              Page: ${route.id}.default,
-            },
-          `
-          })
-          .join('\n')}
-      ]
-      export { Document } from '../document.js'
-      export { middleware } from '../middleware.js'
-      export { createRuntime } from './tmp/templates/runtime.js'
-      export * as lib from 'firebolt'
-    `
-    const coreFile = path.join(buildDir, 'core.raw.js')
-    await fs.writeFile(coreFile, coreCode)
+    // copy over extras
+    await fs.copy(extrasSrcDir, extrasDir)
 
     // build core
     await esbuild.build({
-      entryPoints: [coreFile],
-      outfile: coreBuildFile,
+      entryPoints: [buildCoreVirtual],
+      outfile: buildCoreFile,
       bundle: true,
       treeShaking: true,
       sourcemap: true,
@@ -177,27 +155,62 @@ export async function bundler(opts) {
       },
       jsx: 'automatic',
       jsxImportSource: '@emotion/react',
+      plugins: [
+        virtualModule([
+          {
+            path: path.join(appDir, '.firebolt/runtime.js'), // HERENOW
+          },
+          {
+            path: buildCoreVirtual,
+            contents: `
+              ${routes.map(route => `import * as ${route.id} from '${route.relBuildToPageFile}'`).join('\n')}
+              export const routes = [
+                ${routes
+                  .map(route => {
+                    return `
+                    {
+                      module: ${route.id},
+                      id: '${route.id}',
+                      pattern: '${route.pattern}',
+                      shimFile: '${route.shimFile}',
+                      shimFileName: '${route.shimFileName}',
+                      relBuildToPageFile: '${route.relBuildToPageFile}',
+                      relShimToPageFile: '${route.relShimToPageFile}',
+                      Page: ${route.id}.default,
+                    },
+                  `
+                  })
+                  .join('\n')}
+              ]
+              export { Document } from '../document.js'
+              export { middleware } from '../middleware.js'
+              export { createRuntime } from './extras/runtime.js'
+              export * as lib from 'firebolt'
+            `,
+          },
+        ]),
+      ],
     })
 
     // import core
-    const core = await reimport(coreBuildFile)
+    const core = await reimport(buildCoreFile)
 
-    // generate client page bundles
+    // generate client page shims
     for (const route of core.routes) {
       const code = `
-        import Page from '${route.relWrapperToPageFile}'
+        import Page from '${route.relShimToPageFile}'
         globalThis.$firebolt.push('registerPage', '${route.id}', Page)
       `
-      await fs.outputFile(route.wrapperFile, code)
+      await fs.outputFile(route.shimFile, code)
     }
 
-    // build client bundles (pages + runtime)
+    // build client bundles (pages + bootstrap)
     const publicDir = path.join(buildDir, 'public')
     const publicFiles = []
     for (const route of core.routes) {
-      publicFiles.push(route.wrapperFile)
+      publicFiles.push(route.shimFile)
     }
-    publicFiles.push(path.join(templatesDir, 'bootstrap.js'))
+    publicFiles.push(extrasBoostrapFile)
     const bundleResult = await esbuild.build({
       entryPoints: publicFiles,
       entryNames: '/[name]-[hash]',
@@ -250,22 +263,22 @@ export async function bundler(opts) {
       const output = metafile.outputs[file]
       if (output.entryPoint) {
         // page wrappers
-        if (output.entryPoint.startsWith('.firebolt/tmp/wrappers/')) {
-          const wrapperFileName = output.entryPoint.replace('.firebolt/tmp/wrappers/', '') // prettier-ignore
+        if (output.entryPoint.startsWith('.firebolt/page-shims/')) {
+          const shimFileName = output.entryPoint.replace('.firebolt/page-shims/', '') // prettier-ignore
           const route = core.routes.find(route => {
-            return route.wrapperFileName === wrapperFileName
+            return route.shimFileName === shimFileName
           })
-          manifest.clientPaths[route.id] = file.replace(
+          manifest.pageFiles[route.id] = file.replace(
             '.firebolt/public',
             '/_firebolt'
           )
         }
-        if (output.entryPoint === '.firebolt/tmp/templates/bootstrap.js') {
+        if (output.entryPoint === '.firebolt/extras/bootstrap.js') {
           manifest.bootstrapFile = file.replace('.firebolt/public', '/_firebolt') // prettier-ignore
         }
       }
     }
-    await fs.outputFile(manifestFile, JSON.stringify(manifest, null, 2))
+    await fs.outputFile(buildManifestFile, JSON.stringify(manifest, null, 2))
 
     console.log('build complete')
   }
@@ -280,18 +293,18 @@ export async function bundler(opts) {
     }
 
     // import server core
-    const core = await reimport(coreBuildFile)
+    const core = await reimport(buildCoreFile)
 
     // import manifest
-    const manifest = await fs.readJSON(manifestFile)
+    const manifest = await fs.readJSON(buildManifestFile)
 
     // hydrate manifest
     const bootstrapFile = manifest.bootstrapFile
     for (const route of core.routes) {
-      route.file = manifest.clientPaths[route.id]
+      route.file = manifest.pageFiles[route.id]
     }
 
-    // build route definitions to be sent to client
+    // build route definitions to be used by the client
     const routesForClient = core.routes.map(route => {
       return {
         id: route.id,
