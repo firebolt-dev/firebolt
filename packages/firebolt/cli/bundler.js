@@ -1,28 +1,16 @@
 import fs from 'fs-extra'
 import path from 'path'
 import * as esbuild from 'esbuild'
-import express from 'express'
-import cors from 'cors'
-import compression from 'compression'
-import { renderToPipeableStream, renderToStaticMarkup } from 'react-dom/server'
-import React from 'react'
-import { isbot } from 'isbot'
-import { PassThrough } from 'stream'
 import { debounce, defaultsDeep } from 'lodash'
 import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 import chokidar from 'chokidar'
+import { fork } from 'child_process'
+import chalk from 'chalk'
+import { performance } from 'perf_hooks'
 
 import { getFilePaths } from './utils/getFilePaths'
 import { fileToRoutePattern } from './utils/fileToRoutePattern'
-import { matcher } from './utils/matcher'
 import { virtualModule } from './utils/virtualModule'
-
-const match = matcher()
-
-// suppress React warning about useLayoutEffect on server, this is nonsense because useEffect
-// is similar and doesn't warn and is allowed in SSR
-// see: https://gist.github.com/gaearon/e7d97cdf38a2907924ea12e4ebdf3c85
-React.useLayoutEffect = React.useEffect
 
 export async function bundler(opts) {
   const prod = !!opts.production
@@ -40,27 +28,29 @@ export async function bundler(opts) {
   const buildConfigFile = path.join(appDir, '.firebolt/config.js')
   const buildManifestFile = path.join(appDir, '.firebolt/manifest.json')
   const buildLibFile = path.join(appDir, '.firebolt/lib.js')
+  const buildServerFile = path.join(appDir, '.firebolt/server.js')
 
   const extrasSrcDir = path.join(__dirname, '../extras')
   const extrasDir = path.join(appDir, '.firebolt/extras')
   const extrasBoostrapFile = path.join(appDir, '.firebolt/extras/bootstrap.js')
   const extrasLibFile = path.join(appDir, '.firebolt/extras/lib.js')
+  const extrasServerFile = path.join(appDir, '.firebolt/extras/server.js')
 
-  async function getConfig() {
-    const configMod = await reimport(buildConfigFile)
-    const config = configMod.config()
-    defaultsDeep(config, {
-      port: 3000,
-      external: [],
-    })
-    return config
-  }
+  const $info = chalk.black.bgWhiteBright('  info  ')
+  const $watch = chalk.black.bgWhiteBright(' change ')
 
-  let firstBuild = true
+  let initialBuild = true
+  let config
+
+  console.log(' ')
+  console.log('  🔥 Firebolt')
+  console.log(' ')
 
   async function build() {
-    console.log(firstBuild ? 'building' : 'rebuilding')
-    firstBuild = false
+    const startAt = performance.now()
+    console.log(
+      initialBuild ? `${$info} building...` : `${$info} rebuilding...`
+    )
 
     // ensure we have an empty build directory
     await fs.emptyDir(buildDir)
@@ -88,13 +78,18 @@ export async function bundler(opts) {
           {
             path: buildConfigVirtual,
             contents: `
-              export { default as config } from '../firebolt.config.js'
+              export { default as getConfig } from '../firebolt.config.js'
             `,
           },
         ]),
       ],
     })
-    const config = await getConfig()
+    const { getConfig } = await reimport(buildConfigFile)
+    config = getConfig()
+    defaultsDeep(config, {
+      port: 3000,
+      external: [],
+    })
 
     // initialize manifest
     const manifest = {
@@ -307,233 +302,92 @@ export async function bundler(opts) {
       }
     }
     await fs.outputFile(buildManifestFile, JSON.stringify(manifest, null, 2))
+
+    // build the server
+    await esbuild.build({
+      entryPoints: [extrasServerFile],
+      outfile: buildServerFile,
+      bundle: true,
+      treeShaking: true,
+      sourcemap: true,
+      minify: prod,
+      platform: 'node',
+      packages: 'external',
+      define: {
+        'process.env.NODE_ENV': JSON.stringify(env),
+      },
+      loader: {
+        '.js': 'jsx',
+      },
+      jsx: 'automatic',
+      jsxImportSource: '@emotion/react',
+    })
+
+    const elapsed = (performance.now() - startAt).toFixed(0)
+    console.log(
+      `${$info} ${initialBuild ? 'built' : 'rebuilt'} ${chalk.dim(`(${elapsed}ms)`)}\n`
+    )
+    initialBuild = false
   }
 
   let server
+  let controller
+  let initialServe = true
 
   async function serve() {
     // close any running server
     if (server) {
-      await new Promise(resolve => server.close(resolve))
+      await new Promise(resolve => {
+        server.once('exit', resolve)
+        controller.abort()
+      })
+      controller = null
       server = null
     }
-
-    // import config
-    const config = await getConfig()
-
-    // import server core
-    const core = await reimport(buildCoreFile)
-
-    // import manifest
-    const manifest = await fs.readJSON(buildManifestFile)
-
-    // hydrate manifest
-    const bootstrapFile = manifest.bootstrapFile
-    for (const route of core.routes) {
-      route.file = manifest.pageFiles[route.id]
-    }
-
-    // build route definitions to be used by the client
-    const routesForClient = core.routes.map(route => {
-      return {
-        id: route.id,
-        pattern: route.pattern,
-        file: route.file,
+    controller = new AbortController()
+    const { signal } = controller
+    server = fork(buildServerFile, { signal })
+    server.on('error', err => {
+      if (err.code === 'ABORT_ERR') {
+        // we aborted
+        return
       }
+      console.log('server error')
+      console.error(err)
     })
-
-    // utility to find a route from a url
-    function resolveRouteWithParams(url) {
-      for (const route of core.routes) {
-        const [hit, params] = match(route.pattern, url)
-        if (hit) return [route, params]
-      }
-      return []
-    }
-
-    // utility to call route functions (data and actions)
-    async function callRouteFn(routeId, fnName, args) {
-      // TODO: req needs to exist
-      const req = {}
-      await core.middleware(req)
-      const route = core.routes.find(r => r.id === routeId)
-      if (!route) throw new Error('Route not found')
-      const fn = route.module[fnName]
-      if (!fn) throw new Error('Invalid function')
-      let result = fn(req, ...args)
-      if (result instanceof Promise) {
-        result = await result
-      }
-      return result
-    }
-
-    // start server
-    const app = express()
-    app.use(cors())
-    app.use(compression())
-    app.use(express.json())
-    app.use(express.static('public'))
-    app.use('/_firebolt', express.static('.firebolt/public'))
-
-    // handle route fn calls (useData and useAction)
-    app.post('/_firebolt_fn', async (req, res) => {
-      const { routeId, fnName, args } = req.body
-      let result
-      try {
-        result = await callRouteFn(routeId, fnName, args)
-      } catch (err) {
-        return res.status(400).send(err.message)
-      }
-      res.status(200).json(result)
-    })
-
-    // handle requests for pages and api
-    app.use('*', async (req, res) => {
-      const url = req.originalUrl
-
-      // handle page requests
-      const [route, params] = resolveRouteWithParams(url)
-      if (route) {
-        const RuntimeProvider = core.lib.RuntimeProvider
-        const Router = core.lib.Router
-        const mergeHeadGroups = core.lib.mergeHeadGroups
-        const Document = core.Document
-        const createRuntime = core.createRuntime
-
-        const inserts = {
-          value: '',
-          read() {
-            const str = this.value
-            this.value = ''
-            return str
-          },
-          write(str) {
-            this.value += str
-          },
+    await new Promise(resolve => {
+      server.once('message', msg => {
+        if (msg === 'ready') {
+          resolve()
         }
-
-        const runtime = createRuntime({
-          ssr: {
-            url,
-            params,
-            inserts,
-            callRouteFn,
-          },
-          routes: core.routes,
-        })
-
-        function getHeadContent() {
-          const docHead = runtime.getDocHead()
-          const pageHeads = runtime.getPageHeads()
-          const elem = mergeHeadGroups(docHead, ...pageHeads)
-          return renderToStaticMarkup(elem) || ''
-        }
-
-        const isBot = isbot(req.get('user-agent') || '')
-
-        function Root() {
-          return (
-            <RuntimeProvider data={runtime}>
-              <Document>
-                <Router />
-              </Document>
-            </RuntimeProvider>
-          )
-        }
-
-        // transform stream to:
-        // 1. insert head content
-        // 2. insert streamed suspense resource data
-        // 3. extract and prepend inlined emotion styles
-        let afterHtml
-        const stream = new PassThrough()
-        stream.on('data', chunk => {
-          let str = chunk.toString()
-          // prepend any inlined emotion styles
-          if (afterHtml) {
-            // regex to match all style tags and their contents
-            const regex = /<style[^>]*>[\s\S]*?<\/style>/gi
-            // find all style tags and their contents
-            const matches = str.match(regex) || []
-            const styles = matches.join('')
-            // extract and prepend styles
-            str = styles + str.replace(regex, '')
-          }
-          // append any inserts (eg suspense data)
-          if (afterHtml) {
-            str += inserts.read()
-          }
-          // mark after html
-          if (str.includes('</html>')) {
-            afterHtml = true
-            // inject head content
-            str = str.replace('<head>', '<head>' + getHeadContent())
-          }
-          // console.log('---')
-          // console.log(str)
-          res.write(str)
-          if (afterHtml) {
-            res.flush()
-          }
-        })
-        stream.on('end', () => {
-          res.end()
-        })
-
-        let didError = false
-        const { pipe, abort } = renderToPipeableStream(<Root />, {
-          bootstrapScriptContent: isBot
-            ? undefined
-            : `
-          globalThis.$firebolt = {
-            ssr: null,
-            routes: ${JSON.stringify(routesForClient)},
-            stack: [],
-            push(action, ...args) {
-              this.stack.push({ action, args })
-            }
-          }
-        `,
-          bootstrapModules: isBot ? [] : [route.file, bootstrapFile],
-          onShellReady() {
-            if (!isBot) {
-              res.statusCode = didError ? 500 : 200
-              res.setHeader('Content-Type', 'text/html')
-              pipe(stream)
-            }
-          },
-          onAllReady() {
-            if (isBot) {
-              res.statusCode = didError ? 500 : 200
-              res.setHeader('Content-Type', 'text/html')
-              // pipe(res)
-              pipe(stream)
-            }
-          },
-        })
-      }
+      })
     })
-
-    server = app.listen(config.port, () => {
-      console.log(`server running at http://localhost:${config.port}`)
-    })
-
-    server.on('error', error => {
-      if (error.code === 'EADDRINUSE') {
-        console.log(`port '${config.port}' is already in use`)
-        process.exit()
-      } else {
-        console.error(`failed to start server: ${error.message}`)
-      }
-    })
+    if (initialServe) {
+      console.log(`server running at http://localhost:${config.port}\n`)
+      initialServe = false
+    }
   }
 
-  if (opts.build) {
-    await build()
-  }
-
-  if (opts.serve) {
-    await serve()
+  let runInProgress = false
+  let runPending = false
+  const run = async () => {
+    // if run is called while another run is running, queue it up to re-run at the end
+    if (runInProgress) {
+      runPending = true
+      return
+    }
+    runInProgress = true
+    if (opts.build) {
+      await build()
+    }
+    if (opts.serve && !runPending) {
+      await serve()
+    }
+    runInProgress = false
+    if (runPending) {
+      runPending = false
+      run()
+    }
   }
 
   if (opts.watch) {
@@ -542,17 +396,14 @@ export async function bundler(opts) {
       ignored: ['**/.firebolt/**'],
     }
     const watcher = chokidar.watch([appDir], watchOptions)
-    const onChange = async (type, path) => {
-      console.log('file change:', path)
-      if (opts.build) {
-        await build()
-      }
-      if (opts.serve) {
-        await serve()
-      }
+    const onChange = async (type, file) => {
+      console.log(`${$watch} ~/${path.relative(appDir, file)}`)
+      run()
     }
     watcher.on('all', debounce(onChange))
   }
+
+  run()
 
   // todo: something is preventing the process from self-exiting
   if (!opts.serve && !opts.watch) {
