@@ -25,7 +25,6 @@ const match = matcher()
 React.useLayoutEffect = React.useEffect
 
 export async function bundler(opts) {
-  const port = opts.port || 4004
   const prod = !!opts.production
   const env = prod ? 'production' : 'development'
 
@@ -40,15 +39,28 @@ export async function bundler(opts) {
   const buildConfigVirtual = path.join(appDir, '.firebolt/config.virtual.js')
   const buildConfigFile = path.join(appDir, '.firebolt/config.js')
   const buildManifestFile = path.join(appDir, '.firebolt/manifest.json')
+  const buildLibFile = path.join(appDir, '.firebolt/lib.js')
 
   const extrasSrcDir = path.join(__dirname, '../extras')
   const extrasDir = path.join(appDir, '.firebolt/extras')
   const extrasBoostrapFile = path.join(appDir, '.firebolt/extras/bootstrap.js')
+  const extrasLibFile = path.join(appDir, '.firebolt/extras/lib.js')
 
-  const libFile = path.join(__dirname, 'lib.js')
+  async function getConfig() {
+    const configMod = await reimport(buildConfigFile)
+    const config = configMod.config()
+    defaultsDeep(config, {
+      port: 3000,
+      external: [],
+    })
+    return config
+  }
+
+  let firstBuild = true
 
   async function build() {
-    console.log('building...')
+    console.log(firstBuild ? 'building' : 'rebuilding')
+    firstBuild = false
 
     // ensure we have an empty build directory
     await fs.emptyDir(buildDir)
@@ -82,11 +94,7 @@ export async function bundler(opts) {
         ]),
       ],
     })
-    const configMod = await import(`${buildConfigFile}?v=${Date.now()}`)
-    const config = configMod.config()
-    defaultsDeep(config, {
-      external: [],
-    })
+    const config = await getConfig()
 
     // initialize manifest
     const manifest = {
@@ -133,6 +141,26 @@ export async function bundler(opts) {
     // copy over extras
     await fs.copy(extrasSrcDir, extrasDir)
 
+    // build lib (firebolt)
+    await esbuild.build({
+      entryPoints: [extrasLibFile],
+      outfile: buildLibFile,
+      bundle: true,
+      treeShaking: true,
+      sourcemap: true,
+      minify: prod,
+      platform: 'node', // remove? this is on client too
+      external: ['react', 'react-dom', '@emotion/react'],
+      define: {
+        'process.env.NODE_ENV': JSON.stringify(env),
+      },
+      loader: {
+        '.js': 'jsx',
+      },
+      jsx: 'automatic',
+      jsxImportSource: '@emotion/react',
+    })
+
     // build core
     await esbuild.build({
       entryPoints: [buildCoreVirtual],
@@ -145,7 +173,7 @@ export async function bundler(opts) {
       packages: 'external',
       // external: ['react', 'react-dom', '@emotion/react', ...config.external],
       alias: {
-        firebolt: libFile,
+        firebolt: buildLibFile,
       },
       define: {
         'process.env.NODE_ENV': JSON.stringify(env),
@@ -158,7 +186,7 @@ export async function bundler(opts) {
       plugins: [
         virtualModule([
           {
-            path: path.join(appDir, '.firebolt/runtime.js'), // HERENOW
+            path: path.join(appDir, '.firebolt/runtime.js'),
           },
           {
             path: buildCoreVirtual,
@@ -226,7 +254,7 @@ export async function bundler(opts) {
       minify: prod,
       metafile: true,
       alias: {
-        firebolt: libFile,
+        firebolt: buildLibFile,
       },
       define: {
         'process.env.NODE_ENV': JSON.stringify(env),
@@ -279,8 +307,6 @@ export async function bundler(opts) {
       }
     }
     await fs.outputFile(buildManifestFile, JSON.stringify(manifest, null, 2))
-
-    console.log('build complete')
   }
 
   let server
@@ -291,6 +317,9 @@ export async function bundler(opts) {
       await new Promise(resolve => server.close(resolve))
       server = null
     }
+
+    // import config
+    const config = await getConfig()
 
     // import server core
     const core = await reimport(buildCoreFile)
@@ -485,8 +514,17 @@ export async function bundler(opts) {
       }
     })
 
-    server = app.listen(port, () => {
-      console.log(`server running on http://localhost:${port}`)
+    server = app.listen(config.port, () => {
+      console.log(`server running at http://localhost:${config.port}`)
+    })
+
+    server.on('error', error => {
+      if (error.code === 'EADDRINUSE') {
+        console.log(`port '${config.port}' is already in use`)
+        process.exit()
+      } else {
+        console.error(`failed to start server: ${error.message}`)
+      }
     })
   }
 
@@ -505,8 +543,7 @@ export async function bundler(opts) {
     }
     const watcher = chokidar.watch([appDir], watchOptions)
     const onChange = async (type, path) => {
-      console.log('file change')
-      console.log({ type, path })
+      console.log('file change:', path)
       if (opts.build) {
         await build()
       }
