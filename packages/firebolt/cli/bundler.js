@@ -11,6 +11,7 @@ import { performance } from 'perf_hooks'
 import { getFilePaths } from './utils/getFilePaths'
 import { fileToRoutePattern } from './utils/fileToRoutePattern'
 import { virtualModule } from './utils/virtualModule'
+import { reimport } from './utils/reimport'
 
 export async function bundler(opts) {
   const prod = !!opts.production
@@ -39,20 +40,17 @@ export async function bundler(opts) {
   const $info = chalk.black.bgWhiteBright('  info  ')
   const $watch = chalk.black.bgWhiteBright(' change ')
 
-  let initialBuild = true
+  let firstBuild = true
   let config
 
-  console.log(' ')
-  console.log('  🔥 Firebolt')
-  console.log(' ')
+  console.log('\n  🔥 Firebolt\n')
 
   async function build() {
+    // start tracking build time
     const startAt = performance.now()
-    console.log(
-      initialBuild ? `${$info} building...` : `${$info} rebuilding...`
-    )
+    console.log(`${$info} ${firstBuild ? 'building...' : 'rebuilding...'}`)
 
-    // ensure we have an empty build directory
+    // ensure empty build directory
     await fs.emptyDir(buildDir)
 
     // build and import config
@@ -136,7 +134,7 @@ export async function bundler(opts) {
     // copy over extras
     await fs.copy(extrasSrcDir, extrasDir)
 
-    // build lib (firebolt)
+    // build lib (firebolt) for aliasing in future builds
     await esbuild.build({
       entryPoints: [extrasLibFile],
       outfile: buildLibFile,
@@ -144,7 +142,7 @@ export async function bundler(opts) {
       treeShaking: true,
       sourcemap: true,
       minify: prod,
-      platform: 'node', // remove? this is on client too
+      platform: 'node',
       external: ['react', 'react-dom', '@emotion/react'],
       define: {
         'process.env.NODE_ENV': JSON.stringify(env),
@@ -218,7 +216,7 @@ export async function bundler(opts) {
     // import core
     const core = await reimport(buildCoreFile)
 
-    // generate client page shims
+    // generate page shims for client (tree shaking)
     for (const route of core.routes) {
       const code = `
         import Page from '${route.relShimToPageFile}'
@@ -227,7 +225,7 @@ export async function bundler(opts) {
       await fs.outputFile(route.shimFile, code)
     }
 
-    // build client bundles (pages + bootstrap)
+    // build client bundles (pages + chunks + bootstrap)
     const publicDir = path.join(buildDir, 'public')
     const publicFiles = []
     for (const route of core.routes) {
@@ -281,6 +279,8 @@ export async function bundler(opts) {
         // },
       ],
     })
+
+    // reconcile hashed build files with their source
     const metafile = bundleResult.metafile
     for (const file in metafile.outputs) {
       const output = metafile.outputs[file]
@@ -303,7 +303,7 @@ export async function bundler(opts) {
     }
     await fs.outputFile(buildManifestFile, JSON.stringify(manifest, null, 2))
 
-    // build the server
+    // build server entry
     await esbuild.build({
       entryPoints: [extrasServerFile],
       outfile: buildServerFile,
@@ -324,18 +324,16 @@ export async function bundler(opts) {
     })
 
     const elapsed = (performance.now() - startAt).toFixed(0)
-    console.log(
-      `${$info} ${initialBuild ? 'built' : 'rebuilt'} ${chalk.dim(`(${elapsed}ms)`)}\n`
-    )
-    initialBuild = false
+    console.log(`${$info} ${firstBuild ? 'built' : 'rebuilt'} ${chalk.dim(`(${elapsed}ms)`)}\n`) // prettier-ignore
+    firstBuild = false
   }
 
   let server
   let controller
-  let initialServe = true
+  let firstServe = true
 
   async function serve() {
-    // close any running server
+    // destroy previous server if any
     if (server) {
       await new Promise(resolve => {
         server.once('exit', resolve)
@@ -344,52 +342,56 @@ export async function bundler(opts) {
       controller = null
       server = null
     }
+    // spawn server
     controller = new AbortController()
-    const { signal } = controller
-    server = fork(buildServerFile, { signal })
+    server = fork(buildServerFile, { signal: controller.signal })
     server.on('error', err => {
-      if (err.code === 'ABORT_ERR') {
-        // we aborted
-        return
-      }
+      // ignore abort signals
+      if (err.code === 'ABORT_ERR') return
+      // log other errors
       console.log('server error')
       console.error(err)
     })
     await new Promise(resolve => {
       server.once('message', msg => {
-        if (msg === 'ready') {
-          resolve()
-        }
+        if (msg === 'ready') resolve()
       })
     })
-    if (initialServe) {
+    if (firstServe) {
       console.log(`server running at http://localhost:${config.port}\n`)
-      initialServe = false
+      firstServe = false
     }
   }
 
   let runInProgress = false
   let runPending = false
+
+  // handle bundler runs/re-runs safely
   const run = async () => {
-    // if run is called while another run is running, queue it up to re-run at the end
+    // if run is called while another run is in progress we
+    // queue it up to re-run again after
     if (runInProgress) {
       runPending = true
       return
     }
     runInProgress = true
+    // build
     if (opts.build) {
       await build()
     }
+    // only serve if there isn't anothe run pending
     if (opts.serve && !runPending) {
       await serve()
     }
     runInProgress = false
+    // if another run was queued, lets run it again!
     if (runPending) {
       runPending = false
       run()
     }
   }
 
+  // watch for file changes and then re-run the bundler
   if (opts.watch) {
     const watchOptions = {
       ignoreInitial: true,
@@ -403,15 +405,12 @@ export async function bundler(opts) {
     watcher.on('all', debounce(onChange))
   }
 
+  // execute out initial run
   run()
 
-  // todo: something is preventing the process from self-exiting
+  // todo: isolated builds don't exit the process automatically so
+  // for now we just force exit.
   if (!opts.serve && !opts.watch) {
     process.exit()
   }
-}
-
-function reimport(module) {
-  delete require.cache[module]
-  return import(`${module}?v=${Date.now()}`)
 }
