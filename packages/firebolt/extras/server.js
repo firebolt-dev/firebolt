@@ -212,6 +212,14 @@ app.use('*', async (req, res) => {
           pipe(stream)
         }
       },
+      onError(err) {
+        console.log('react render onError')
+        console.error(err)
+      },
+      onShellError(err) {
+        console.log('react render onShellError')
+        console.error(err)
+      },
     })
   }
 })

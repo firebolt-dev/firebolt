@@ -1,6 +1,6 @@
 export default function config() {
   return {
-    port: 3000,
+    port: 3004,
     external: [],
   }
 }

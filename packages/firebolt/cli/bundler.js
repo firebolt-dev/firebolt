@@ -1,7 +1,7 @@
 import fs from 'fs-extra'
 import path from 'path'
 import * as esbuild from 'esbuild'
-import { debounce, defaultsDeep } from 'lodash'
+import { debounce, defaultsDeep, padStart } from 'lodash'
 import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 import chokidar from 'chokidar'
 import { fork } from 'child_process'
@@ -12,14 +12,18 @@ import { getFilePaths } from './utils/getFilePaths'
 import { fileToRoutePattern } from './utils/fileToRoutePattern'
 import { virtualModule } from './utils/virtualModule'
 import { reimport } from './utils/reimport'
+import { BundlerError } from './utils/BundlerError'
+import { isESBuildError, logESBuildError } from './utils/esbuild'
 
 export async function bundler(opts) {
   const prod = !!opts.production
   const env = prod ? 'production' : 'development'
 
+  const dir = __dirname
   const appDir = process.cwd()
   const appPagesDir = path.join(appDir, 'pages')
   const appApiDir = path.join(appDir, 'api')
+  const appConfigFile = path.join(appDir, 'firebolt.config.js')
 
   const buildDir = path.join(appDir, '.firebolt')
   const buildPageShimsDir = path.join(appDir, '.firebolt/page-shims')
@@ -31,27 +35,46 @@ export async function bundler(opts) {
   const buildLibFile = path.join(appDir, '.firebolt/lib.js')
   const buildServerFile = path.join(appDir, '.firebolt/server.js')
 
-  const extrasSrcDir = path.join(__dirname, '../extras')
+  const extrasSrcDir = path.join(dir, '../extras')
   const extrasDir = path.join(appDir, '.firebolt/extras')
   const extrasBoostrapFile = path.join(appDir, '.firebolt/extras/bootstrap.js')
   const extrasLibFile = path.join(appDir, '.firebolt/extras/lib.js')
   const extrasServerFile = path.join(appDir, '.firebolt/extras/server.js')
 
-  const $info = chalk.black.bgWhiteBright('  info  ')
-  const $watch = chalk.black.bgWhiteBright(' change ')
+  const templateConfigFile = path.join(dir, '../templates/firebolt.config.js')
 
   let firstBuild = true
   let config
 
   console.log('\n  🔥 Firebolt\n')
 
+  const $file = chalk.blueBright
+  const $highlight = chalk.blueBright
+
+  const log = {
+    info(...args) {
+      console.log(chalk.black.bgWhiteBright('  info  '), ...args)
+    },
+    change(...args) {
+      console.log(chalk.black.bgWhiteBright(' change '), ...args)
+    },
+    error(...args) {
+      console.log(chalk.whiteBright.bgRed(' error  '), ...args)
+    },
+  }
+
   async function build() {
     // start tracking build time
     const startAt = performance.now()
-    console.log(`${$info} ${firstBuild ? 'building...' : 'rebuilding...'}`)
+    log.info(`${firstBuild ? 'building...' : 'rebuilding...'}`)
 
     // ensure empty build directory
     await fs.emptyDir(buildDir)
+
+    // create config file if one doesn't exist
+    if (!(await fs.exists(appConfigFile))) {
+      throw new BundlerError(`missing 'firebolt.config.js' file`)
+    }
 
     // build and import config
     await esbuild.build({
@@ -63,6 +86,7 @@ export async function bundler(opts) {
       minify: false,
       platform: 'node',
       packages: 'external',
+      logLevel: 'silent',
       define: {
         'process.env.NODE_ENV': JSON.stringify(env),
       },
@@ -103,6 +127,7 @@ export async function bundler(opts) {
     const routes = []
     for (const pageFile of pageFiles) {
       const id = `route${++ids}`
+      const prettyFileBase = path.relative(appDir, pageFile)
       const pageFileBase = path.relative(appPagesDir, pageFile)
       const shimFile = path.join(buildPageShimsDir, pageFileBase.replace('/', '.')) // prettier-ignore
       const shimFileName = path.relative(path.dirname(shimFile), shimFile) // prettier-ignore
@@ -111,6 +136,7 @@ export async function bundler(opts) {
       const relShimToPageFile = path.relative(path.dirname(shimFile), pageFile) // prettier-ignore
       routes.push({
         id,
+        prettyFileBase,
         pattern,
         shimFile,
         shimFileName,
@@ -144,6 +170,7 @@ export async function bundler(opts) {
       minify: prod,
       platform: 'node',
       external: ['react', 'react-dom', '@emotion/react'],
+      logLevel: 'silent',
       define: {
         'process.env.NODE_ENV': JSON.stringify(env),
       },
@@ -165,6 +192,7 @@ export async function bundler(opts) {
       platform: 'node',
       packages: 'external',
       // external: ['react', 'react-dom', '@emotion/react', ...config.external],
+      logLevel: 'silent',
       alias: {
         firebolt: buildLibFile,
       },
@@ -192,6 +220,7 @@ export async function bundler(opts) {
                     {
                       module: ${route.id},
                       id: '${route.id}',
+                      prettyFileBase: '${route.prettyFileBase}',
                       pattern: '${route.pattern}',
                       shimFile: '${route.shimFile}',
                       shimFileName: '${route.shimFileName}',
@@ -218,6 +247,11 @@ export async function bundler(opts) {
 
     // generate page shims for client (tree shaking)
     for (const route of core.routes) {
+      if (!route.Page) {
+        throw new BundlerError(
+          `missing default export for ${$highlight(route.prettyFileBase)}`
+        )
+      }
       const code = `
         import Page from '${route.relShimToPageFile}'
         globalThis.$firebolt.push('registerPage', '${route.id}', Page)
@@ -246,6 +280,7 @@ export async function bundler(opts) {
       format: 'esm',
       minify: prod,
       metafile: true,
+      logLevel: 'silent',
       alias: {
         firebolt: buildLibFile,
       },
@@ -313,6 +348,7 @@ export async function bundler(opts) {
       minify: prod,
       platform: 'node',
       packages: 'external',
+      logLevel: 'silent',
       define: {
         'process.env.NODE_ENV': JSON.stringify(env),
       },
@@ -324,13 +360,13 @@ export async function bundler(opts) {
     })
 
     const elapsed = (performance.now() - startAt).toFixed(0)
-    console.log(`${$info} ${firstBuild ? 'built' : 'rebuilt'} ${chalk.dim(`(${elapsed}ms)`)}\n`) // prettier-ignore
+    log.info(`${firstBuild ? 'built' : 'rebuilt'} ${chalk.dim(`(${elapsed}ms)`)}\n`) // prettier-ignore
     firstBuild = false
   }
 
   let server
   let controller
-  let firstServe = true
+  let lastPort
 
   async function serve() {
     // destroy previous server if any
@@ -357,9 +393,9 @@ export async function bundler(opts) {
         if (msg === 'ready') resolve()
       })
     })
-    if (firstServe) {
+    if (lastPort !== config.port) {
       console.log(`server running at http://localhost:${config.port}\n`)
-      firstServe = false
+      lastPort = config.port
     }
   }
 
@@ -377,7 +413,21 @@ export async function bundler(opts) {
     runInProgress = true
     // build
     if (opts.build) {
-      await build()
+      try {
+        await build()
+      } catch (err) {
+        if (err instanceof BundlerError) {
+          log.error(err.message)
+        } else if (isESBuildError(err)) {
+          logESBuildError(err)
+        } else {
+          log.error('\n')
+          console.error(err)
+        }
+        runInProgress = false
+        runPending = false
+        return
+      }
     }
     // only serve if there isn't anothe run pending
     if (opts.serve && !runPending) {
@@ -391,6 +441,9 @@ export async function bundler(opts) {
     }
   }
 
+  // execute our initial run
+  await run()
+
   // watch for file changes and then re-run the bundler
   if (opts.watch) {
     const watchOptions = {
@@ -399,14 +452,11 @@ export async function bundler(opts) {
     }
     const watcher = chokidar.watch([appDir], watchOptions)
     const onChange = async (type, file) => {
-      console.log(`${$watch} ~/${path.relative(appDir, file)}`)
+      log.change(`~/${path.relative(appDir, file)}`)
       run()
     }
     watcher.on('all', debounce(onChange))
   }
-
-  // execute out initial run
-  run()
 
   // todo: isolated builds don't exit the process automatically so
   // for now we just force exit.
