@@ -60,6 +60,7 @@ export function createRuntime({ ssr, routes, stack = [] }) {
   }
 
   function resolveRouteWithParams(url) {
+    if (!url) return []
     for (const route of routes) {
       const [hit, params] = match(route.pattern, url)
       if (hit) return [route, params]

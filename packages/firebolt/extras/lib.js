@@ -168,16 +168,46 @@ export function useLocation() {
 
 const historyEvents = ['popstate', 'pushState', 'replaceState', 'hashchange']
 
+function useRouteWithParams(url) {
+  const runtime = useContext(RuntimeContext)
+  return useMemo(() => runtime.resolveRouteWithParams(url), [url])
+}
+
 export function Router() {
   const runtime = useContext(RuntimeContext)
   const [browserUrl, setBrowserUrl] = useState(runtime.ssr?.url || globalThis.location.pathname + globalThis.location.search) // prettier-ignore
-  const [currentUrl, setCurrentUrl] = useState(browserUrl)
-  const [route, params] = runtime.resolveRouteWithParams(currentUrl)
-  const { Page } = route
+  const [prevUrl, setPrevUrl] = useState(null)
+  const [currUrl, setCurrUrl] = useState(browserUrl)
+  const [currRoute, currParams] = useRouteWithParams(currUrl)
+  const [prevRoute, prevParams] = useRouteWithParams(prevUrl)
 
   useEffect(() => {
     function onChange(e) {
-      setBrowserUrl(globalThis.location.pathname + globalThis.location.search)
+      const browserUrl =
+        globalThis.location.pathname + globalThis.location.search
+      if (browserUrl === currUrl) return
+      let cancelled
+      const exec = async () => {
+        const url = browserUrl
+        console.log('browserUrl changed:', url)
+        const route = runtime.resolveRoute(url)
+        console.log('route', route)
+        if (!route.Page) {
+          console.log('missing Page, loading it')
+          await runtime.loadRoute(route)
+        }
+        if (cancelled) {
+          console.log('cancelled')
+          return
+        }
+        setPrevUrl(currUrl)
+        setCurrUrl(url)
+      }
+      exec()
+      return () => {
+        cancelled = true
+      }
+      // setBrowserUrl(globalThis.location.pathname + globalThis.location.search)
     }
     for (const event of historyEvents) {
       addEventListener(event, onChange)
@@ -187,54 +217,94 @@ export function Router() {
         removeEventListener(event, onChange)
       }
     }
-  }, [])
+  }, [currUrl])
 
   useEffect(() => {
-    if (browserUrl === currentUrl) return
-    let cancelled
-    const exec = async () => {
-      const url = browserUrl
-      console.log('browserUrl changed:', url)
-      const route = runtime.resolveRoute(url)
-      console.log('route', route)
-      if (!route.Page) {
-        console.log('missing Page, loading it')
-        await runtime.loadRoute(route)
-      }
-      if (cancelled) {
-        console.log('cancelled')
-        return
-      }
-      setCurrentUrl(url)
-    }
-    exec()
-    return () => {
-      cancelled = true
-    }
+    // if (browserUrl === currUrl) return
+    // let cancelled
+    // const exec = async () => {
+    //   const url = browserUrl
+    //   console.log('browserUrl changed:', url)
+    //   const route = runtime.resolveRoute(url)
+    //   console.log('route', route)
+    //   if (!route.Page) {
+    //     console.log('missing Page, loading it')
+    //     await runtime.loadRoute(route)
+    //   }
+    //   if (cancelled) {
+    //     console.log('cancelled')
+    //     return
+    //   }
+    //   setPrevUrl(currUrl)
+    //   setCurrUrl(url)
+    // }
+    // exec()
+    // return () => {
+    //   cancelled = true
+    // }
   }, [browserUrl])
 
+  // const prevLocation = useMemo(() => {
+  //   if (!prevUrl) return
+  //   return {
+  //     routeId: prevRoute.id,
+  //     url: prevUrl,
+  //     params: prevParams,
+  //   }
+  // }, [prevUrl])
+
+  // const currLocation = useMemo(() => {
+  //   return {
+  //     routeId: currRoute.id,
+  //     url: currUrl,
+  //     params: currParams,
+  //   }
+  // }, [currUrl])
+
+  // console.log('---')
+  // console.log('Router')
+  // console.log('currUrl', currUrl)
+  // console.log('prevUrl', prevUrl)
+  // console.log('---')
+
+  // we work some magic here because if the new route doesn't have its own
+  // suspense, we want to continue showing the previous route until its ready
+  let fallback
+  if (prevUrl) {
+    fallback = (
+      <Route
+        key={prevUrl}
+        url={prevUrl}
+        route={prevRoute}
+        params={prevParams}
+      />
+    )
+  }
+
+  return (
+    <Suspense fallback={fallback}>
+      <Route
+        key={currUrl}
+        url={currUrl}
+        route={currRoute}
+        params={currParams}
+      />
+    </Suspense>
+  )
+}
+
+function Route({ url, route, params }) {
+  const { Page } = route
   const location = useMemo(() => {
     return {
       routeId: route.id,
-      url: currentUrl,
+      url,
       params,
     }
-  }, [currentUrl])
-
-  // console.log('-')
-  // console.log('browserUrl', browserUrl)
-  // console.log('currentUrl', currentUrl)
-  // console.log('runtime', runtime)
-  // console.log('route', route, params)
-  // console.log('-')
-
-  // todo: remove Loading components now
-
+  }, [])
   return (
     <LocationProvider value={location}>
-      <Suspense /*fallback={<div>Loading temp...</div>}*/>
-        <Page />
-      </Suspense>
+      <Page />
     </LocationProvider>
   )
 }
