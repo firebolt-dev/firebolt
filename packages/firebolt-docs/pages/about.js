@@ -1,6 +1,8 @@
 import { css } from 'firebolt'
 
 export default function About() {
+  // throw new Error('foo-bar')
+  // console.log(foo.bar)
   return (
     <div
       css={css`
@@ -13,7 +15,7 @@ export default function About() {
 }
 
 // export function Loading() {
-//   return <div>About loaidng...</div>
+//   return <div>About loading...</div>
 // }
 
 export async function getMetadata() {

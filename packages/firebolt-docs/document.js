@@ -1,17 +1,15 @@
-import { Meta, Router, Style, css } from 'firebolt'
+import { Head, Style, css } from 'firebolt'
 
-export function Document() {
+export function Document({ children }) {
   return (
     <html lang='en'>
-      <head>
-        <Meta />
+      <Head>
+        <title key='title'>Firebolt</title>
         <meta charSet='utf-8' />
         <meta name='viewport' content='width=device-width, initial-scale=1' />
         <Style>{styles}</Style>
-      </head>
-      <body>
-        <Router />
-      </body>
+      </Head>
+      <body>{children}</body>
     </html>
   )
 }

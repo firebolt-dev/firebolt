@@ -2,3 +2,4 @@
 .firebolt
 node_modules
 build
+*.db

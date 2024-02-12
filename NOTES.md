@@ -107,8 +107,11 @@ We use a custom router because we need to disconnect ACTUAL browser location fro
 
 ### Todos
 
+- expire useSuspense data somehow?
+- on server route `fetch('/api/*')` to api routes
+- middleware.js to receive req,res and do things like insert db
 - drop support for nested page folders? they shouldnt be used
-- .firebolt structure
+- [done] .firebolt structure
   - instead of public, use a public prefix like /\_firebolt/\* for client bundles
 - [done] global styles in Document
 - [done] rename Shell to Loading
@@ -174,3 +177,9 @@ We use a custom router because we need to disconnect ACTUAL browser location fro
 
 - google rich results ssr link tester
   - https://search.google.com/test/rich-results/result?id=pvSASzePp3ThAGCw9W9A_A
+
+### Push route
+
+- issue is that the new page may or may not have its own suspense/loading ui
+- if it doesnt, we probably want to stay on the current
+- SCAP isnt this fine?

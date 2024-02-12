@@ -1,72 +1,146 @@
 import fs from 'fs-extra'
 import path from 'path'
+import { fork } from 'child_process'
+import { performance } from 'perf_hooks'
+import chokidar from 'chokidar'
 import * as esbuild from 'esbuild'
-import express from 'express'
-import cors from 'cors'
-import compression from 'compression'
-import { renderToPipeableStream } from 'react-dom/server'
-import React from 'react'
-import { isbot } from 'isbot'
-import { PassThrough } from 'stream'
+import { debounce, defaultsDeep } from 'lodash'
+import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 
+import * as s from './utils/style'
+import { reimport } from './utils/reimport'
 import { getFilePaths } from './utils/getFilePaths'
 import { fileToRoutePattern } from './utils/fileToRoutePattern'
-import { matcher } from './utils/matcher'
-
-const port = 4004
-const env = process.env.NODE_ENV || 'development'
-const prod = env === 'production'
-
-const match = matcher()
+import {
+  BundlerError,
+  isEsbuildError,
+  logCodeError,
+  parseEsbuildError,
+  parseServerError,
+} from './utils/errors'
+import { virtualModule } from './utils/virtualModule'
 
 export async function bundler(opts) {
+  const prod = !!opts.production
+  const env = prod ? 'production' : 'development'
+
+  const dir = __dirname
   const appDir = process.cwd()
-  const pagesDir = path.join(appDir, 'pages')
-  const apiDir = path.join(appDir, 'api')
+  const appPagesDir = path.join(appDir, 'pages')
+  const appApiDir = path.join(appDir, 'api')
+  const appConfigFile = path.join(appDir, 'firebolt.config.js')
 
   const buildDir = path.join(appDir, '.firebolt')
-  const wrapperBuildDir = path.join(appDir, '.firebolt', 'tmp', 'wrappers')
-  const libFile = path.join(__dirname, 'lib.js')
-  const coreBuildFile = path.join(buildDir, 'core.js')
-  const manifestFile = path.join(buildDir, 'manifest.json')
+  const buildPageShimsDir = path.join(appDir, '.firebolt/page-shims')
+  const buildCoreFile = path.join(appDir, '.firebolt/core.js')
+  const buildConfigFile = path.join(appDir, '.firebolt/config.js')
+  const buildManifestFile = path.join(appDir, '.firebolt/manifest.json')
+  const buildLibFile = path.join(appDir, '.firebolt/lib.js')
+  const buildBoostrapFile = path.join(appDir, '.firebolt/bootstrap.js')
+  const buildServerFile = path.join(appDir, '.firebolt/server.js')
 
-  let core
-  let manifest
+  const extrasDir = path.join(dir, '../extras')
+
+  const serverServerFile = path.join(appDir, '.firebolt/server/index.js')
+
+  const templateConfigFile = path.join(dir, '../templates/firebolt.config.js')
+
+  const tmpConfigFile = path.join(appDir, '.firebolt/tmp/config.js')
+  const tmpCoreFile = path.join(appDir, '.firebolt/tmp/core.js')
+
+  let firstBuild = true
+  let config
+
+  const log = {
+    info(...args) {
+      console.log(s.bInfo, ...args)
+    },
+    change(...args) {
+      console.log(s.bChange, ...args)
+    },
+    error(...args) {
+      console.log(s.bError, ...args)
+    },
+  }
+
+  console.log('\n  🔥 Firebolt\n')
 
   async function build() {
-    console.log('building...')
+    // start tracking build time
+    const startAt = performance.now()
+    log.info(`${firstBuild ? 'building...' : 'rebuilding...'}`)
 
-    // ensure we have an empty build directory
+    // ensure empty build directory
     await fs.emptyDir(buildDir)
 
+    // check for config
+    if (!(await fs.exists(appConfigFile))) {
+      throw new BundlerError(`missing ${$mark('firebolt.config.js')} file`)
+    }
+
+    // create config entry
+    const configCode = `
+      export { default as getConfig } from '../firebolt.config.js'
+    `
+    await fs.writeFile(buildConfigFile, configCode)
+
+    // temporarily build, import and validate config
+    await esbuild.build({
+      entryPoints: [buildConfigFile],
+      outfile: tmpConfigFile,
+      bundle: true,
+      treeShaking: true,
+      sourcemap: true,
+      minify: false,
+      platform: 'node',
+      packages: 'external',
+      logLevel: 'silent',
+      define: {
+        'process.env.NODE_ENV': JSON.stringify(env),
+      },
+      loader: {
+        '.js': 'jsx',
+      },
+      jsx: 'automatic',
+      jsxImportSource: '@emotion/react',
+      plugins: [],
+    })
+    const { getConfig } = await reimport(tmpConfigFile)
+    config = getConfig()
+    defaultsDeep(config, {
+      port: 3000,
+      external: [],
+    })
+
     // initialize manifest
-    manifest = {
-      clientPaths: {},
-      runtimeBuildFile: null,
+    const manifest = {
+      pageFiles: {},
+      bootstrapFile: null,
     }
 
     // get a list of page files
-    const pageFiles = await getFilePaths(pagesDir)
+    const pageFiles = await getFilePaths(appPagesDir)
 
-    // generate route info
+    // generate route details
     let ids = 0
     const routes = []
     for (const pageFile of pageFiles) {
       const id = `route${++ids}`
-      const srcFile = pageFile
-      const srcFileBase = path.relative(pagesDir, pageFile)
-      const wrapperFile = path.join(wrapperBuildDir, srcFileBase.replace('/', '.')) // prettier-ignore
-      const wrapperFileName = path.relative(path.dirname(wrapperFile), wrapperFile) // prettier-ignore
-      const pattern = fileToRoutePattern(pageFile.replace(pagesDir, ''))
-      const relBuildToPageFile = path.relative(buildDir, srcFile)
-      const relWrapperToPageFile = path.relative(path.dirname(wrapperFile), srcFile) // prettier-ignore
+      const prettyFileBase = path.relative(appDir, pageFile)
+      const pageFileBase = path.relative(appPagesDir, pageFile)
+      const shimFile = path.join(buildPageShimsDir, pageFileBase.replace('/', '.')) // prettier-ignore
+      const shimFileName = path.relative(path.dirname(shimFile), shimFile) // prettier-ignore
+      const pattern = fileToRoutePattern('/' + pageFileBase)
+      const relBuildToPageFile = path.relative(buildDir, pageFile)
+      const relShimToPageFile = path.relative(path.dirname(shimFile), pageFile) // prettier-ignore
       routes.push({
         id,
+        prettyFileBase,
         pattern,
-        wrapperFile,
-        wrapperFileName,
+        shimFile,
+        shimFileName,
         relBuildToPageFile,
-        relWrapperToPageFile,
+        relShimToPageFile,
       })
     }
 
@@ -75,17 +149,17 @@ export async function bundler(opts) {
       const isDynamicA = a.pattern.includes(':')
       const isDynamicB = b.pattern.includes(':')
       if (isDynamicA && !isDynamicB) {
-        // if 'a' is catch-all and 'b' is not, 'a' should come after 'b'
         return 1
       } else if (!isDynamicA && isDynamicB) {
-        // if 'b' is catch-all and 'a' is not, 'a' should come before 'b'
         return -1
       }
-      // if both are catch-all or both are not, keep original order
       return 0
     })
 
-    // write core (an entry into the apps code for SSR)
+    // copy over extras
+    await fs.copy(extrasDir, buildDir)
+
+    // create core
     const coreCode = `
       ${routes.map(route => `import * as ${route.id} from '${route.relBuildToPageFile}'`).join('\n')}
       export const routes = [
@@ -95,38 +169,39 @@ export async function bundler(opts) {
             {
               module: ${route.id},
               id: '${route.id}',
+              prettyFileBase: '${route.prettyFileBase}',
               pattern: '${route.pattern}',
-              wrapperFile: '${route.wrapperFile}',
-              wrapperFileName: '${route.wrapperFileName}',
+              shimFile: '${route.shimFile}',
+              shimFileName: '${route.shimFileName}',
               relBuildToPageFile: '${route.relBuildToPageFile}',
-              relWrapperToPageFile: '${route.relWrapperToPageFile}',
+              relShimToPageFile: '${route.relShimToPageFile}',
               Page: ${route.id}.default,
-              Loading: ${route.id}?.Loading,
-              getMetadata: ${route.id}?.getMetadata,
-              hasMetadata: !!${route.id}?.getMetadata,
             },
           `
           })
           .join('\n')}
       ]
       export { Document } from '../document.js'
-      export * as firebolt from 'firebolt'
+      export { middleware } from '../middleware.js'
+      export { createRuntime } from './runtime.js'
+      export * as lib from 'firebolt'
     `
-    const coreFile = path.join(buildDir, 'core.raw.js')
-    await fs.writeFile(coreFile, coreCode)
+    await fs.outputFile(buildCoreFile, coreCode)
 
-    // build core
+    // temporarily build core for validation
     await esbuild.build({
-      entryPoints: [coreFile],
-      outfile: coreBuildFile,
+      entryPoints: [buildCoreFile],
+      outfile: tmpCoreFile,
       bundle: true,
       treeShaking: true,
       sourcemap: true,
-      minify: prod,
+      minify: false,
       platform: 'node',
-      external: ['react', 'react-dom', '@emotion/react'],
+      packages: 'external',
+      // external: ['react', 'react-dom', '@emotion/react', ...config.external],
+      logLevel: 'silent',
       alias: {
-        firebolt: libFile,
+        firebolt: buildLibFile,
       },
       define: {
         'process.env.NODE_ENV': JSON.stringify(env),
@@ -136,35 +211,35 @@ export async function bundler(opts) {
       },
       jsx: 'automatic',
       jsxImportSource: '@emotion/react',
+      plugins: [],
     })
 
-    // import core
-    core = await import(`${coreBuildFile}?v=${Date.now()}`)
-
-    // copy over runtime
-    const runtimeSrc = path.join(__dirname, '../runtime')
-    const runtimeDir = path.join(buildDir, 'tmp', 'runtime')
-    await fs.copy(runtimeSrc, runtimeDir)
-
-    // generate client page bundles
-    // TODO: retain page function name?
+    // import and validate core page exports etc
+    const core = await reimport(tmpCoreFile)
     for (const route of core.routes) {
-      const code = `
-        import Page from '${route.relWrapperToPageFile}'
-        ${route.Loading ? `import { Loading } from '${route.relWrapperToPageFile}'` : ''}
-        ${!route.Loading ? `globalThis.$firebolt.push('registerPage', '${route.id}', Page)` : ''}
-        ${route.Loading ? `globalThis.$firebolt.push('registerPage', '${route.id}', Page, Loading)` : ''}
-      `
-      await fs.outputFile(route.wrapperFile, code)
+      if (!route.Page) {
+        throw new BundlerError(
+          `missing default export for ${$mark(route.prettyFileBase)}`
+        )
+      }
     }
 
-    // build client bundles (pages + runtime)
+    // generate page shims for client (tree shaking)
+    for (const route of routes) {
+      const code = `
+        import Page from '${route.relShimToPageFile}'
+        globalThis.$firebolt.push('registerPage', '${route.id}', Page)
+      `
+      await fs.outputFile(route.shimFile, code)
+    }
+
+    // build client bundles (pages + chunks + bootstrap)
     const publicDir = path.join(buildDir, 'public')
     const publicFiles = []
-    for (const route of core.routes) {
-      publicFiles.push(route.wrapperFile)
+    for (const route of routes) {
+      publicFiles.push(route.shimFile)
     }
-    publicFiles.push(runtimeDir)
+    publicFiles.push(buildBoostrapFile)
     const bundleResult = await esbuild.build({
       entryPoints: publicFiles,
       entryNames: '/[name]-[hash]',
@@ -174,11 +249,14 @@ export async function bundler(opts) {
       sourcemap: true,
       splitting: true,
       platform: 'browser',
+      // mainFields: ["browser", "module", "main"],
+      // external: ['fs', 'path', 'util', /*...config.external*/],
       format: 'esm',
       minify: prod,
       metafile: true,
+      logLevel: 'silent',
       alias: {
-        firebolt: libFile,
+        firebolt: buildLibFile,
       },
       define: {
         'process.env.NODE_ENV': JSON.stringify(env),
@@ -188,230 +266,184 @@ export async function bundler(opts) {
       },
       jsx: 'automatic',
       jsxImportSource: '@emotion/react',
+      plugins: [
+        // polyfill fs, path etc for browser environment
+        // polyfillNode({}),
+        // ensure pages are marked side-effect free for tree shaking
+        // {
+        //   name: 'no-side-effects',
+        //   setup(build) {
+        //     build.onResolve({ filter: /.*/ }, async args => {
+        //       // ignore this if we called ourselves
+        //       if (args.pluginData) return
+        //       console.log(args.path)
+        //       const { path, ...rest } = args
+        //       // avoid infinite recursion
+        //       rest.pluginData = true
+        //       const result = await build.resolve(path, rest)
+        //       result.sideEffects = false
+        //       return result
+        //     })
+        //   },
+        // },
+      ],
     })
+
+    // reconcile hashed build files with their source
     const metafile = bundleResult.metafile
     for (const file in metafile.outputs) {
       const output = metafile.outputs[file]
       if (output.entryPoint) {
         // page wrappers
-        if (output.entryPoint.startsWith('.firebolt/tmp/wrappers/')) {
-          const wrapperFileName = output.entryPoint.replace('.firebolt/tmp/wrappers/', '') // prettier-ignore
-          const route = core.routes.find(route => {
-            return route.wrapperFileName === wrapperFileName
+        if (output.entryPoint.startsWith('.firebolt/page-shims/')) {
+          const shimFileName = output.entryPoint.replace('.firebolt/page-shims/', '') // prettier-ignore
+          const route = routes.find(route => {
+            return route.shimFileName === shimFileName
           })
-          manifest.clientPaths[route.id] = file.replace(
+          manifest.pageFiles[route.id] = file.replace(
             '.firebolt/public',
             '/_firebolt'
           )
         }
-        if (output.entryPoint === '.firebolt/tmp/runtime/index.js') {
-          manifest.runtimeBuildFile = file.replace('.firebolt/public', '/_firebolt') // prettier-ignore
+        if (output.entryPoint === '.firebolt/bootstrap.js') {
+          manifest.bootstrapFile = file.replace('.firebolt/public', '/_firebolt') // prettier-ignore
         }
       }
     }
-    await fs.outputFile(manifestFile, JSON.stringify(manifest, null, 2))
+    await fs.outputFile(buildManifestFile, JSON.stringify(manifest, null, 2))
 
-    // build server
-    // await esbuild.build({
-    //   entryPoints: [serverFile],
-    //   outfile: serverBuildFile,
-    //   bundle: true,
-    //   treeShaking: true,
-    //   sourcemap: true,
-    //   minify: prod,
-    //   platform: 'node',
-    //   packages: 'external',
-    //   alias: {
-    //     firebolt: libFile,
-    //   },
-    //   define: {
-    //     'process.env.NODE_ENV': JSON.stringify(env),
-    //   },
-    //   loader: {
-    //     '.js': 'jsx',
-    //   },
-    //   jsx: 'automatic',
-    //   jsxImportSource: '@emotion/react',
-    // })
+    // build server entry
+    await esbuild.build({
+      entryPoints: [buildServerFile],
+      outfile: serverServerFile,
+      bundle: true,
+      treeShaking: true,
+      sourcemap: true,
+      minify: prod,
+      platform: 'node',
+      packages: 'external',
+      logLevel: 'silent',
+      alias: {
+        firebolt: buildLibFile,
+      },
+      define: {
+        'process.env.NODE_ENV': JSON.stringify(env),
+      },
+      loader: {
+        '.js': 'jsx',
+      },
+      jsx: 'automatic',
+      jsxImportSource: '@emotion/react',
+      plugins: [],
+    })
 
-    console.log('build complete')
+    const elapsed = (performance.now() - startAt).toFixed(0)
+    log.info(`${firstBuild ? 'built' : 'rebuilt'} ${s.dim(`(${elapsed}ms)`)}\n`) // prettier-ignore
+    firstBuild = false
   }
+
+  let server
+  let controller
+  let lastPort
 
   async function serve() {
-    // ...
-  }
-
-  if (opts.build) {
-    await build()
-  }
-
-  // import server core
-  if (!core) {
-    core = await import(coreBuildFile)
-  }
-
-  // import manifest
-  if (!manifest) {
-    manifest = await fs.readJSON(manifestFile)
-  }
-
-  // hydrate manifest
-  const runtimeBuildFile = manifest.runtimeBuildFile
-  for (const route of core.routes) {
-    route.file = manifest.clientPaths[route.id]
-  }
-
-  // build route definitions to be sent to client
-  const routesForClient = core.routes.map(route => {
-    return {
-      id: route.id,
-      pattern: route.pattern,
-      file: route.file,
-      Page: null,
-      Loading: null,
-      hasMetadata: route.hasMetadata,
-    }
-  })
-
-  // utility to find a route from a url
-  function resolveRoute(url) {
-    for (const route of core.routes) {
-      const [hit, params] = match(route.pattern, url)
-      if (hit) return [route, params]
-    }
-    return []
-  }
-
-  // start server
-  const server = express()
-  server.use(cors())
-  server.use(compression())
-  server.use(express.json())
-  server.use(express.static('public'))
-  server.use('/_firebolt', express.static('.firebolt/public'))
-
-  // handle requests for page data
-  server.get('/_firebolt_metadata', async (req, res) => {
-    const url = req.query.url
-    const [route, params] = resolveRoute(url)
-    if (!route) return res.json({})
-    const metadata = await route.getMetadata() // todo: pass in params? request?
-    return res.json(metadata)
-  })
-
-  // handle requests for pages and api
-  server.use('*', async (req, res) => {
-    const url = req.originalUrl
-
-    // handle page requests
-    const [route, params] = resolveRoute(url)
-    if (route) {
-      const RuntimeProvider = core.firebolt.RuntimeProvider
-      const Document = core.Document
-
-      const inserts = {
-        value: '',
-        read() {
-          const str = this.value
-          this.value = ''
-          return str
-        },
-        write(str) {
-          this.value += str
-        },
-      }
-
-      const runtime = {
-        ssr: {
-          url,
-          params,
-          inserts,
-        },
-        routes: core.routes,
-      }
-
-      const isBot = isbot(req.get('user-agent') || '')
-
-      // crawlers need to pre-fetch metadata and inject it for both <Meta/> and <Router/> to consume
-      if (isBot && route.getMetadata) {
-        runtime.ssr.botMetadata = await route.getMetadata()
-      }
-
-      function Root() {
-        return (
-          <RuntimeProvider data={runtime}>
-            <Document />
-          </RuntimeProvider>
-        )
-      }
-
-      // transform stream to:
-      // 1. insert suspense data
-      // 2. extract and prepend inlined emotion styles
-      let afterHtml
-      const stream = new PassThrough()
-      stream.on('data', chunk => {
-        let str = chunk.toString()
-        // prepend any inlined emotion styles
-        if (afterHtml) {
-          // regex to match all style tags and their contents
-          const regex = /<style[^>]*>[\s\S]*?<\/style>/gi
-          // find all style tags and their contents
-          const matches = str.match(regex) || []
-          const styles = matches.join('')
-          // extract and prepend styles
-          str = styles + str.replace(regex, '')
-        }
-        // append any inserts (eg suspense data)
-        if (afterHtml) {
-          str += inserts.read()
-        }
-        // mark after html
-        if (str.includes('</html>')) {
-          afterHtml = true
-        }
-        console.log('---')
-        console.log(str)
-        res.write(str)
-        res.flush()
+    // destroy previous server if any
+    if (server) {
+      await new Promise(resolve => {
+        server.once('exit', resolve)
+        controller.abort()
       })
-      stream.on('end', () => {
-        res.end()
-      })
-
-      let didError = false
-      const { pipe, abort } = renderToPipeableStream(<Root />, {
-        bootstrapScriptContent: isBot
-          ? ``
-          : `
-          globalThis.$firebolt = {
-            ssr: null,
-            routes: ${JSON.stringify(routesForClient)},
-            stack: [],
-            push(action, ...args) {
-              this.stack.push({ action, args })
-            }
-          }
-        `,
-        bootstrapModules: isBot ? [] : [route.file, runtimeBuildFile],
-        onShellReady() {
-          if (!isBot) {
-            res.statusCode = didError ? 500 : 200
-            res.setHeader('Content-Type', 'text/html')
-            pipe(stream)
-          }
-        },
-        onAllReady() {
-          if (isBot) {
-            res.statusCode = didError ? 500 : 200
-            res.setHeader('Content-Type', 'text/html')
-            pipe(res)
-          }
-        },
-      })
+      controller = null
+      server = null
     }
-  })
-  server.listen(port, () => {
-    console.log(`server running on http://localhost:${port}`)
-  })
+    // spawn server
+    controller = new AbortController()
+    server = fork(serverServerFile, { signal: controller.signal })
+    server.on('error', err => {
+      // ignore abort signals
+      if (err.code === 'ABORT_ERR') return
+      // log other errors
+      console.log('server error')
+      console.error(err)
+    })
+    await new Promise(resolve => {
+      server.once('message', msg => {
+        if (msg === 'ready') resolve()
+      })
+    })
+    server.on('message', msg => {
+      if (msg.type === 'error') {
+        logCodeError(parseServerError(msg.error, appDir))
+      }
+    })
+    if (lastPort !== config.port) {
+      console.log(`server running at http://localhost:${config.port}\n`)
+      lastPort = config.port
+    }
+  }
+
+  let runInProgress = false
+  let runPending = false
+
+  // handle bundler runs/re-runs safely
+  const run = async () => {
+    // if run is called while another run is in progress we
+    // queue it up to re-run again after
+    if (runInProgress) {
+      runPending = true
+      return
+    }
+    runInProgress = true
+    // build
+    if (opts.build) {
+      try {
+        await build()
+      } catch (err) {
+        if (err instanceof BundlerError) {
+          log.error(err.message)
+        } else if (isEsbuildError(err)) {
+          logCodeError(parseEsbuildError(err))
+        } else {
+          log.error('\n')
+          console.error(err)
+        }
+        runInProgress = false
+        runPending = false
+        return
+      }
+    }
+    // only serve if there isn't anothe run pending
+    if (opts.serve && !runPending) {
+      await serve()
+    }
+    runInProgress = false
+    // if another run was queued, lets run it again!
+    if (runPending) {
+      runPending = false
+      run()
+    }
+  }
+
+  // execute our initial run
+  await run()
+
+  // watch for file changes and then re-run the bundler
+  if (opts.watch) {
+    const watchOptions = {
+      ignoreInitial: true,
+      ignored: ['**/.firebolt/**'],
+    }
+    const watcher = chokidar.watch([appDir], watchOptions)
+    const onChange = async (type, file) => {
+      log.change(`~/${path.relative(appDir, file)}`)
+      run()
+    }
+    watcher.on('all', debounce(onChange))
+  }
+
+  // todo: isolated builds don't exit the process automatically so
+  // for now we just force exit.
+  if (!opts.serve && !opts.watch) {
+    process.exit()
+  }
 }
