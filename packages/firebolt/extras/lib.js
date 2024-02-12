@@ -322,7 +322,7 @@ export function useData(...args) {
   const runtime = useContext(RuntimeContext)
   const loader = runtime.getLoader(routeId, args)
   useEffect(() => {
-    return runtime.watchLoader(loader, forceUpdate)
+    return loader.watch(forceUpdate)
   }, [])
   return loader
 }

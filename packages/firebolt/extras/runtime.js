@@ -25,10 +25,9 @@ export function createRuntime({ ssr, routes, stack = [] }) {
     watchPageHeads,
     callRouteFn,
     getLoader,
-    watchLoader,
     getResource,
     setResource,
-    setResourceValue,
+    setResourceResult,
     getAction,
     getCache,
   }
@@ -104,7 +103,7 @@ export function createRuntime({ ssr, routes, stack = [] }) {
     if (ssr) {
       result = await ssr.callRouteFn(routeId, fnName, args)
     } else {
-      const resp = await fetch('/_firebolt_fn', {
+      const res = await fetch('/_firebolt_fn', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -115,7 +114,7 @@ export function createRuntime({ ssr, routes, stack = [] }) {
           args,
         }),
       })
-      result = await resp.json()
+      result = await res.json()
     }
     return result
   }
@@ -135,18 +134,18 @@ export function createRuntime({ ssr, routes, stack = [] }) {
       fetching: resource?.pending() || false,
       invalidated: false,
       async fetch() {
-        let value
+        let result
         if (ssr) {
-          value = await ssr.callRouteFn(routeId, fnName, fnArgs)
+          result = await ssr.callRouteFn(routeId, fnName, fnArgs)
           ssr.inserts.write(`
             <script>
-              globalThis.$firebolt.push('setResourceValue', '${key}', ${JSON.stringify(value)})
+              globalThis.$firebolt.push('setResourceResult', '${key}', ${JSON.stringify(result)})
             </script>
           `)
         } else {
-          value = await callRouteFn(routeId, fnName, fnArgs)
+          result = await callRouteFn(routeId, fnName, fnArgs)
         }
-        return value
+        return result
       },
       get() {
         let resource = getResource(key)
@@ -154,29 +153,32 @@ export function createRuntime({ ssr, routes, stack = [] }) {
           resource = createResource(loader.fetch())
           setResource(key, resource)
         }
-        if (loader.invalidated) {
-          loader.invalidated = false
+        if (resource.expired()) {
+          loader.invalidated = true
+        }
+        if (loader.invalidated && !loader.fetching) {
           loader.fetching = true
-          loader.fetch().then(newValue => {
-            resource.write(newValue)
+          loader.fetch().then(result => {
+            resource.write(result)
             loader.fetching = false
+            loader.invalidated = false
             loader.notify()
           })
         }
         return resource.read()
       },
-      set(data) {
+      set(value) {
         const resource = getResource(key)
-        resource.write(data)
+        resource.write({ value }) // todo: set expire?
         loader.notify()
       },
       edit(fn) {
         const resource = getResource(key)
         const value = resource.read(false)
         const newValue = produce(value, draft => {
-          fn(draft)
+          return fn(draft)
         })
-        resource.write(newValue)
+        resource.write({ value: newValue })
         loader.notify()
       },
       async invalidate() {
@@ -188,14 +190,13 @@ export function createRuntime({ ssr, routes, stack = [] }) {
           notify()
         }
       },
+      watch(callback) {
+        loader.watchers.add(callback)
+        return () => loader.watchers.delete(callback)
+      },
     }
     loaders[key] = loader
     return loader
-  }
-
-  function watchLoader(loader, onChange) {
-    loader.watchers.add(onChange)
-    return () => loader.watchers.delete(onChange)
   }
 
   const resources = {} // [key]: resource
@@ -208,39 +209,44 @@ export function createRuntime({ ssr, routes, stack = [] }) {
     resources[key] = resource
   }
 
-  function setResourceValue(key, value) {
+  function setResourceResult(key, result) {
     let resource = getResource(key)
     if (resource) {
-      resource.write(value)
+      resource.write(result)
     } else {
-      resource = createResource(value)
+      resource = createResource(result)
       setResource(key, resource)
     }
   }
 
-  function createResource(valueOrPromise) {
+  function createResource(resultOrPromise) {
     let status
     let value
     let promise
-    const set = valueOrPromise => {
-      if (valueOrPromise instanceof Promise) {
+    let expiresAt = null
+    const set = resultOrPromise => {
+      if (resultOrPromise instanceof Promise) {
         status = 'pending'
-        promise = valueOrPromise.then(
-          resp => {
+        promise = resultOrPromise.then(
+          result => {
             status = 'ready'
-            value = resp
+            value = result.value
+            expiresAt = result.expire ? new Date().getTime() + result.expire * 1000 : null // prettier-ignore
           },
           err => {
             status = 'error'
             value = err
+            expiresAt = null
           }
         )
       } else {
+        const result = resultOrPromise
         status = 'ready'
-        value = valueOrPromise
+        value = result.value
+        expiresAt = result.expire ? new Date().getTime() + result.expire * 1000 : null // prettier-ignore
       }
     }
-    set(valueOrPromise)
+    set(resultOrPromise)
     return {
       read(suspend = true) {
         if (!suspend) return value
@@ -248,11 +254,16 @@ export function createRuntime({ ssr, routes, stack = [] }) {
         if (status === 'pending') throw promise
         if (status === 'error') throw value
       },
-      write(valueOrPromise) {
-        set(valueOrPromise)
+      write(resultOrPromise) {
+        set(resultOrPromise)
       },
       pending() {
         return status === 'pending'
+      },
+      expired() {
+        if (expiresAt === null) return false
+        const now = new Date().getTime()
+        return now > expiresAt
       },
     }
   }

@@ -4,6 +4,7 @@ import path from 'path'
 import express from 'express'
 import cors from 'cors'
 import compression from 'compression'
+import cookieParser from 'cookie-parser'
 import { renderToPipeableStream, renderToStaticMarkup } from 'react-dom/server'
 import React from 'react'
 import { isbot } from 'isbot'
@@ -15,6 +16,7 @@ import { matcher } from './matcher'
 import { getConfig } from './config.js'
 import * as core from './core.js'
 import manifest from './manifest.json'
+import { Request } from './request'
 
 // suppress React warning about useLayoutEffect on server, this is nonsense because useEffect
 // is similar and doesn't warn and is allowed in SSR
@@ -55,19 +57,17 @@ function resolveRouteWithParams(url) {
 }
 
 // utility to call route functions (data and actions)
-async function callRouteFn(routeId, fnName, args) {
-  // TODO: req needs to exist
-  const req = {}
-  await core.middleware(req)
+async function callRouteFn(request, routeId, fnName, args) {
+  await core.middleware(request)
   const route = core.routes.find(r => r.id === routeId)
   if (!route) throw new Error('Route not found')
   const fn = route.module[fnName]
   if (!fn) throw new Error('Invalid function')
-  let result = fn(req, ...args)
-  if (result instanceof Promise) {
-    result = await result
+  let value = fn(request, ...args)
+  if (value instanceof Promise) {
+    value = await value
   }
-  return result
+  return value
 }
 
 // start server
@@ -75,19 +75,35 @@ const app = express()
 app.use(cors())
 app.use(compression())
 app.use(express.json())
+app.use(cookieParser())
 app.use(express.static('public'))
 app.use('/_firebolt', express.static('.firebolt/public'))
 
 // handle route fn calls (useData and useAction)
 app.post('/_firebolt_fn', async (req, res) => {
   const { routeId, fnName, args } = req.body
-  let result
+  const request = new Request(req)
+  let value
+  let err
   try {
-    result = await callRouteFn(routeId, fnName, args)
-  } catch (err) {
-    return res.status(400).send(err.message)
+    value = await callRouteFn(request, routeId, fnName, args)
+  } catch (_err) {
+    err = _err
   }
-  res.status(200).json(result)
+  if (err) {
+    console.log('TODO: handle fn err')
+    res.status(400).send(err.message)
+  } else {
+    // todo: redirect if any
+    // todo: error if any
+    // todo: expire if any
+    request.cookies._apply(res)
+    const result = {
+      value,
+      expire: request._expire,
+    }
+    res.status(200).json(result)
+  }
 })
 
 // handle requests for pages and api
@@ -120,7 +136,18 @@ app.use('*', async (req, res) => {
         url,
         params,
         inserts,
-        callRouteFn,
+        async callRouteFn(...args) {
+          const request = new Request(req)
+          const value = await callRouteFn(request, ...args)
+          // todo: redirect if any
+          // todo: error if any
+          request.cookies._apply(res)
+          const result = {
+            value,
+            expire: request._expire,
+          }
+          return result
+        },
       },
       routes: core.routes,
     })
@@ -200,6 +227,7 @@ app.use('*', async (req, res) => {
       bootstrapModules: isBot ? [] : [route.file, bootstrapFile],
       onShellReady() {
         if (!isBot) {
+          // TODO: handle Request cookie changes and expiry etc
           res.statusCode = didError ? 500 : 200
           res.setHeader('Content-Type', 'text/html')
           pipe(stream)
@@ -214,6 +242,11 @@ app.use('*', async (req, res) => {
         }
       },
       onError(error) {
+        if (error instanceof Request) {
+          console.log(
+            'TODO: request.redirect or request.error was thrown! handle it!'
+          )
+        }
         if (process.send) {
           process.send({
             type: 'error',

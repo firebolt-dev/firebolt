@@ -4,6 +4,11 @@ import path from 'path'
 
 import * as s from './style'
 
+/**
+ * TODO: if esbuild throws multiple errors (eg the knex external issue) we currently only
+ *       show the first but should probably show all of them!
+ */
+
 export class BundlerError extends Error {
   constructor(message) {
     super(message)

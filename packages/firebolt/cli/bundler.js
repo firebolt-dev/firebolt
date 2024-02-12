@@ -93,7 +93,7 @@ export async function bundler(opts) {
       sourcemap: true,
       minify: false,
       platform: 'node',
-      packages: 'external',
+      // packages: 'external',
       logLevel: 'silent',
       define: {
         'process.env.NODE_ENV': JSON.stringify(env),
@@ -197,8 +197,10 @@ export async function bundler(opts) {
       sourcemap: true,
       minify: false,
       platform: 'node',
+      // format: 'esm',
       packages: 'external',
       // external: ['react', 'react-dom', '@emotion/react', ...config.external],
+      // external: [...config.external],
       logLevel: 'silent',
       alias: {
         firebolt: buildLibFile,
@@ -321,6 +323,7 @@ export async function bundler(opts) {
       sourcemap: true,
       minify: prod,
       platform: 'node',
+      // format: 'esm',
       packages: 'external',
       logLevel: 'silent',
       alias: {

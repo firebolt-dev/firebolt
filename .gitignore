@@ -1,5 +1,6 @@
 .DS_Store
 .firebolt
+.notes
 node_modules
 build
 *.db
