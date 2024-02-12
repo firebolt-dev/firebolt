@@ -1,19 +1,24 @@
 import fs from 'fs-extra'
 import path from 'path'
-import * as esbuild from 'esbuild'
-import { debounce, defaultsDeep, padStart } from 'lodash'
-import { polyfillNode } from 'esbuild-plugin-polyfill-node'
-import chokidar from 'chokidar'
 import { fork } from 'child_process'
-import chalk from 'chalk'
 import { performance } from 'perf_hooks'
+import chokidar from 'chokidar'
+import * as esbuild from 'esbuild'
+import { debounce, defaultsDeep } from 'lodash'
+import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 
+import * as s from './utils/style'
+import { reimport } from './utils/reimport'
 import { getFilePaths } from './utils/getFilePaths'
 import { fileToRoutePattern } from './utils/fileToRoutePattern'
+import {
+  BundlerError,
+  isEsbuildError,
+  logCodeError,
+  parseEsbuildError,
+  parseServerError,
+} from './utils/errors'
 import { virtualModule } from './utils/virtualModule'
-import { reimport } from './utils/reimport'
-import { BundlerError } from './utils/BundlerError'
-import { isESBuildError, logESBuildError } from './utils/esbuild'
 
 export async function bundler(opts) {
   const prod = !!opts.production
@@ -27,41 +32,38 @@ export async function bundler(opts) {
 
   const buildDir = path.join(appDir, '.firebolt')
   const buildPageShimsDir = path.join(appDir, '.firebolt/page-shims')
-  const buildCoreVirtual = path.join(appDir, '.firebolt/core.virtual.js')
   const buildCoreFile = path.join(appDir, '.firebolt/core.js')
-  const buildConfigVirtual = path.join(appDir, '.firebolt/config.virtual.js')
   const buildConfigFile = path.join(appDir, '.firebolt/config.js')
   const buildManifestFile = path.join(appDir, '.firebolt/manifest.json')
   const buildLibFile = path.join(appDir, '.firebolt/lib.js')
+  const buildBoostrapFile = path.join(appDir, '.firebolt/bootstrap.js')
   const buildServerFile = path.join(appDir, '.firebolt/server.js')
 
-  const extrasSrcDir = path.join(dir, '../extras')
-  const extrasDir = path.join(appDir, '.firebolt/extras')
-  const extrasBoostrapFile = path.join(appDir, '.firebolt/extras/bootstrap.js')
-  const extrasLibFile = path.join(appDir, '.firebolt/extras/lib.js')
-  const extrasServerFile = path.join(appDir, '.firebolt/extras/server.js')
+  const extrasDir = path.join(dir, '../extras')
+
+  const serverServerFile = path.join(appDir, '.firebolt/server/index.js')
 
   const templateConfigFile = path.join(dir, '../templates/firebolt.config.js')
+
+  const tmpConfigFile = path.join(appDir, '.firebolt/tmp/config.js')
+  const tmpCoreFile = path.join(appDir, '.firebolt/tmp/core.js')
 
   let firstBuild = true
   let config
 
-  console.log('\n  🔥 Firebolt\n')
-
-  const $file = chalk.blueBright
-  const $highlight = chalk.blueBright
-
   const log = {
     info(...args) {
-      console.log(chalk.black.bgWhiteBright('  info  '), ...args)
+      console.log(s.bInfo, ...args)
     },
     change(...args) {
-      console.log(chalk.black.bgWhiteBright(' change '), ...args)
+      console.log(s.bChange, ...args)
     },
     error(...args) {
-      console.log(chalk.whiteBright.bgRed(' error  '), ...args)
+      console.log(s.bError, ...args)
     },
   }
+
+  console.log('\n  🔥 Firebolt\n')
 
   async function build() {
     // start tracking build time
@@ -71,18 +73,24 @@ export async function bundler(opts) {
     // ensure empty build directory
     await fs.emptyDir(buildDir)
 
-    // create config file if one doesn't exist
+    // check for config
     if (!(await fs.exists(appConfigFile))) {
-      throw new BundlerError(`missing 'firebolt.config.js' file`)
+      throw new BundlerError(`missing ${$mark('firebolt.config.js')} file`)
     }
 
-    // build and import config
+    // create config entry
+    const configCode = `
+      export { default as getConfig } from '../firebolt.config.js'
+    `
+    await fs.writeFile(buildConfigFile, configCode)
+
+    // temporarily build, import and validate config
     await esbuild.build({
-      entryPoints: [buildConfigVirtual],
-      outfile: buildConfigFile,
+      entryPoints: [buildConfigFile],
+      outfile: tmpConfigFile,
       bundle: true,
-      treeShaking: false,
-      sourcemap: false,
+      treeShaking: true,
+      sourcemap: true,
       minify: false,
       platform: 'node',
       packages: 'external',
@@ -95,18 +103,9 @@ export async function bundler(opts) {
       },
       jsx: 'automatic',
       jsxImportSource: '@emotion/react',
-      plugins: [
-        virtualModule([
-          {
-            path: buildConfigVirtual,
-            contents: `
-              export { default as getConfig } from '../firebolt.config.js'
-            `,
-          },
-        ]),
-      ],
+      plugins: [],
     })
-    const { getConfig } = await reimport(buildConfigFile)
+    const { getConfig } = await reimport(tmpConfigFile)
     config = getConfig()
     defaultsDeep(config, {
       port: 3000,
@@ -122,7 +121,7 @@ export async function bundler(opts) {
     // get a list of page files
     const pageFiles = await getFilePaths(appPagesDir)
 
-    // generate route info
+    // generate route details
     let ids = 0
     const routes = []
     for (const pageFile of pageFiles) {
@@ -158,37 +157,45 @@ export async function bundler(opts) {
     })
 
     // copy over extras
-    await fs.copy(extrasSrcDir, extrasDir)
+    await fs.copy(extrasDir, buildDir)
 
-    // build lib (firebolt) for aliasing in future builds
+    // create core
+    const coreCode = `
+      ${routes.map(route => `import * as ${route.id} from '${route.relBuildToPageFile}'`).join('\n')}
+      export const routes = [
+        ${routes
+          .map(route => {
+            return `
+            {
+              module: ${route.id},
+              id: '${route.id}',
+              prettyFileBase: '${route.prettyFileBase}',
+              pattern: '${route.pattern}',
+              shimFile: '${route.shimFile}',
+              shimFileName: '${route.shimFileName}',
+              relBuildToPageFile: '${route.relBuildToPageFile}',
+              relShimToPageFile: '${route.relShimToPageFile}',
+              Page: ${route.id}.default,
+            },
+          `
+          })
+          .join('\n')}
+      ]
+      export { Document } from '../document.js'
+      export { middleware } from '../middleware.js'
+      export { createRuntime } from './runtime.js'
+      export * as lib from 'firebolt'
+    `
+    await fs.outputFile(buildCoreFile, coreCode)
+
+    // temporarily build core for validation
     await esbuild.build({
-      entryPoints: [extrasLibFile],
-      outfile: buildLibFile,
+      entryPoints: [buildCoreFile],
+      outfile: tmpCoreFile,
       bundle: true,
       treeShaking: true,
       sourcemap: true,
-      minify: prod,
-      platform: 'node',
-      external: ['react', 'react-dom', '@emotion/react'],
-      logLevel: 'silent',
-      define: {
-        'process.env.NODE_ENV': JSON.stringify(env),
-      },
-      loader: {
-        '.js': 'jsx',
-      },
-      jsx: 'automatic',
-      jsxImportSource: '@emotion/react',
-    })
-
-    // build core
-    await esbuild.build({
-      entryPoints: [buildCoreVirtual],
-      outfile: buildCoreFile,
-      bundle: true,
-      treeShaking: true,
-      sourcemap: true,
-      minify: prod,
+      minify: false,
       platform: 'node',
       packages: 'external',
       // external: ['react', 'react-dom', '@emotion/react', ...config.external],
@@ -204,54 +211,21 @@ export async function bundler(opts) {
       },
       jsx: 'automatic',
       jsxImportSource: '@emotion/react',
-      plugins: [
-        virtualModule([
-          {
-            path: path.join(appDir, '.firebolt/runtime.js'),
-          },
-          {
-            path: buildCoreVirtual,
-            contents: `
-              ${routes.map(route => `import * as ${route.id} from '${route.relBuildToPageFile}'`).join('\n')}
-              export const routes = [
-                ${routes
-                  .map(route => {
-                    return `
-                    {
-                      module: ${route.id},
-                      id: '${route.id}',
-                      prettyFileBase: '${route.prettyFileBase}',
-                      pattern: '${route.pattern}',
-                      shimFile: '${route.shimFile}',
-                      shimFileName: '${route.shimFileName}',
-                      relBuildToPageFile: '${route.relBuildToPageFile}',
-                      relShimToPageFile: '${route.relShimToPageFile}',
-                      Page: ${route.id}.default,
-                    },
-                  `
-                  })
-                  .join('\n')}
-              ]
-              export { Document } from '../document.js'
-              export { middleware } from '../middleware.js'
-              export { createRuntime } from './extras/runtime.js'
-              export * as lib from 'firebolt'
-            `,
-          },
-        ]),
-      ],
+      plugins: [],
     })
 
-    // import core
-    const core = await reimport(buildCoreFile)
-
-    // generate page shims for client (tree shaking)
+    // import and validate core page exports etc
+    const core = await reimport(tmpCoreFile)
     for (const route of core.routes) {
       if (!route.Page) {
         throw new BundlerError(
-          `missing default export for ${$highlight(route.prettyFileBase)}`
+          `missing default export for ${$mark(route.prettyFileBase)}`
         )
       }
+    }
+
+    // generate page shims for client (tree shaking)
+    for (const route of routes) {
       const code = `
         import Page from '${route.relShimToPageFile}'
         globalThis.$firebolt.push('registerPage', '${route.id}', Page)
@@ -262,10 +236,10 @@ export async function bundler(opts) {
     // build client bundles (pages + chunks + bootstrap)
     const publicDir = path.join(buildDir, 'public')
     const publicFiles = []
-    for (const route of core.routes) {
+    for (const route of routes) {
       publicFiles.push(route.shimFile)
     }
-    publicFiles.push(extrasBoostrapFile)
+    publicFiles.push(buildBoostrapFile)
     const bundleResult = await esbuild.build({
       entryPoints: publicFiles,
       entryNames: '/[name]-[hash]',
@@ -323,7 +297,7 @@ export async function bundler(opts) {
         // page wrappers
         if (output.entryPoint.startsWith('.firebolt/page-shims/')) {
           const shimFileName = output.entryPoint.replace('.firebolt/page-shims/', '') // prettier-ignore
-          const route = core.routes.find(route => {
+          const route = routes.find(route => {
             return route.shimFileName === shimFileName
           })
           manifest.pageFiles[route.id] = file.replace(
@@ -331,7 +305,7 @@ export async function bundler(opts) {
             '/_firebolt'
           )
         }
-        if (output.entryPoint === '.firebolt/extras/bootstrap.js') {
+        if (output.entryPoint === '.firebolt/bootstrap.js') {
           manifest.bootstrapFile = file.replace('.firebolt/public', '/_firebolt') // prettier-ignore
         }
       }
@@ -340,8 +314,8 @@ export async function bundler(opts) {
 
     // build server entry
     await esbuild.build({
-      entryPoints: [extrasServerFile],
-      outfile: buildServerFile,
+      entryPoints: [buildServerFile],
+      outfile: serverServerFile,
       bundle: true,
       treeShaking: true,
       sourcemap: true,
@@ -349,6 +323,9 @@ export async function bundler(opts) {
       platform: 'node',
       packages: 'external',
       logLevel: 'silent',
+      alias: {
+        firebolt: buildLibFile,
+      },
       define: {
         'process.env.NODE_ENV': JSON.stringify(env),
       },
@@ -357,10 +334,11 @@ export async function bundler(opts) {
       },
       jsx: 'automatic',
       jsxImportSource: '@emotion/react',
+      plugins: [],
     })
 
     const elapsed = (performance.now() - startAt).toFixed(0)
-    log.info(`${firstBuild ? 'built' : 'rebuilt'} ${chalk.dim(`(${elapsed}ms)`)}\n`) // prettier-ignore
+    log.info(`${firstBuild ? 'built' : 'rebuilt'} ${s.dim(`(${elapsed}ms)`)}\n`) // prettier-ignore
     firstBuild = false
   }
 
@@ -380,7 +358,7 @@ export async function bundler(opts) {
     }
     // spawn server
     controller = new AbortController()
-    server = fork(buildServerFile, { signal: controller.signal })
+    server = fork(serverServerFile, { signal: controller.signal })
     server.on('error', err => {
       // ignore abort signals
       if (err.code === 'ABORT_ERR') return
@@ -392,6 +370,11 @@ export async function bundler(opts) {
       server.once('message', msg => {
         if (msg === 'ready') resolve()
       })
+    })
+    server.on('message', msg => {
+      if (msg.type === 'error') {
+        logCodeError(parseServerError(msg.error, appDir))
+      }
     })
     if (lastPort !== config.port) {
       console.log(`server running at http://localhost:${config.port}\n`)
@@ -418,8 +401,8 @@ export async function bundler(opts) {
       } catch (err) {
         if (err instanceof BundlerError) {
           log.error(err.message)
-        } else if (isESBuildError(err)) {
-          logESBuildError(err)
+        } else if (isEsbuildError(err)) {
+          logCodeError(parseEsbuildError(err))
         } else {
           log.error('\n')
           console.error(err)

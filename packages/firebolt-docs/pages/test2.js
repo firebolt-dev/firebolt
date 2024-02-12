@@ -31,7 +31,10 @@ export function Content() {
   )
 }
 
-export async function getTitle() {
+export async function getTitle(req) {
+  // const header = req.headers.get('Foobars')
+  // req.redirect('/not-found', 302)
+  // req.cache(5)
   await new Promise(resolve => setTimeout(resolve, 1000))
   return 'Test 2'
 }

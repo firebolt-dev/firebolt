@@ -1,17 +1,17 @@
 import { Suspense, useState } from 'react'
-import { Meta, useLocation, useSuspense } from 'firebolt'
+import { Head, useLocation } from 'firebolt'
 
 /**
- * Basic + Meta
+ * Basic + Head
  */
 
 export default function Page() {
   const [foo, setFoo] = useState(false)
   return (
     <>
-      <Meta>
+      <Head>
         <title>Page</title>
-      </Meta>
+      </Head>
       <div>Page</div>
     </>
   )

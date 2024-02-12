@@ -111,7 +111,7 @@ We use a custom router because we need to disconnect ACTUAL browser location fro
 - on server route `fetch('/api/*')` to api routes
 - middleware.js to receive req,res and do things like insert db
 - drop support for nested page folders? they shouldnt be used
-- .firebolt structure
+- [done] .firebolt structure
   - instead of public, use a public prefix like /\_firebolt/\* for client bundles
 - [done] global styles in Document
 - [done] rename Shell to Loading

@@ -1,3 +1,4 @@
+import 'source-map-support/register'
 import fs from 'fs-extra'
 import path from 'path'
 import express from 'express'
@@ -11,9 +12,9 @@ import { defaultsDeep } from 'lodash'
 
 import { matcher } from './matcher'
 
-import { getConfig } from '../config.js'
-import * as core from '../core.js'
-import manifest from '../manifest.json'
+import { getConfig } from './config.js'
+import * as core from './core.js'
+import manifest from './manifest.json'
 
 // suppress React warning about useLayoutEffect on server, this is nonsense because useEffect
 // is similar and doesn't warn and is allowed in SSR
@@ -212,9 +213,19 @@ app.use('*', async (req, res) => {
           pipe(stream)
         }
       },
-      onError(err) {
-        console.log('react render onError')
-        console.error(err)
+      onError(error) {
+        if (process.send) {
+          process.send({
+            type: 'error',
+            error: {
+              name: error.constructor.name,
+              message: error.message,
+              stack: error.stack,
+            },
+          })
+        } else {
+          console.error(error)
+        }
       },
       onShellError(err) {
         console.log('react render onShellError')
@@ -241,3 +252,34 @@ function onError(err) {
 }
 
 app.listen(config.port, onConnected).on('error', onError)
+
+// function testFormatErr(err) {
+//   const type = err.constructor.name // Error, ReferenceError etc
+//   const lines = err.stack.split('\n')
+//   const stackLine = lines[1]
+//   const match = stackLine.match(/\((.*):(\d+):(\d+)\)$/)
+//   console.log('type', type)
+//   if (match) {
+//     const [, file, line, column] = match
+//     console.log('msg', err.message)
+//     console.log('file', file)
+//     console.log('line', line)
+//     console.log('column', column)
+//   }
+
+//   // const stack = err.stack || ''
+//   // const stackLines = stack.split('\n')
+//   // const formattedStack = stackLines
+//   //   .map(line => {
+//   //     // Simple parsing example; you might need a more robust parsing approach
+//   //     const match = line.match(/\((.*):(\d+):(\d+)\)$/)
+//   //     if (match) {
+//   //       const [, file, line, column] = match
+//   //       return `File: ${file}, Line: ${line}, Column: ${column}`
+//   //     }
+//   //     return line
+//   //   })
+//   //   .join('\n')
+
+//   // console.log(`Error: ${err.message}\nStack:\n${formattedStack}`)
+// }
