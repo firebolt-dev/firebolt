@@ -1,6 +1,4 @@
 import 'source-map-support/register'
-import fs from 'fs-extra'
-import path from 'path'
 import express from 'express'
 import cors from 'cors'
 import compression from 'compression'
@@ -90,19 +88,35 @@ app.post('/_firebolt_fn', async (req, res) => {
   } catch (_err) {
     err = _err
   }
-  if (err) {
+  // if err is a request, route function called req.redirect() or req.error()
+  if (err instanceof Request) {
+    // apply any cookies
+    request.cookies.applyToExpressResponse(res)
+    // handle any redirect
+    if (request._redirect) {
+      const data = {
+        redirect: request._redirect,
+      }
+      res.status(200).json(data)
+      return
+    }
+    // handle any error
+    if (request._error) {
+      console.log('TODO: handle req.error() from POST /_firebolt_fn')
+      return
+    }
+  } else if (err) {
     console.log('TODO: handle fn err')
     res.status(400).send(err.message)
   } else {
-    // todo: redirect if any
+    request.cookies.applyToExpressResponse(res)
     // todo: error if any
     // todo: expire if any
-    request.cookies._apply(res)
-    const result = {
+    const data = {
       value,
       expire: request._expire,
     }
-    res.status(200).json(result)
+    res.status(200).json(data)
   }
 })
 
@@ -138,15 +152,24 @@ app.use('*', async (req, res) => {
         inserts,
         async callRouteFn(...args) {
           const request = new Request(req)
-          const value = await callRouteFn(request, ...args)
-          // todo: redirect if any
+          try {
+            value = await callRouteFn(request, ...args)
+          } catch (err) {
+            if (err === request) {
+              value = request
+            }
+          }
+          // write out any cookies first
+          request.cookies.applyToStream(inserts)
+          // write out any redirects
+          const didRedirect = request.applyRedirectToExpressResponse(res)
+          if (didRedirect) return
           // todo: error if any
-          request.cookies._apply(res)
-          const result = {
+          const data = {
             value,
             expire: request._expire,
           }
-          return result
+          return data
         },
       },
       routes: core.routes,
@@ -173,13 +196,14 @@ app.use('*', async (req, res) => {
 
     // transform stream to:
     // 1. insert head content
-    // 2. insert streamed suspense resource data
+    // 2. insert streamed loader data and redirect scripts
     // 3. extract and prepend inlined emotion styles
     let afterHtml
     const stream = new PassThrough()
     stream.on('data', chunk => {
       let str = chunk.toString()
-      // prepend any inlined emotion styles
+      // extract and prepend any inline emotion styles
+      // so they don't cause hydration errors
       if (afterHtml) {
         // regex to match all style tags and their contents
         const regex = /<style[^>]*>[\s\S]*?<\/style>/gi
@@ -189,8 +213,8 @@ app.use('*', async (req, res) => {
         // extract and prepend styles
         str = styles + str.replace(regex, '')
       }
-      // append any inserts (eg suspense data)
-      if (afterHtml) {
+      // append any inserts (loader data, redirects etc)
+      if (afterHtml && str.endsWith('</script>')) {
         str += inserts.read()
       }
       // mark after html
@@ -242,12 +266,14 @@ app.use('*', async (req, res) => {
         }
       },
       onError(error) {
+        console.log('onError', error)
         if (error instanceof Request) {
           console.log(
             'TODO: request.redirect or request.error was thrown! handle it!'
           )
         }
         if (process.send) {
+          // todo: instead of piping to bundler for pretty logs, use a shared module for logging
           process.send({
             type: 'error',
             error: {
@@ -261,8 +287,8 @@ app.use('*', async (req, res) => {
         }
       },
       onShellError(err) {
-        console.log('react render onShellError')
-        console.error(err)
+        console.log('onShellError', err)
+        // console.error(err)
       },
     })
   }
@@ -287,34 +313,3 @@ function onError(err) {
 }
 
 app.listen(config.port, onConnected).on('error', onError)
-
-// function testFormatErr(err) {
-//   const type = err.constructor.name // Error, ReferenceError etc
-//   const lines = err.stack.split('\n')
-//   const stackLine = lines[1]
-//   const match = stackLine.match(/\((.*):(\d+):(\d+)\)$/)
-//   console.log('type', type)
-//   if (match) {
-//     const [, file, line, column] = match
-//     console.log('msg', err.message)
-//     console.log('file', file)
-//     console.log('line', line)
-//     console.log('column', column)
-//   }
-
-//   // const stack = err.stack || ''
-//   // const stackLines = stack.split('\n')
-//   // const formattedStack = stackLines
-//   //   .map(line => {
-//   //     // Simple parsing example; you might need a more robust parsing approach
-//   //     const match = line.match(/\((.*):(\d+):(\d+)\)$/)
-//   //     if (match) {
-//   //       const [, file, line, column] = match
-//   //       return `File: ${file}, Line: ${line}, Column: ${column}`
-//   //     }
-//   //     return line
-//   //   })
-//   //   .join('\n')
-
-//   // console.log(`Error: ${err.message}\nStack:\n${formattedStack}`)
-// }

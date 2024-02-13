@@ -2,8 +2,7 @@ import { Suspense, useState } from 'react'
 import { Link, useData, css } from 'firebolt'
 
 export default function Page() {
-  console.log('Page Test 2')
-  // return <Content />
+  return <Content />
   return (
     <Suspense fallback={<div>Loading...</div>}>
       <Content />
@@ -14,8 +13,9 @@ export default function Page() {
 export function Content() {
   const data = useData('getTitle')
   const [on, setOn] = useState()
+  console.log('test2 render')
   const title = data.get()
-  console.log('Page Test 2 Content', title)
+  console.log('title', title)
   return (
     <div>
       <div
@@ -36,12 +36,16 @@ export function Content() {
 
 export async function getTitle(req) {
   // const header = req.headers.get('Foobars')
-  // req.redirect('/not-found', 302)
   // req.expire(5, 'days')
-  // req.getCookie('foo')
-  // req.setCookie('foo', bar)
+  // req.cookies.get('foo')
+  // req.cookies.set('foo', bar)
   // req.error('Yeah nah its wrong') // throws to boundary
   await new Promise(resolve => setTimeout(resolve, 1000))
-  req.expire(5)
+  req.redirect('/about')
+  // req.expire(5)
+  console.log('get foo', req.cookies.get('foo'))
+  const foo = { id: req.uuid() }
+  console.log('set foo', foo)
+  req.cookies.set('foo', foo)
   return 'HEYOO' + Math.random()
 }

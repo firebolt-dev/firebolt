@@ -1,4 +1,5 @@
 import { produce } from 'immer'
+import cookie from 'cookiejs'
 
 import { matcher } from './matcher.js'
 
@@ -24,12 +25,15 @@ export function createRuntime({ ssr, routes, stack = [] }) {
     getDocHead,
     watchPageHeads,
     callRouteFn,
+    applyRedirect,
     getLoader,
-    getResource,
-    setResource,
-    setResourceResult,
+    setLoaderData,
+    getLoaderData,
     getAction,
     getCache,
+    getCookie,
+    setCookie,
+    removeCookie,
   }
 
   function push(action, ...args) {
@@ -101,6 +105,7 @@ export function createRuntime({ ssr, routes, stack = [] }) {
   async function callRouteFn(routeId, fnName, args) {
     let result
     if (ssr) {
+      console.log('TODO: this shouldnt happen yeah?')
       result = await ssr.callRouteFn(routeId, fnName, args)
     } else {
       const res = await fetch('/_firebolt_fn', {
@@ -111,12 +116,21 @@ export function createRuntime({ ssr, routes, stack = [] }) {
         body: JSON.stringify({
           routeId,
           fnName,
-          args,
+          args, // todo: rename fnArgs
         }),
       })
       result = await res.json()
     }
     return result
+  }
+
+  function applyRedirect(redirect) {
+    if (redirect.type === 'push') {
+      history.pushState(null, '', redirect.url)
+    }
+    if (redirect.type === 'replace') {
+      history.replaceState(null, '', redirect.url)
+    }
   }
 
   const loaders = {} // [key]: loader
@@ -126,12 +140,27 @@ export function createRuntime({ ssr, routes, stack = [] }) {
     const fnName = args[0]
     const fnArgs = args.slice(1)
     if (loaders[key]) return loaders[key]
-    let resource = getResource(key)
+    let status = 'pending'
+    let promise
+    let value
+    let expiresAt
+    const setData = data => {
+      if (data) {
+        status = 'ready'
+        value = data.value
+        expiresAt = data.expire ? new Date().getTime() + data.expire * 1000 : null // prettier-ignore
+      } else {
+        status = 'pending'
+        value = null
+        expiresAt = null
+      }
+    }
+    setData(getLoaderData(key))
     const loader = {
       key,
       args,
       watchers: new Set(),
-      fetching: resource?.pending() || false,
+      fetching: status === 'pending',
       invalidated: false,
       async fetch() {
         let result
@@ -139,7 +168,7 @@ export function createRuntime({ ssr, routes, stack = [] }) {
           result = await ssr.callRouteFn(routeId, fnName, fnArgs)
           ssr.inserts.write(`
             <script>
-              globalThis.$firebolt.push('setResourceResult', '${key}', ${JSON.stringify(result)})
+              globalThis.$firebolt.push('setLoaderData', '${key}', ${JSON.stringify(result)})
             </script>
           `)
         } else {
@@ -148,139 +177,122 @@ export function createRuntime({ ssr, routes, stack = [] }) {
         return result
       },
       get() {
-        let resource = getResource(key)
-        if (!resource) {
-          resource = createResource(loader.fetch())
-          setResource(key, resource)
+        // invalidate if expired
+        if (expiresAt !== null) {
+          const now = new Date().getTime()
+          const expired = now > expiresAt
+          if (expired) {
+            loader.invalidated = true
+          }
         }
-        if (resource.expired()) {
-          loader.invalidated = true
-        }
+        // background fetch if invalidated
         if (loader.invalidated && !loader.fetching) {
           loader.fetching = true
-          loader.fetch().then(result => {
-            resource.write(result)
+          loader.fetch().then(data => {
+            if (data.redirect) {
+              // maintain pending state for a blip while we redirect then clear the promise
+              return new Promise(() => {
+                applyRedirect(data.redirect)
+                promise = null
+                loader.fetching = false
+                loader.invalidated = false
+              })
+            }
+            setData(data)
             loader.fetching = false
             loader.invalidated = false
             loader.notify()
           })
         }
-        return resource.read()
+        // read from status
+        if (status === 'ready') {
+          return value
+        }
+        if (status === 'pending') {
+          if (!promise) {
+            promise = loader.fetch().then(data => {
+              if (data.redirect) {
+                // maintain pending state for a blip while we redirect then clear the promise
+                return new Promise(() => {
+                  applyRedirect(data.redirect)
+                  promise = null
+                  loader.fetching = false
+                })
+              }
+              setData(data)
+              loader.fetching = false
+            })
+          }
+          throw promise
+        }
+        if (status === 'error') {
+          throw value
+        }
       },
       set(value) {
-        const resource = getResource(key)
-        resource.write({ value }) // todo: set expire?
+        setData({ value })
         loader.notify()
       },
       edit(fn) {
-        const resource = getResource(key)
-        const value = resource.read(false)
         const newValue = produce(value, draft => {
           return fn(draft)
         })
-        resource.write({ value: newValue })
+        setData({ value: newValue })
         loader.notify()
       },
       async invalidate() {
         loader.invalidated = true
         loader.notify()
       },
+      watch(callback) {
+        loader.watchers.add(callback)
+        return () => loader.watchers.delete(callback)
+      },
       notify() {
         for (const notify of loader.watchers) {
           notify()
         }
-      },
-      watch(callback) {
-        loader.watchers.add(callback)
-        return () => loader.watchers.delete(callback)
       },
     }
     loaders[key] = loader
     return loader
   }
 
-  const resources = {} // [key]: resource
+  const loaderData = {} // [key]: data
 
-  function getResource(key) {
-    return resources[key]
+  function setLoaderData(key, data) {
+    loaderData[key] = data
   }
 
-  function setResource(key, resource) {
-    resources[key] = resource
-  }
-
-  function setResourceResult(key, result) {
-    let resource = getResource(key)
-    if (resource) {
-      resource.write(result)
-    } else {
-      resource = createResource(result)
-      setResource(key, resource)
-    }
-  }
-
-  function createResource(resultOrPromise) {
-    let status
-    let value
-    let promise
-    let expiresAt = null
-    const set = resultOrPromise => {
-      if (resultOrPromise instanceof Promise) {
-        status = 'pending'
-        promise = resultOrPromise.then(
-          result => {
-            status = 'ready'
-            value = result.value
-            expiresAt = result.expire ? new Date().getTime() + result.expire * 1000 : null // prettier-ignore
-          },
-          err => {
-            status = 'error'
-            value = err
-            expiresAt = null
-          }
-        )
-      } else {
-        const result = resultOrPromise
-        status = 'ready'
-        value = result.value
-        expiresAt = result.expire ? new Date().getTime() + result.expire * 1000 : null // prettier-ignore
-      }
-    }
-    set(resultOrPromise)
-    return {
-      read(suspend = true) {
-        if (!suspend) return value
-        if (status === 'ready') return value
-        if (status === 'pending') throw promise
-        if (status === 'error') throw value
-      },
-      write(resultOrPromise) {
-        set(resultOrPromise)
-      },
-      pending() {
-        return status === 'pending'
-      },
-      expired() {
-        if (expiresAt === null) return false
-        const now = new Date().getTime()
-        return now > expiresAt
-      },
-    }
+  function getLoaderData(key) {
+    return loaderData[key]
   }
 
   const actions = {} // [key]: action
 
   function getAction(routeId, fnName) {
     const key = `${routeId}|${fnName}`
-    if (!actions[key]) {
-      actions[key] = async function (...fnArgs) {
-        if (ssr) {
-          return await ssr.callRouteFn(routeId, fnName, fnArgs)
-        }
-        return await callRouteFn(routeId, fnName, fnArgs)
+    if (actions[key]) return actions[key]
+    const action = function (...fnArgs) {
+      let promise
+      if (ssr) {
+        promise = ssr.callRouteFn(routeId, fnName, fnArgs)
+      } else {
+        promise = callRouteFn(routeId, fnName, fnArgs)
       }
+      return promise.then(data => {
+        if (data.redirect) {
+          // cancel action call stack and redirect
+          return new Promise(() => {
+            applyRedirect(data.redirect)
+          })
+        } else {
+          return data.value
+        }
+      })
     }
-    return actions[key]
+    actions[key] = action
+    return action
   }
 
   const cache = {
@@ -324,6 +336,32 @@ export function createRuntime({ ssr, routes, stack = [] }) {
 
   function getCache() {
     return cache
+  }
+
+  function getCookie(key) {
+    let value = cookie.get(key)
+    try {
+      value = JSON.parse(value)
+    } catch (err) {
+      // ...
+    }
+    console.log('getCookie', key, value)
+    return value
+  }
+
+  function setCookie(key, value, options) {
+    console.log('setCookie', key, value, options)
+    try {
+      value = JSON.stringify(value)
+    } catch (err) {
+      // ...
+    }
+    cookie.set(key, value, options)
+  }
+
+  function removeCookie(key) {
+    console.log('removeCookie', key)
+    cookie.remove(key)
   }
 
   for (const item of stack) {

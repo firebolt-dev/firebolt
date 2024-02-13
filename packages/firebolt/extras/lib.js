@@ -175,29 +175,28 @@ function useRouteWithParams(url) {
 
 export function Router() {
   const runtime = useContext(RuntimeContext)
-  const [browserUrl, setBrowserUrl] = useState(runtime.ssr?.url || globalThis.location.pathname + globalThis.location.search) // prettier-ignore
+  // const [browserUrl, setBrowserUrl] = useState(runtime.ssr?.url || globalThis.location.pathname + globalThis.location.search) // prettier-ignore
   const [prevUrl, setPrevUrl] = useState(null)
-  const [currUrl, setCurrUrl] = useState(browserUrl)
+  const [currUrl, setCurrUrl] = useState(() => runtime.ssr?.url || globalThis.location.pathname + globalThis.location.search) // prettier-ignore
   const [currRoute, currParams] = useRouteWithParams(currUrl)
   const [prevRoute, prevParams] = useRouteWithParams(prevUrl)
 
   useEffect(() => {
     function onChange(e) {
-      const browserUrl =
-        globalThis.location.pathname + globalThis.location.search
+      const browserUrl = globalThis.location.pathname + globalThis.location.search // prettier-ignore
       if (browserUrl === currUrl) return
       let cancelled
       const exec = async () => {
         const url = browserUrl
-        console.log('browserUrl changed:', url)
+        // console.log('browserUrl changed:', url)
         const route = runtime.resolveRoute(url)
-        console.log('route', route)
+        // console.log('route', route)
         if (!route.Page) {
-          console.log('missing Page, loading it')
+          // console.log('missing Page, loading it')
           await runtime.loadRoute(route)
         }
         if (cancelled) {
-          console.log('cancelled')
+          // console.log('cancelled')
           return
         }
         setPrevUrl(currUrl)
@@ -218,54 +217,6 @@ export function Router() {
       }
     }
   }, [currUrl])
-
-  useEffect(() => {
-    // if (browserUrl === currUrl) return
-    // let cancelled
-    // const exec = async () => {
-    //   const url = browserUrl
-    //   console.log('browserUrl changed:', url)
-    //   const route = runtime.resolveRoute(url)
-    //   console.log('route', route)
-    //   if (!route.Page) {
-    //     console.log('missing Page, loading it')
-    //     await runtime.loadRoute(route)
-    //   }
-    //   if (cancelled) {
-    //     console.log('cancelled')
-    //     return
-    //   }
-    //   setPrevUrl(currUrl)
-    //   setCurrUrl(url)
-    // }
-    // exec()
-    // return () => {
-    //   cancelled = true
-    // }
-  }, [browserUrl])
-
-  // const prevLocation = useMemo(() => {
-  //   if (!prevUrl) return
-  //   return {
-  //     routeId: prevRoute.id,
-  //     url: prevUrl,
-  //     params: prevParams,
-  //   }
-  // }, [prevUrl])
-
-  // const currLocation = useMemo(() => {
-  //   return {
-  //     routeId: currRoute.id,
-  //     url: currUrl,
-  //     params: currParams,
-  //   }
-  // }, [currUrl])
-
-  // console.log('---')
-  // console.log('Router')
-  // console.log('currUrl', currUrl)
-  // console.log('prevUrl', prevUrl)
-  // console.log('---')
 
   // we work some magic here because if the new route doesn't have its own
   // suspense, we want to continue showing the previous route until its ready
@@ -300,6 +251,12 @@ function Route({ url, route, params }) {
       routeId: route.id,
       url,
       params,
+      push(href) {
+        history.pushState(null, '', href)
+      },
+      replace(href) {
+        history.replaceState(null, '', href)
+      },
     }
   }, [])
   return (
@@ -317,10 +274,10 @@ function useForceUpdate() {
 }
 
 export function useData(...args) {
-  const { routeId } = useLocation()
   const forceUpdate = useForceUpdate()
+  const location = useLocation()
   const runtime = useContext(RuntimeContext)
-  const loader = runtime.getLoader(routeId, args)
+  const loader = runtime.getLoader(location.routeId, args)
   useEffect(() => {
     return loader.watch(forceUpdate)
   }, [])
@@ -328,9 +285,9 @@ export function useData(...args) {
 }
 
 export function useAction(fnName) {
-  const { routeId } = useLocation()
+  const location = useLocation()
   const runtime = useContext(RuntimeContext)
-  const action = runtime.getAction(routeId, fnName)
+  const action = runtime.getAction(location.routeId, fnName)
   return action
 }
 
@@ -338,3 +295,36 @@ export function useCache() {
   const runtime = useContext(RuntimeContext)
   return runtime.getCache()
 }
+
+// export function ErrorBoundary() {
+
+// }
+// export class ErrorBoundary extends React.Component {
+//   constructor(props) {
+//     super(props);
+//     this.state = { hasError: false };
+//   }
+
+//   static getDerivedStateFromError(error) {
+//     // Update state so the next render will show the fallback UI.
+//     return { hasError: true };
+//   }
+
+//   componentDidCatch(error, info) {
+//     // Example "componentStack":
+//     //   in ComponentThatThrows (created by App)
+//     //   in ErrorBoundary (created by App)
+//     //   in div (created by App)
+//     //   in App
+//     logErrorToMyService(error, info.componentStack);
+//   }
+
+//   render() {
+//     if (this.state.hasError) {
+//       // You can render any custom fallback UI
+//       return this.props.fallback;
+//     }
+
+//     return this.props.children;
+//   }
+// }
