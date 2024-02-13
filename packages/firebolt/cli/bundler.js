@@ -347,9 +347,12 @@ export async function bundler(opts) {
 
   let server
   let controller
-  let lastPort
 
   async function serve() {
+    let SILENT_STARTUP
+    if (server) {
+      SILENT_STARTUP = config && config.port === server.port ? 'yes' : undefined
+    }
     // destroy previous server if any
     if (server) {
       await new Promise(resolve => {
@@ -361,7 +364,11 @@ export async function bundler(opts) {
     }
     // spawn server
     controller = new AbortController()
-    server = fork(serverServerFile, { signal: controller.signal })
+    server = fork(serverServerFile, {
+      signal: controller.signal,
+      env: { SILENT_STARTUP },
+    })
+    server.port = config?.port
     server.on('error', err => {
       // ignore abort signals
       if (err.code === 'ABORT_ERR') return
@@ -379,10 +386,6 @@ export async function bundler(opts) {
         logCodeError(parseServerError(msg.error, appDir))
       }
     })
-    if (lastPort !== config.port) {
-      console.log(`server running at http://localhost:${config.port}\n`)
-      lastPort = config.port
-    }
   }
 
   let runInProgress = false

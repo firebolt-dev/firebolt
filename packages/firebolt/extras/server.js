@@ -269,7 +269,9 @@ app.use('*', async (req, res) => {
 })
 
 function onConnected() {
-  //   console.log(`server running at http://localhost:${config.port}`)
+  if (!process.env.SILENT_STARTUP) {
+    console.log(`server running at http://localhost:${config.port}`)
+  }
   if (process.send) {
     process.send('ready') // notify any parent process
   }
