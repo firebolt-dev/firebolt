@@ -34,6 +34,7 @@ export function createRuntime({ ssr, routes, stack = [] }) {
     getCookie,
     setCookie,
     removeCookie,
+    getCookieInterface,
   }
 
   function push(action, ...args) {
@@ -362,6 +363,16 @@ export function createRuntime({ ssr, routes, stack = [] }) {
   function removeCookie(key) {
     console.log('removeCookie', key)
     cookie.remove(key)
+  }
+
+  let cookieInterface = ssr?.cookieInterface || {
+    get: getCookie,
+    set: setCookie,
+    remove: removeCookie,
+  }
+
+  function getCookieInterface() {
+    return cookieInterface
   }
 
   for (const item of stack) {

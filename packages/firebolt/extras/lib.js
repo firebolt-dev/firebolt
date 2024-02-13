@@ -296,6 +296,11 @@ export function useCache() {
   return runtime.getCache()
 }
 
+export function useCookies() {
+  const runtime = useContext(RuntimeContext)
+  return runtime.getCookieInterface()
+}
+
 // export function ErrorBoundary() {
 
 // }

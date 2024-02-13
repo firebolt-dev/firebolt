@@ -1,5 +1,5 @@
 import { Suspense, useState } from 'react'
-import { Link, useData, css } from 'firebolt'
+import { Link, useData, css, useCookies } from 'firebolt'
 
 export default function Page() {
   return <Content />
@@ -11,6 +11,8 @@ export default function Page() {
 }
 
 export function Content() {
+  const cookies = useCookies()
+  console.log('render cookie foo', cookies.get('foo'))
   const data = useData('getTitle')
   const [on, setOn] = useState()
   console.log('test2 render')
@@ -41,11 +43,11 @@ export async function getTitle(req) {
   // req.cookies.set('foo', bar)
   // req.error('Yeah nah its wrong') // throws to boundary
   await new Promise(resolve => setTimeout(resolve, 1000))
-  req.redirect('/about')
+  // req.redirect('/about')
   // req.expire(5)
-  console.log('get foo', req.cookies.get('foo'))
+  console.log('loader cookie get foo', req.cookies.get('foo'))
   const foo = { id: req.uuid() }
-  console.log('set foo', foo)
+  console.log('loader cookie set foo', foo)
   req.cookies.set('foo', foo)
   return 'HEYOO' + Math.random()
 }

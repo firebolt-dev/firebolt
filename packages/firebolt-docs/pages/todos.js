@@ -1,5 +1,5 @@
 import { Suspense, useState } from 'react'
-import { useData, useAction } from 'firebolt'
+import { useData, useAction, useCookies } from 'firebolt'
 
 export default function Page() {
   return (
@@ -42,7 +42,7 @@ export function Todos() {
 
 export async function list(req) {
   // await new Promise(resolve => setTimeout(resolve, 1000))
-  req.redirect('/about')
+  // req.redirect('/about')
   console.log('get foo cookie', req.cookies.get('foo'))
   console.log('get foo2 cookie', req.cookies.get('foo2'))
   return await req.db('todos')

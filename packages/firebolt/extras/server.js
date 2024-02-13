@@ -171,6 +171,17 @@ app.use('*', async (req, res) => {
           }
           return data
         },
+        cookieInterface: {
+          get(key) {
+            // ...
+          },
+          set(key) {
+            // ...
+          },
+          remove(key) {
+            // ...
+          },
+        },
       },
       routes: core.routes,
     })
