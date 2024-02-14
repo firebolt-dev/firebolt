@@ -1,5 +1,5 @@
 import { produce } from 'immer'
-import cookie from 'cookiejs'
+import cookiejs from 'cookiejs'
 
 import { matcher } from './matcher.js'
 
@@ -33,8 +33,7 @@ export function createRuntime({ ssr, routes, stack = [] }) {
     getCache,
     getCookie,
     setCookie,
-    removeCookie,
-    getCookieInterface,
+    watchCookie,
   }
 
   function push(action, ...args) {
@@ -172,6 +171,7 @@ export function createRuntime({ ssr, routes, stack = [] }) {
         } else {
           result = await callRegistry(id, args)
         }
+        invalidateCookies(result.cookies)
         return result
       },
       get() {
@@ -279,6 +279,7 @@ export function createRuntime({ ssr, routes, stack = [] }) {
         promise = callRegistry(id, args)
       }
       return promise.then(data => {
+        invalidateCookies(data.cookies)
         if (data.redirect) {
           // cancel action call stack and redirect
           return new Promise(() => {
@@ -336,40 +337,82 @@ export function createRuntime({ ssr, routes, stack = [] }) {
     return cache
   }
 
+  const cookieWatchers = {} // [key]: Set
+
   function getCookie(key) {
-    let value = cookie.get(key)
-    try {
-      value = JSON.parse(value)
-    } catch (err) {
-      // ...
+    let data
+    if (ssr) {
+      data = ssr.cookies.get(key)
+    } else {
+      data = cookiejs.get(key)
+      if (data === false) return null // cookiejs returns false if cookie doesn't exist
     }
-    console.log('getCookie', key, value)
+    let value
+    try {
+      value = JSON.parse(data)
+    } catch (err) {
+      console.error(`could not deserialize cookie ${key} with value:`, data)
+      return null
+    }
+    // console.log('getCookie', { key, value })
     return value
   }
 
   function setCookie(key, value, options) {
-    console.log('setCookie', key, value, options)
-    try {
-      value = JSON.stringify(value)
-    } catch (err) {
-      // ...
+    // console.log('setCookie', { key, value, options })
+    if (value === null || value === undefined || value === '') {
+      if (ssr) {
+        ssr.cookies.remove(key)
+      } else {
+        cookiejs.remove(key)
+      }
+      value = null
+    } else {
+      let data
+      try {
+        data = JSON.stringify(value)
+      } catch (err) {
+        return console.error(
+          `could not serialize cookie ${key} with value:`,
+          value
+        )
+      }
+      if (ssr) {
+        ssr.cookies.set(key, data, options)
+      } else {
+        cookiejs.set(key, data, options)
+      }
     }
-    cookie.set(key, value, options)
+    const watchers = cookieWatchers[key]
+    if (watchers) {
+      for (const callback of watchers) {
+        callback(value)
+      }
+    }
   }
 
-  function removeCookie(key) {
-    console.log('removeCookie', key)
-    cookie.remove(key)
+  function watchCookie(key, callback) {
+    let watchers = cookieWatchers[key]
+    if (!watchers) {
+      cookieWatchers[key] = new Set()
+      watchers = cookieWatchers[key]
+    }
+    watchers.add(callback)
+    return () => watchers.delete(callback)
   }
 
-  let cookieInterface = ssr?.cookieInterface || {
-    get: getCookie,
-    set: setCookie,
-    remove: removeCookie,
-  }
-
-  function getCookieInterface() {
-    return cookieInterface
+  function invalidateCookies(keys) {
+    console.log('invalidateCookies', keys)
+    if (!keys) return
+    for (const key of keys) {
+      const value = getCookie(key)
+      console.log(key, value)
+      const watchers = cookieWatchers[key]
+      if (!watchers) continue
+      for (const callback of watchers) {
+        callback(value)
+      }
+    }
   }
 
   for (const item of stack) {

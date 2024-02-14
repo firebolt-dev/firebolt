@@ -89,15 +89,17 @@ app.post('/_firebolt_fn', async (req, res) => {
   } catch (_err) {
     err = _err
   }
-  // if err is a request, route function called req.redirect() or req.error()
+  const data = {}
+  // notify client to invalidate changed cookies
+  data.cookies = request.cookies.getChangedKeys()
+  // apply changed cookies to the express response
+  request.cookies.applyToExpressResponse(res)
+
+  // if err is a request then function called req.redirect() or req.error()
   if (err instanceof Request) {
-    // apply any cookies
-    request.cookies.applyToExpressResponse(res)
     // handle any redirect
     if (request._redirect) {
-      const data = {
-        redirect: request._redirect,
-      }
+      data.redirect = request._redirect
       res.status(200).json(data)
       return
     }
@@ -110,13 +112,8 @@ app.post('/_firebolt_fn', async (req, res) => {
     console.log('TODO: handle fn err')
     res.status(400).send(err.message)
   } else {
-    request.cookies.applyToExpressResponse(res)
-    // todo: error if any
-    // todo: expire if any
-    const data = {
-      value,
-      expire: request._expire,
-    }
+    data.value = value
+    data.expire = request._expire
     res.status(200).json(data)
   }
 })
@@ -172,15 +169,17 @@ app.use('*', async (req, res) => {
           }
           return data
         },
-        cookieInterface: {
+        cookies: {
           get(key) {
-            // ...
+            // returns raw data
+            return req.cookies[key]
           },
-          set(key) {
-            // ...
+          set(key, data, option) {
+            // sets raw data
+            res.cookie(key, data, option)
           },
           remove(key) {
-            // ...
+            res.clearCookie(key)
           },
         },
       },

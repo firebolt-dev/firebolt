@@ -294,9 +294,21 @@ export function useCache() {
   return runtime.getCache()
 }
 
-export function useCookies() {
+// export function useCookies() {
+//   const runtime = useContext(RuntimeContext)
+//   return runtime.getCookieInterface()
+// }
+
+export function useCookie(key) {
   const runtime = useContext(RuntimeContext)
-  return runtime.getCookieInterface()
+  const [value, setValue] = useState(() => runtime.getCookie(key))
+  const update = useMemo(() => {
+    return (value, options) => runtime.setCookie(key, value, options)
+  })
+  useEffect(() => {
+    return runtime.watchCookie(key, setValue)
+  }, [])
+  return [value, update]
 }
 
 // export function ErrorBoundary() {

@@ -1,5 +1,5 @@
 import { Suspense, useState } from 'react'
-import { useData, useAction, useCookies } from 'firebolt'
+import { useData, useAction } from 'firebolt'
 
 export default function Page() {
   return (

@@ -58,34 +58,64 @@ class Cookies {
     this._changes = []
   }
 
-  set(key, data, options = defaultCookieOptions) {
-    const value = JSON.stringify(data)
-    this._values[key] = value
-    this._changes.push({
-      type: 'set',
-      key,
-      data,
-      options,
-    })
+  set(key, value, options = defaultCookieOptions) {
+    // console.log('setCookie', { key, value, options })
+    if (value === null || value === undefined || value === '') {
+      this._values[key] = null
+      this._changes.push({
+        type: 'remove',
+        key,
+      })
+    } else {
+      let data
+      try {
+        data = JSON.stringify(value)
+      } catch (err) {
+        return console.error(
+          `could not serialize cookie ${key} with value:`,
+          value
+        )
+      }
+      this._values[key] = value
+      this._changes.push({
+        type: 'set',
+        key,
+        data,
+        options,
+      })
+    }
   }
 
   get(key) {
-    const value = this._values[key]
-    if (!value) return null
-    const data = JSON.parse(value)
-    return data
+    let data = this._values[key]
+    if (data === null || data === undefined || data === '') {
+      return null
+    }
+    let value
+    try {
+      value = JSON.parse(data)
+    } catch (err) {
+      console.error(`could not deserialize cookie ${key} with value:`, data)
+      return null
+    }
+    // console.log('getCookie', { key, value })
+    return value
   }
 
-  remove(key) {
-    delete this._values[key]
-    this._changes.push({ type: 'remove', key })
+  getChangedKeys() {
+    const keys = []
+    for (const change of this._changes) {
+      if (!keys.includes(change.key)) {
+        keys.push(change.key)
+      }
+    }
+    return keys
   }
 
   applyToExpressResponse(res) {
     for (const change of this._changes) {
       if (change.type === 'set') {
         let { key, data, options } = change
-        data = JSON.stringify(data)
         options = cookieToExpressOptions(options)
         res.cookie(key, data, options)
       }
@@ -101,7 +131,6 @@ class Cookies {
     for (const change of this._changes) {
       if (change.type === 'set') {
         let { key, data, options } = change
-        data = JSON.stringify(data)
         options = JSON.stringify(cookieToExpressOptions(options))
         inserts.write(`
           <script>globalThis.$firebolt.push('setCookie', '${key}', ${data}, ${options})</script>
@@ -110,7 +139,7 @@ class Cookies {
       if (change.type === 'remove') {
         let { key } = change
         inserts.write(`
-          <script>globalThis.$firebolt.push('removeCookie', '${key}')</script>
+          <script>globalThis.$firebolt.push('setCookie', '${key}', null)</script>
         `)
       }
     }
