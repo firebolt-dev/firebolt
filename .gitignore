@@ -2,5 +2,6 @@
 .firebolt
 .notes
 node_modules
+arch
 build
 *.db

@@ -10,8 +10,8 @@ export default function Page() {
 }
 
 export function Todos() {
-  const data = useData('list')
-  const create = useAction('create')
+  const data = useData(list)
+  const create = useAction(create)
   const todos = data.get()
   const [text, setText] = useState('')
   const submit = async e => {

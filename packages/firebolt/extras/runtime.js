@@ -24,7 +24,7 @@ export function createRuntime({ ssr, routes, stack = [] }) {
     getPageHeads,
     getDocHead,
     watchPageHeads,
-    callRouteFn,
+    callRegistry,
     applyRedirect,
     getLoader,
     setLoaderData,
@@ -103,11 +103,11 @@ export function createRuntime({ ssr, routes, stack = [] }) {
     return () => headWatchers.delete(callback)
   }
 
-  async function callRouteFn(routeId, fnName, args) {
+  async function callRegistry(id, args) {
     let result
     if (ssr) {
       console.log('TODO: this shouldnt happen yeah?')
-      result = await ssr.callRouteFn(routeId, fnName, args)
+      result = await ssr.callRegistry(id, args)
     } else {
       const res = await fetch('/_firebolt_fn', {
         method: 'POST',
@@ -115,8 +115,7 @@ export function createRuntime({ ssr, routes, stack = [] }) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          routeId,
-          fnName,
+          id,
           args, // todo: rename fnArgs
         }),
       })
@@ -136,10 +135,8 @@ export function createRuntime({ ssr, routes, stack = [] }) {
 
   const loaders = {} // [key]: loader
 
-  function getLoader(routeId, args) {
-    const key = `${routeId}|${args.join('|')}`
-    const fnName = args[0]
-    const fnArgs = args.slice(1)
+  function getLoader(id, args) {
+    const key = `${id}|${args.join('|')}`
     if (loaders[key]) return loaders[key]
     let status = 'pending'
     let promise
@@ -166,14 +163,14 @@ export function createRuntime({ ssr, routes, stack = [] }) {
       async fetch() {
         let result
         if (ssr) {
-          result = await ssr.callRouteFn(routeId, fnName, fnArgs)
+          result = await ssr.callRegistry(id, args)
           ssr.inserts.write(`
             <script>
               globalThis.$firebolt.push('setLoaderData', '${key}', ${JSON.stringify(result)})
             </script>
           `)
         } else {
-          result = await callRouteFn(routeId, fnName, fnArgs)
+          result = await callRegistry(id, args)
         }
         return result
       },
@@ -271,15 +268,15 @@ export function createRuntime({ ssr, routes, stack = [] }) {
 
   const actions = {} // [key]: action
 
-  function getAction(routeId, fnName) {
-    const key = `${routeId}|${fnName}`
+  function getAction(id) {
+    const key = `${id}`
     if (actions[key]) return actions[key]
-    const action = function (...fnArgs) {
+    const action = function (...args) {
       let promise
       if (ssr) {
-        promise = ssr.callRouteFn(routeId, fnName, fnArgs)
+        promise = ssr.callRegistry(id, args)
       } else {
-        promise = callRouteFn(routeId, fnName, fnArgs)
+        promise = callRegistry(id, args)
       }
       return promise.then(data => {
         if (data.redirect) {

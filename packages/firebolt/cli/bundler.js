@@ -19,6 +19,7 @@ import {
   parseServerError,
 } from './utils/errors'
 import { virtualModule } from './utils/virtualModule'
+import { registryPlugin } from './utils/registryPlugin'
 
 export async function bundler(opts) {
   const prod = !!opts.production
@@ -37,6 +38,7 @@ export async function bundler(opts) {
   const buildManifestFile = path.join(appDir, '.firebolt/manifest.json')
   const buildLibFile = path.join(appDir, '.firebolt/lib.js')
   const buildBoostrapFile = path.join(appDir, '.firebolt/bootstrap.js')
+  const buildRegistryFile = path.join(appDir, '.firebolt/registry.js')
   const buildServerFile = path.join(appDir, '.firebolt/server.js')
 
   const extrasDir = path.join(dir, '../extras')
@@ -97,6 +99,7 @@ export async function bundler(opts) {
       logLevel: 'silent',
       define: {
         'process.env.NODE_ENV': JSON.stringify(env),
+        FIREBOLT_NODE_ENV: JSON.stringify(env),
       },
       loader: {
         '.js': 'jsx',
@@ -207,6 +210,7 @@ export async function bundler(opts) {
       },
       define: {
         'process.env.NODE_ENV': JSON.stringify(env),
+        FIREBOLT_NODE_ENV: JSON.stringify(env),
       },
       loader: {
         '.js': 'jsx',
@@ -235,6 +239,8 @@ export async function bundler(opts) {
       await fs.outputFile(route.shimFile, code)
     }
 
+    const registry = {} // [id]: { file, fnName }
+
     // build client bundles (pages + chunks + bootstrap)
     const publicDir = path.join(buildDir, 'public')
     const publicFiles = []
@@ -262,13 +268,16 @@ export async function bundler(opts) {
       },
       define: {
         'process.env.NODE_ENV': JSON.stringify(env),
+        FIREBOLT_NODE_ENV: JSON.stringify(env),
       },
       loader: {
         '.js': 'jsx',
       },
       jsx: 'automatic',
       jsxImportSource: '@emotion/react',
+      keepNames: !prod,
       plugins: [
+        registryPlugin({ registry }),
         // polyfill fs, path etc for browser environment
         // polyfillNode({}),
         // ensure pages are marked side-effect free for tree shaking
@@ -314,6 +323,18 @@ export async function bundler(opts) {
     }
     await fs.outputFile(buildManifestFile, JSON.stringify(manifest, null, 2))
 
+    // generate our registry file
+    const getRegistryRelPath = file => path.relative(buildDir, file)
+    const registryCode = `
+      ${Object.keys(registry)
+        .map(
+          id =>
+            `export { ${registry[id].fnName} as ${id} } from '${getRegistryRelPath(registry[id].file)}'`
+        )
+        .join('\n')}
+    `
+    await fs.outputFile(buildRegistryFile, registryCode)
+
     // build server entry
     await esbuild.build({
       entryPoints: [buildServerFile],
@@ -331,13 +352,17 @@ export async function bundler(opts) {
       },
       define: {
         'process.env.NODE_ENV': JSON.stringify(env),
+        FIREBOLT_NODE_ENV: JSON.stringify(env),
       },
       loader: {
         '.js': 'jsx',
       },
       jsx: 'automatic',
       jsxImportSource: '@emotion/react',
-      plugins: [],
+      keepNames: !prod,
+      plugins: [
+        registryPlugin({ registry: null }), // dont write to registry, we already have it from the client
+      ],
     })
 
     const elapsed = (performance.now() - startAt).toFixed(0)

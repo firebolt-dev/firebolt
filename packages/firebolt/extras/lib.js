@@ -273,21 +273,19 @@ function useForceUpdate() {
   }, [])
 }
 
-export function useData(...args) {
+export function useData(id, ...args) {
   const forceUpdate = useForceUpdate()
-  const location = useLocation()
   const runtime = useContext(RuntimeContext)
-  const loader = runtime.getLoader(location.routeId, args)
+  const loader = runtime.getLoader(id, args)
   useEffect(() => {
     return loader.watch(forceUpdate)
   }, [])
   return loader
 }
 
-export function useAction(fnName) {
-  const location = useLocation()
+export function useAction(id) {
   const runtime = useContext(RuntimeContext)
-  const action = runtime.getAction(location.routeId, fnName)
+  const action = runtime.getAction(id)
   return action
 }
 

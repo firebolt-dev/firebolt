@@ -18,9 +18,9 @@ function Loading() {
 
 function Item({ id }) {
   // const { id } = useLocation().params
-  const data = useData('getItem', id)
+  const data = useData(getItem, id)
   const item = data.get()
-  const update = useAction('updateItem')
+  const update = useAction(updateItem)
   // const cache = useCache()
   const save = async () => {
     const resp = await update(item)
@@ -89,7 +89,7 @@ export async function updateItem(req, data) {
 
 async function examples() {
   // get a loader
-  const loader = useData('getItem', '123')
+  const loader = useData(getItem, '123')
   // read the loader or suspend while it loads
   const item = loader.get()
   // check if the loader is refetching in the background
@@ -100,7 +100,7 @@ async function examples() {
   loader.set({ name: 'YUP!' })
 
   // get an action
-  const save = useAction('saveItem')
+  const save = useAction_(saveItem)
   // call the action
   const newItem = await save({ name: 'Milk' })
 

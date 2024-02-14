@@ -1,4 +1,5 @@
 import 'source-map-support/register'
+import './process'
 import express from 'express'
 import cors from 'cors'
 import compression from 'compression'
@@ -15,6 +16,7 @@ import { getConfig } from './config.js'
 import * as core from './core.js'
 import manifest from './manifest.json'
 import { Request } from './request'
+import * as registry from './registry'
 
 // suppress React warning about useLayoutEffect on server, this is nonsense because useEffect
 // is similar and doesn't warn and is allowed in SSR
@@ -55,11 +57,9 @@ function resolveRouteWithParams(url) {
 }
 
 // utility to call route functions (data and actions)
-async function callRouteFn(request, routeId, fnName, args) {
+async function callRegistry(request, id, args) {
   await core.middleware(request)
-  const route = core.routes.find(r => r.id === routeId)
-  if (!route) throw new Error('Route not found')
-  const fn = route.module[fnName]
+  const fn = registry[id]
   if (!fn) throw new Error('Invalid function')
   let value = fn(request, ...args)
   if (value instanceof Promise) {
@@ -79,12 +79,12 @@ app.use('/_firebolt', express.static('.firebolt/public'))
 
 // handle route fn calls (useData and useAction)
 app.post('/_firebolt_fn', async (req, res) => {
-  const { routeId, fnName, args } = req.body
+  const { id, args } = req.body
   const request = new Request(req)
   let value
   let err
   try {
-    value = await callRouteFn(request, routeId, fnName, args)
+    value = await callRegistry(request, id, args)
   } catch (_err) {
     err = _err
   }
@@ -150,10 +150,10 @@ app.use('*', async (req, res) => {
         url,
         params,
         inserts,
-        async callRouteFn(...args) {
+        async callRegistry(...args) {
           const request = new Request(req)
           try {
-            value = await callRouteFn(request, ...args)
+            value = await callRegistry(request, ...args)
           } catch (err) {
             if (err === request) {
               value = request
