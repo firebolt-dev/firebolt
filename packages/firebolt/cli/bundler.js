@@ -113,6 +113,7 @@ export async function bundler(opts) {
     defaultsDeep(config, {
       port: 3000,
       external: [],
+      productionBrowserSourceMaps: false,
     })
 
     // initialize manifest
@@ -254,7 +255,7 @@ export async function bundler(opts) {
       outdir: publicDir,
       bundle: true,
       treeShaking: true,
-      sourcemap: true,
+      sourcemap: prod ? config.productionBrowserSourceMaps : true,
       splitting: true,
       platform: 'browser',
       // mainFields: ["browser", "module", "main"],
@@ -331,7 +332,7 @@ export async function bundler(opts) {
           id =>
             `export { ${registry[id].fnName} as ${id} } from '${getRegistryRelPath(registry[id].file)}'`
         )
-        .join('\n')}
+        .join('\n')}      
     `
     await fs.outputFile(buildRegistryFile, registryCode)
 
