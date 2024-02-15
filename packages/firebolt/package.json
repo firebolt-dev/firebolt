@@ -6,6 +6,7 @@
   "bin": {
     "firebolt": "dist/index.js"
   },
+  "types": "types/firebolt.d.ts",
   "scripts": {
     "dev": "node scripts/build.mjs --watch",
     "build": "node scripts/build.mjs --minify"
