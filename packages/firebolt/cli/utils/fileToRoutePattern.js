@@ -6,10 +6,9 @@ export function fileToRoutePattern(filePath) {
   // remove extension
   filePath = filePath.split('.')
   filePath.pop()
-  // join back with . to /
-  filePath = filePath.join('/')
-  // now split by /
-  filePath = filePath.split('/')
+  filePath = filePath.join('')
+  // split by _ and trim empties
+  filePath = filePath.split('_').filter(seg => !!seg)
   // conversion
   const pattern = filePath
     .map(segment => {

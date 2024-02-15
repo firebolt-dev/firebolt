@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { useData, useAction, useCookies, css } from 'firebolt'
+import { useData, useAction, css } from 'firebolt'
 
 export function Profile() {
   return (

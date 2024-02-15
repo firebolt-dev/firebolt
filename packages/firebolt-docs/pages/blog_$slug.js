@@ -8,10 +8,14 @@ export default function BlogPost() {
       <div>Blog Post: {location.params.slug}</div>
       <div>Cake: {location.params.cake}</div>
       <div>
-        <Link to='/blog/123?cake=true'>With Cake</Link>
+        <Link to='/blog/123?cake=true' replace>
+          With Cake
+        </Link>
       </div>
       <div>
-        <Link to='/blog/123'>Without Cake</Link>
+        <Link to='/blog/123' replace>
+          Without Cake
+        </Link>
       </div>
     </div>
   )
