@@ -7,7 +7,7 @@ import * as esbuild from 'esbuild'
 import { debounce, defaultsDeep } from 'lodash'
 import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 
-import * as s from './utils/style'
+import * as style from './utils/style'
 import * as log from './utils/log'
 import { reimport } from './utils/reimport'
 import { getFilePaths } from './utils/getFilePaths'
@@ -353,7 +353,7 @@ export async function compile(opts) {
     })
 
     const elapsed = (performance.now() - startAt).toFixed(0)
-    log.info(`${firstBuild ? 'built' : 'rebuilt'} ${s.dim(`(${elapsed}ms)`)}\n`) // prettier-ignore
+    log.info(`${firstBuild ? 'built' : 'rebuilt'} ${style.dim(`(${elapsed}ms)`)}\n`) // prettier-ignore
     firstBuild = false
   }
 
