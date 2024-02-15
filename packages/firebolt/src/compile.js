@@ -400,6 +400,11 @@ export async function compile(opts) {
     })
   }
 
+  // ensure any running server is killed on exit
+  process.on('exit', () => {
+    controller?.abort()
+  })
+
   let runInProgress = false
   let runPending = false
 
