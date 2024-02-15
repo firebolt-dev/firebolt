@@ -1,6 +1,5 @@
 {
   "search.exclude": {
-    "**/dist": true,
     "**/.firebolt": true
   }
 }

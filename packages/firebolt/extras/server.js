@@ -59,7 +59,7 @@ function resolveRouteWithParams(url) {
 
 // utility to call route functions (data and actions)
 async function callRegistry(request, id, args) {
-  await core.middleware(request)
+  await config.middleware(request)
   const fn = registry[id]
   if (!fn) throw new Error('Invalid function')
   let value = fn(request, ...args)

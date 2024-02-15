@@ -24,7 +24,7 @@ export async function getMetadata() {
     title: 'About',
     description: 'About description',
     props: {
-      test: 'TEST!',
+      test: 'TEST!!',
     },
     expire: 2,
   }

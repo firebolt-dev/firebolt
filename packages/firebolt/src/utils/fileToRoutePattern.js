@@ -12,8 +12,8 @@ export function fileToRoutePattern(filePath) {
   // conversion
   const pattern = filePath
     .map(segment => {
-      // index -> /
-      if (segment === 'index') {
+      // /index -> /
+      if (segment === '/index') {
         return ''
       }
       // dynamic

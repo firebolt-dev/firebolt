@@ -4,11 +4,11 @@
   "description": "",
   "license": "MIT",
   "bin": {
-    "firebolt": "build/cli.js"
+    "firebolt": "dist/index.js"
   },
   "scripts": {
-    "dev": "node ./build.mjs --watch",
-    "build": "node ./build.mjs --minify"
+    "dev": "node scripts/build.mjs --watch",
+    "build": "node scripts/build.mjs --minify"
   },
   "dependencies": {
     "@emotion/react": "^11.11.3",

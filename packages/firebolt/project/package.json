@@ -1,0 +1,14 @@
+{
+  "name": "__projectName__",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "firebolt dev",
+    "build": "firebolt build",
+    "start": "firebolt start"
+  },
+  "dependencies": {
+    "firebolt": "*",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}

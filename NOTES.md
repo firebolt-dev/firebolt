@@ -107,6 +107,11 @@ We use a custom router because we need to disconnect ACTUAL browser location fro
 
 ### Todos
 
+- [done] root page doesn't work (index.js)
+- [done] move middleware.js to a config function
+- handle thrown errors (and req.redirect/req.error throws) inside middleware()
+- <Link css> ?
+- [done] remove templates folder (template is the empty project)
 - handle calling a route fn that doesn't exist
 - const cookies = useCookies()
   - cookies.set(key, value, options)

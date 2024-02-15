@@ -8,6 +8,7 @@ import { debounce, defaultsDeep } from 'lodash'
 import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 
 import * as s from './utils/style'
+import * as log from './utils/log'
 import { reimport } from './utils/reimport'
 import { getFilePaths } from './utils/getFilePaths'
 import { fileToRoutePattern } from './utils/fileToRoutePattern'
@@ -21,7 +22,7 @@ import {
 import { virtualModule } from './utils/virtualModule'
 import { registryPlugin } from './utils/registryPlugin'
 
-export async function bundler(opts) {
+export async function compile(opts) {
   const prod = !!opts.production
   const env = prod ? 'production' : 'development'
 
@@ -45,27 +46,13 @@ export async function bundler(opts) {
 
   const serverServerFile = path.join(appDir, '.firebolt/server/index.js')
 
-  const templateConfigFile = path.join(dir, '../templates/firebolt.config.js')
-
   const tmpConfigFile = path.join(appDir, '.firebolt/tmp/config.js')
   const tmpCoreFile = path.join(appDir, '.firebolt/tmp/core.js')
 
   let firstBuild = true
   let config
 
-  const log = {
-    info(...args) {
-      console.log(s.bInfo, ...args)
-    },
-    change(...args) {
-      console.log(s.bChange, ...args)
-    },
-    error(...args) {
-      console.log(s.bError, ...args)
-    },
-  }
-
-  console.log('\n  🔥 Firebolt\n')
+  log.intro()
 
   async function build() {
     // start tracking build time
@@ -95,7 +82,7 @@ export async function bundler(opts) {
       sourcemap: true,
       minify: false,
       platform: 'node',
-      // packages: 'external',
+      packages: 'external',
       logLevel: 'silent',
       define: {
         'process.env.NODE_ENV': JSON.stringify(env),
@@ -186,7 +173,6 @@ export async function bundler(opts) {
           .join('\n')}
       ]
       export { Document } from '../document.js'
-      export { middleware } from '../middleware.js'
       export { createRuntime } from './runtime.js'
       export * as lib from 'firebolt'
     `

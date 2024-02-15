@@ -3,6 +3,7 @@ import { padStart } from 'lodash'
 import path from 'path'
 
 import * as s from './style'
+import * as log from './log'
 
 /**
  * TODO: if esbuild throws multiple errors (eg the knex external issue) we currently only
@@ -79,8 +80,8 @@ export function logCodeError({
   length,
   suggestion,
 }) {
-  let line1 = `${s.bError} ${name}: ${message}\n`
-  console.log(line1)
+  let line1 = `${name}: ${message}\n`
+  log.error(line1)
 
   let line2 = `    ${file}:${line}:${column}:`
   console.log(line2)
