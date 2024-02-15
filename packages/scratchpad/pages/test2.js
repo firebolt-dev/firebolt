@@ -28,7 +28,7 @@ export function Content() {
         {title}
       </div>
       <div>
-        <Link href='/test1'>Test 1</Link>
+        <Link to='/test1'>Test 1</Link>
       </div>
       <div>Fetching: {data.fetching ? 'yes' : 'no'}</div>
       <div onClick={() => setOn(!on)}>{on ? 'Toggle Off' : 'Toggle On'}</div>

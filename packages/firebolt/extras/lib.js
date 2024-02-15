@@ -41,13 +41,13 @@ export function Style(props) {
   return <style>{props.children.styles}</style>
 }
 
-export function Link(props) {
-  const { to, href = to, replace, onClick, children } = props
-
+export function Link({ to, replace, onClick, children, ...rest }) {
   const runtime = useContext(RuntimeContext)
-
-  const jsx = isValidElement(children) ? children : <a {...props} />
-
+  const elem = isValidElement(children) ? (
+    children
+  ) : (
+    <a href={to} children={children} {...rest} />
+  )
   const handleClick = useEvent(e => {
     // ignore modifier clicks
     if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.button !== 0) {
@@ -57,23 +57,17 @@ export function Link(props) {
     if (e.defaultPrevented) return
     e.preventDefault()
     if (replace) {
-      history.replaceState(null, '', href)
+      history.replaceState(null, '', to)
     } else {
-      history.pushState(null, '', href)
+      history.pushState(null, '', to)
     }
   })
-
-  const extraProps = {
-    to: null,
-    onClick: handleClick,
-  }
-
   useEffect(() => {
     // prefetch routes
-    runtime.loadRouteByUrl(href)
+    runtime.loadRouteByUrl(to)
   }, [])
-
-  return cloneElement(jsx, extraProps)
+  // return children
+  return cloneElement(elem, { href: to, onClick: handleClick })
 }
 
 const RuntimeContext = createContext()

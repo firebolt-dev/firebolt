@@ -402,11 +402,9 @@ export function createRuntime({ ssr, routes, stack = [] }) {
   }
 
   function invalidateCookies(keys) {
-    console.log('invalidateCookies', keys)
     if (!keys) return
     for (const key of keys) {
       const value = getCookie(key)
-      console.log(key, value)
       const watchers = cookieWatchers[key]
       if (!watchers) continue
       for (const callback of watchers) {
