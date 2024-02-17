@@ -172,9 +172,6 @@ export async function compile(opts) {
           })
           .join('\n')}
       ]
-      export { Document } from '../document.js'
-      export { createRuntime } from './runtime.js'
-      export * as lib from 'firebolt'
     `
     await fs.outputFile(buildCoreFile, coreCode)
 
@@ -349,6 +346,12 @@ export async function compile(opts) {
       keepNames: !prod,
       plugins: [
         registryPlugin({ registry: null }), // dont write to registry, we already have it from the client
+        virtualModule([
+          {
+            path: buildCoreFile,
+            contents: coreCode,
+          },
+        ]),
       ],
     })
 

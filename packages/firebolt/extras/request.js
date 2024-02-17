@@ -1,4 +1,4 @@
-import { cookieToExpressOptions } from './cookies'
+import { cookieOptionsToExpress } from './cookies'
 
 export class Request {
   constructor(req) {
@@ -54,14 +54,14 @@ export class Request {
 
 class Cookies {
   constructor(req) {
-    this._values = req.cookies
+    this._data = req.cookies
     this._changes = []
   }
 
   set(key, value, options = defaultCookieOptions) {
     // console.log('setCookie', { key, value, options })
     if (value === null || value === undefined || value === '') {
-      this._values[key] = null
+      this._data[key] = null
       this._changes.push({
         type: 'remove',
         key,
@@ -76,7 +76,7 @@ class Cookies {
           value
         )
       }
-      this._values[key] = value
+      this._data[key] = data
       this._changes.push({
         type: 'set',
         key,
@@ -87,7 +87,7 @@ class Cookies {
   }
 
   get(key) {
-    let data = this._values[key]
+    let data = this._data[key]
     if (data === null || data === undefined || data === '') {
       return null
     }
@@ -112,11 +112,11 @@ class Cookies {
     return keys
   }
 
-  applyToExpressResponse(res) {
+  pushChangesToResponse(res) {
     for (const change of this._changes) {
       if (change.type === 'set') {
         let { key, data, options } = change
-        options = cookieToExpressOptions(options)
+        options = cookieOptionsToExpress(options)
         res.cookie(key, data, options)
       }
       if (change.type === 'remove') {
@@ -127,11 +127,11 @@ class Cookies {
     this._changes.length = 0
   }
 
-  applyToStream(inserts) {
+  pushChangesToStream(inserts) {
     for (const change of this._changes) {
       if (change.type === 'set') {
         let { key, data, options } = change
-        options = JSON.stringify(cookieToExpressOptions(options))
+        options = JSON.stringify(options)
         inserts.write(`
           <script>globalThis.$firebolt.push('setCookie', '${key}', ${data}, ${options})</script>
         `)

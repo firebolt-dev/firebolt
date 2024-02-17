@@ -9,14 +9,16 @@ import React from 'react'
 import { isbot } from 'isbot'
 import { PassThrough } from 'stream'
 import { defaultsDeep } from 'lodash'
+import { Root, mergeHeadGroups } from 'firebolt'
 
 import { matcher } from './matcher'
-
 import { getConfig } from './config.js'
 import * as core from './core.js'
 import manifest from './manifest.json'
 import { Request } from './request'
 import * as registry from './registry'
+import { cookieOptionsToExpress } from './cookies'
+import { createRuntime } from './runtime'
 
 // suppress React warning about useLayoutEffect on server, this is nonsense because useEffect
 // is similar and doesn't warn and is allowed in SSR
@@ -93,7 +95,7 @@ app.post('/_firebolt_fn', async (req, res) => {
   // notify client to invalidate changed cookies
   data.cookies = request.cookies.getChangedKeys()
   // apply changed cookies to the express response
-  request.cookies.applyToExpressResponse(res)
+  request.cookies.pushChangesToResponse(res)
 
   // if err is a request then function called req.redirect() or req.error()
   if (err instanceof Request) {
@@ -125,12 +127,6 @@ app.use('*', async (req, res) => {
   // handle page requests
   const [route, params] = resolveRouteWithParams(url)
   if (route) {
-    const RuntimeProvider = core.lib.RuntimeProvider
-    const Router = core.lib.Router
-    const mergeHeadGroups = core.lib.mergeHeadGroups
-    const Document = core.Document
-    const createRuntime = core.createRuntime
-
     const inserts = {
       value: '',
       read() {
@@ -143,11 +139,27 @@ app.use('*', async (req, res) => {
       },
     }
 
+    const cookies = {
+      get(key) {
+        // console.log('s.cookies.get', key, req.cookies[key])
+        return req.cookies[key]
+      },
+      set(key, value, options) {
+        // console.log('s.cookies.set', key, value)
+        res.cookie(key, value, cookieOptionsToExpress(options))
+      },
+      remove(key) {
+        // console.log('scookies.remove', key)
+        res.clearCookie(key)
+      },
+    }
+
     const runtime = createRuntime({
       ssr: {
         url,
         params,
         inserts,
+        cookies,
         async callRegistry(...args) {
           const request = new Request(req)
           try {
@@ -158,7 +170,7 @@ app.use('*', async (req, res) => {
             }
           }
           // write out any cookies first
-          request.cookies.applyToStream(inserts)
+          request.cookies.pushChangesToStream(inserts)
           // write out any redirects
           const didRedirect = request.applyRedirectToExpressResponse(res)
           if (didRedirect) return
@@ -168,19 +180,6 @@ app.use('*', async (req, res) => {
             expire: request._expire,
           }
           return data
-        },
-        cookies: {
-          get(key) {
-            // returns raw data
-            return req.cookies[key]
-          },
-          set(key, data, option) {
-            // sets raw data
-            res.cookie(key, data, option)
-          },
-          remove(key) {
-            res.clearCookie(key)
-          },
         },
       },
       routes: core.routes,
@@ -195,20 +194,11 @@ app.use('*', async (req, res) => {
 
     const isBot = isbot(req.get('user-agent') || '')
 
-    function Root() {
-      return (
-        <RuntimeProvider data={runtime}>
-          <Document>
-            <Router />
-          </Document>
-        </RuntimeProvider>
-      )
-    }
-
     // transform stream to:
     // 1. insert head content
     // 2. insert streamed loader data and redirect scripts
     // 3. extract and prepend inlined emotion styles
+    let headSent
     let afterHtml
     const stream = new PassThrough()
     stream.on('data', chunk => {
@@ -228,11 +218,14 @@ app.use('*', async (req, res) => {
       if (afterHtml && str.endsWith('</script>')) {
         str += inserts.read()
       }
+      // inject head content
+      if (str.includes('<head>') && !headSent) {
+        str = str.replace('<head>', '<head>' + getHeadContent())
+        headSent = true
+      }
       // mark after html
       if (str.includes('</html>')) {
         afterHtml = true
-        // inject head content
-        str = str.replace('<head>', '<head>' + getHeadContent())
       }
       // console.log('---')
       // console.log(str)
@@ -246,7 +239,7 @@ app.use('*', async (req, res) => {
     })
 
     let didError = false
-    const { pipe, abort } = renderToPipeableStream(<Root />, {
+    const { pipe, abort } = renderToPipeableStream(<Root runtime={runtime} />, {
       bootstrapScriptContent: isBot
         ? undefined
         : `
@@ -262,7 +255,6 @@ app.use('*', async (req, res) => {
       bootstrapModules: isBot ? [] : [route.file, bootstrapFile],
       onShellReady() {
         if (!isBot) {
-          // TODO: handle Request cookie changes and expiry etc
           res.statusCode = didError ? 500 : 200
           res.setHeader('Content-Type', 'text/html')
           pipe(stream)

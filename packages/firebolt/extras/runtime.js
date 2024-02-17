@@ -340,53 +340,56 @@ export function createRuntime({ ssr, routes, stack = [] }) {
   const cookieWatchers = {} // [key]: Set
 
   function getCookie(key) {
-    let data
-    if (ssr) {
-      data = ssr.cookies.get(key)
-    } else {
-      data = cookiejs.get(key)
-      if (data === false) return null // cookiejs returns false if cookie doesn't exist
-    }
     let value
+    if (ssr) {
+      value = ssr.cookies.get(key)
+    } else {
+      value = cookiejs.get(key)
+      // cookiejs returns false if cookie doesn't exist
+      if (value === false) value = null
+    }
+    if (value === null || value === undefined) return null
+    let data
     try {
-      value = JSON.parse(data)
+      data = JSON.parse(value)
     } catch (err) {
-      console.error(`could not deserialize cookie ${key} with value:`, data)
+      console.error(`could not deserialize cookie ${key} with value:`, value)
+      console.log({ value })
       return null
     }
-    // console.log('getCookie', { key, value })
-    return value
+    // console.log('getCookie', { key, data })
+    return data
   }
 
-  function setCookie(key, value, options) {
-    // console.log('setCookie', { key, value, options })
-    if (value === null || value === undefined || value === '') {
+  function setCookie(key, data, options) {
+    // console.log('setCookie', { key, data, options })
+    if (data === null || data === undefined || data === '') {
       if (ssr) {
         ssr.cookies.remove(key)
       } else {
         cookiejs.remove(key)
       }
-      value = null
+      data = null
     } else {
-      let data
+      let value
       try {
-        data = JSON.stringify(value)
+        value = JSON.stringify(data)
       } catch (err) {
         return console.error(
-          `could not serialize cookie ${key} with value:`,
-          value
+          `could not serialize cookie ${key} with data:`,
+          data
         )
       }
       if (ssr) {
-        ssr.cookies.set(key, data, options)
+        ssr.cookies.set(key, value, options)
       } else {
-        cookiejs.set(key, data, options)
+        cookiejs.set(key, value, options)
       }
     }
     const watchers = cookieWatchers[key]
     if (watchers) {
       for (const callback of watchers) {
-        callback(value)
+        callback(data)
       }
     }
   }
@@ -404,11 +407,11 @@ export function createRuntime({ ssr, routes, stack = [] }) {
   function invalidateCookies(keys) {
     if (!keys) return
     for (const key of keys) {
-      const value = getCookie(key)
+      const data = getCookie(key)
       const watchers = cookieWatchers[key]
       if (!watchers) continue
       for (const callback of watchers) {
-        callback(value)
+        callback(data)
       }
     }
   }

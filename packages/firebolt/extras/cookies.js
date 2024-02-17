@@ -1,5 +1,7 @@
 /**
- * Firebolt cookie options:
+ * Cookie options in firebolt are the same as cookiejs in the browser.
+ * When working with cookies on the server, we need to convert the options
+ * to work with express response api.
  *
  * expires: Number|Date
  * - default null (session storage)
@@ -22,7 +24,7 @@
  *
  */
 
-export function cookieToExpressOptions(opts) {
+export function cookieOptionsToExpress(opts) {
   // convert firebolt cookie options to express cookie options
   let expires = opts.expire
   if (typeof expires === 'number') {
@@ -37,10 +39,4 @@ export function cookieToExpressOptions(opts) {
     secure: opts.secure,
     sameSite: opts.sameSite,
   }
-}
-
-export function cookieToCookieJSOptions(options) {
-  // convert firebolt cookie options to cookiejs options
-  // note: these are the same for now
-  return options
 }

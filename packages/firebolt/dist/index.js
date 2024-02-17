@@ -97,7 +97,7 @@ async function replace(file, target, value) {
 
 // src/compile.js
 var import_fs_extra5 = __toESM(require("fs-extra"));
-var import_path5 = __toESM(require("path"));
+var import_path6 = __toESM(require("path"));
 var import_child_process2 = require("child_process");
 var import_perf_hooks = require("perf_hooks");
 var import_chokidar = __toESM(require("chokidar"));
@@ -260,9 +260,31 @@ function isEsbuildError(err) {
   return err.errors?.[0].location;
 }
 
+// src/utils/virtualModule.js
+var import_path4 = __toESM(require("path"));
+function virtualModule(modules) {
+  return {
+    name: "virtual-modules",
+    setup(build2) {
+      for (const module2 of modules) {
+        const { path: path6, contents } = module2;
+        const escapedPath = path6.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const filter = new RegExp(`^${escapedPath}$`);
+        const namespace = "ns" + Math.random();
+        build2.onResolve({ filter }, (args) => {
+          return { path: path6, namespace };
+        });
+        build2.onLoad({ filter: /.*/, namespace }, () => {
+          return { contents, resolveDir: import_path4.default.dirname(path6) };
+        });
+      }
+    }
+  };
+}
+
 // src/utils/registryPlugin.js
 var import_fs_extra4 = __toESM(require("fs-extra"));
-var import_path4 = __toESM(require("path"));
+var import_path5 = __toESM(require("path"));
 var import_crypto = __toESM(require("crypto"));
 function registryPlugin({ registry }) {
   return {
@@ -337,7 +359,7 @@ async function transform({ modPath, imports, contents, hook, registry }) {
     if (imports[fnName]) {
       const name = imports[fnName].name;
       const alias = imports[fnName].alias;
-      const file = import_path4.default.resolve(import_path4.default.dirname(modPath), imports[fnName].file);
+      const file = import_path5.default.resolve(import_path5.default.dirname(modPath), imports[fnName].file);
       const fullPath = `${file}${alias || name}`;
       const id = "f" + import_crypto.default.createHash("sha256").update(fullPath).digest("hex");
       fnInfo.push({ name, alias, file, id });
@@ -370,22 +392,22 @@ async function compile(opts) {
   const env = prod ? "production" : "development";
   const dir = __dirname;
   const appDir = process.cwd();
-  const appPagesDir = import_path5.default.join(appDir, "pages");
-  const appApiDir = import_path5.default.join(appDir, "api");
-  const appConfigFile = import_path5.default.join(appDir, "firebolt.config.js");
-  const buildDir = import_path5.default.join(appDir, ".firebolt");
-  const buildPageShimsDir = import_path5.default.join(appDir, ".firebolt/page-shims");
-  const buildCoreFile = import_path5.default.join(appDir, ".firebolt/core.js");
-  const buildConfigFile = import_path5.default.join(appDir, ".firebolt/config.js");
-  const buildManifestFile = import_path5.default.join(appDir, ".firebolt/manifest.json");
-  const buildLibFile = import_path5.default.join(appDir, ".firebolt/lib.js");
-  const buildBoostrapFile = import_path5.default.join(appDir, ".firebolt/bootstrap.js");
-  const buildRegistryFile = import_path5.default.join(appDir, ".firebolt/registry.js");
-  const buildServerFile = import_path5.default.join(appDir, ".firebolt/server.js");
-  const extrasDir = import_path5.default.join(dir, "../extras");
-  const serverServerFile = import_path5.default.join(appDir, ".firebolt/server/index.js");
-  const tmpConfigFile = import_path5.default.join(appDir, ".firebolt/tmp/config.js");
-  const tmpCoreFile = import_path5.default.join(appDir, ".firebolt/tmp/core.js");
+  const appPagesDir = import_path6.default.join(appDir, "pages");
+  const appApiDir = import_path6.default.join(appDir, "api");
+  const appConfigFile = import_path6.default.join(appDir, "firebolt.config.js");
+  const buildDir = import_path6.default.join(appDir, ".firebolt");
+  const buildPageShimsDir = import_path6.default.join(appDir, ".firebolt/page-shims");
+  const buildCoreFile = import_path6.default.join(appDir, ".firebolt/core.js");
+  const buildConfigFile = import_path6.default.join(appDir, ".firebolt/config.js");
+  const buildManifestFile = import_path6.default.join(appDir, ".firebolt/manifest.json");
+  const buildLibFile = import_path6.default.join(appDir, ".firebolt/lib.js");
+  const buildBoostrapFile = import_path6.default.join(appDir, ".firebolt/bootstrap.js");
+  const buildRegistryFile = import_path6.default.join(appDir, ".firebolt/registry.js");
+  const buildServerFile = import_path6.default.join(appDir, ".firebolt/server.js");
+  const extrasDir = import_path6.default.join(dir, "../extras");
+  const serverServerFile = import_path6.default.join(appDir, ".firebolt/server/index.js");
+  const tmpConfigFile = import_path6.default.join(appDir, ".firebolt/tmp/config.js");
+  const tmpCoreFile = import_path6.default.join(appDir, ".firebolt/tmp/core.js");
   let firstBuild = true;
   let config;
   intro();
@@ -437,13 +459,13 @@ async function compile(opts) {
     const routes = [];
     for (const pageFile of pageFiles) {
       const id = `route${++ids}`;
-      const prettyFileBase = import_path5.default.relative(appDir, pageFile);
-      const pageFileBase = import_path5.default.relative(appPagesDir, pageFile);
-      const shimFile = import_path5.default.join(buildPageShimsDir, pageFileBase.replace("/", "."));
-      const shimFileName = import_path5.default.relative(import_path5.default.dirname(shimFile), shimFile);
+      const prettyFileBase = import_path6.default.relative(appDir, pageFile);
+      const pageFileBase = import_path6.default.relative(appPagesDir, pageFile);
+      const shimFile = import_path6.default.join(buildPageShimsDir, pageFileBase.replace("/", "."));
+      const shimFileName = import_path6.default.relative(import_path6.default.dirname(shimFile), shimFile);
       const pattern = fileToRoutePattern("/" + pageFileBase);
-      const relBuildToPageFile = import_path5.default.relative(buildDir, pageFile);
-      const relShimToPageFile = import_path5.default.relative(import_path5.default.dirname(shimFile), pageFile);
+      const relBuildToPageFile = import_path6.default.relative(buildDir, pageFile);
+      const relShimToPageFile = import_path6.default.relative(import_path6.default.dirname(shimFile), pageFile);
       routes.push({
         id,
         prettyFileBase,
@@ -484,9 +506,6 @@ async function compile(opts) {
           `;
     }).join("\n")}
       ]
-      export { Document } from '../document.js'
-      export { createRuntime } from './runtime.js'
-      export * as lib from 'firebolt'
     `;
     await import_fs_extra5.default.outputFile(buildCoreFile, coreCode);
     await esbuild.build({
@@ -532,7 +551,7 @@ async function compile(opts) {
       await import_fs_extra5.default.outputFile(route.shimFile, code);
     }
     const registry = {};
-    const publicDir = import_path5.default.join(buildDir, "public");
+    const publicDir = import_path6.default.join(buildDir, "public");
     const publicFiles = [];
     for (const route of routes) {
       publicFiles.push(route.shimFile);
@@ -609,7 +628,7 @@ async function compile(opts) {
       }
     }
     await import_fs_extra5.default.outputFile(buildManifestFile, JSON.stringify(manifest, null, 2));
-    const getRegistryRelPath = (file) => import_path5.default.relative(buildDir, file);
+    const getRegistryRelPath = (file) => import_path6.default.relative(buildDir, file);
     const registryCode = `
       ${Object.keys(registry).map(
       (id) => `export { ${registry[id].fnName} as ${id} } from '${getRegistryRelPath(registry[id].file)}'`
@@ -641,8 +660,14 @@ async function compile(opts) {
       jsxImportSource: "@emotion/react",
       keepNames: !prod,
       plugins: [
-        registryPlugin({ registry: null })
+        registryPlugin({ registry: null }),
         // dont write to registry, we already have it from the client
+        virtualModule([
+          {
+            path: buildCoreFile,
+            contents: coreCode
+          }
+        ])
       ]
     });
     const elapsed = (import_perf_hooks.performance.now() - startAt).toFixed(0);
@@ -689,6 +714,9 @@ async function compile(opts) {
       }
     });
   }
+  process.on("exit", () => {
+    controller?.abort();
+  });
   let runInProgress = false;
   let runPending = false;
   const run = async () => {
@@ -731,7 +759,7 @@ async function compile(opts) {
     };
     const watcher = import_chokidar.default.watch([appDir], watchOptions);
     const onChange = async (type, file) => {
-      change2(`~/${import_path5.default.relative(appDir, file)}`);
+      change2(`~/${import_path6.default.relative(appDir, file)}`);
       run();
     };
     watcher.on("all", (0, import_lodash2.debounce)(onChange));

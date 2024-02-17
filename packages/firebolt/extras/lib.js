@@ -11,10 +11,13 @@ import React, {
   useMemo,
   Suspense,
   useLayoutEffect,
+  Fragment,
 } from 'react'
-import { css } from '@emotion/react'
+import { Global, css } from '@emotion/react'
 
-export { css }
+import { Document } from '../document.js'
+
+export { Global, css }
 
 export const mergeHeadGroups = (...groups) => {
   const flattened = []
@@ -37,12 +40,8 @@ export const mergeHeadGroups = (...groups) => {
   return merged.map((child, idx) => cloneElement(child, { key: `.$fb${idx}` }))
 }
 
-export function Style(props) {
-  return <style>{props.children.styles}</style>
-}
-
 export function Link({ to, replace, onClick, children, ...rest }) {
-  const runtime = useContext(RuntimeContext)
+  const runtime = useRuntime()
   const elem = isValidElement(children) ? (
     children
   ) : (
@@ -72,53 +71,115 @@ export function Link({ to, replace, onClick, children, ...rest }) {
 
 const RuntimeContext = createContext()
 
+function useRuntime() {
+  return useContext(RuntimeContext)
+}
+
 export function Head({ children }) {
+  const runtime = useRuntime()
   const location = useLocation()
   // if location is defined then we are a child of the router
   if (location) return <PageHead>{children}</PageHead>
+  // if ssr use our doc head collector
+  if (runtime.ssr) return <DocHeadServer>{children}</DocHeadServer>
   // otherwise we must be the document head
-  return <DocHead>{children}</DocHead>
+  return <DocHeadClient>{children}</DocHeadClient>
 }
 
-function DocHead({ children }) {
-  const runtime = useContext(RuntimeContext)
-  // server renders empty head and registers children to be inserted on first flush
-  if (runtime.ssr) {
-    runtime.insertDocHead(children)
-    return <head />
-  }
-  // client first renders server provided head to match and then subscribes to changes
+function DocHeadServer({ children }) {
+  const runtime = useRuntime()
+  runtime.insertDocHead(children)
+  return <head />
+}
+
+function DocHeadClient({ children }) {
+  const runtime = useRuntime()
   const [pageHeads, setPageHeads] = useState(() => runtime.getPageHeads())
   useEffect(() => {
     return runtime.watchPageHeads(pageHeads => {
       setPageHeads(pageHeads)
     })
   }, [])
-  if (!globalThis.__fireboldHeadHydrated) {
-    globalThis.__fireboldHeadHydrated = true
-    return (
-      <head dangerouslySetInnerHTML={{ __html: document.head.innerHTML }} />
-    )
-  }
+
+  // if (!globalThis.__fireboltHeadHydrated) {
+  //   globalThis.__fireboltHeadHydrated = true
+  //   return (
+  //     <head dangerouslySetInnerHTML={{ __html: document.head.innerHTML }} />
+  //   )
+  // }
   const tags = mergeHeadGroups(children, ...pageHeads)
+  console.log(tags)
   return <head>{tags}</head>
+  // const [mounted, setMounted] = useState(false)
+  // if (runtime.ssr) {
+  //   runtime.insertDocHead(children)
+  //   return <head />
+  // }
+  // console.log('DocHead', children)
+  // useEffect(() => {
+  //   setMounted(true)
+  //   // if (mounted) return
+  //   // return runtime.watchPageHeads(pageHeads => {
+  //   //   setMounted(true)
+  //   // })
+  // }, [mounted])
+  // if (!mounted) {
+  //   console.log('DocHead mount head')
+  //   return (
+  //     <head dangerouslySetInnerHTML={{ __html: document.head.innerHTML }} />
+  //   )
+  // }
+  // console.log('moutned')
+  // if (!globalThis.__fireboltHeadHydrated) {
+  //   globalThis.__fireboltHeadHydrated = true
+  //   return (
+  //     <head dangerouslySetInnerHTML={{ __html: document.head.innerHTML }} />
+  //   )
+  // }
+  // return (
+  //   <head>
+  //     <DocHeadContent>{children}</DocHeadContent>
+  //   </head>
+  // )
 }
 
+// function DocHeadContent({ children }) {
+//   const runtime = useRuntime()
+//   // server renders empty head and registers children to be inserted on first flush
+//   // if (runtime.ssr) {
+//   //   runtime.insertDocHead(children)
+//   //   return null
+//   // }
+//   // client first renders server provided head to match and then subscribes to changes
+//   const [pageHeads, setPageHeads] = useState(() => runtime.getPageHeads())
+//   useEffect(() => {
+//     return runtime.watchPageHeads(pageHeads => {
+//       setPageHeads(pageHeads)
+//     })
+//   }, [])
+//   console.log({ pageHeads })
+//   const tags = mergeHeadGroups(children, ...pageHeads)
+//   return tags
+// }
+
 function PageHead({ children }) {
-  const runtime = useContext(RuntimeContext)
+  const runtime = useRuntime()
   // server inserts immediately for injection
   if (runtime.ssr) {
     runtime.insertPageHead(children)
   }
   // client inserts on mount (post hydration)
   useLayoutEffect(() => {
+    console.log('page heads change', children)
     return runtime.insertPageHead(children)
   }, [children])
 }
 
-export function RuntimeProvider({ data, children }) {
+export function RuntimeProvider({ runtime, children }) {
   return (
-    <RuntimeContext.Provider value={data}>{children}</RuntimeContext.Provider>
+    <RuntimeContext.Provider value={runtime}>
+      {children}
+    </RuntimeContext.Provider>
   )
 }
 
@@ -163,12 +224,12 @@ export function useLocation() {
 const historyEvents = ['popstate', 'pushState', 'replaceState', 'hashchange']
 
 function useRouteWithParams(url) {
-  const runtime = useContext(RuntimeContext)
+  const runtime = useRuntime()
   return useMemo(() => runtime.resolveRouteWithParams(url), [url])
 }
 
 export function Router() {
-  const runtime = useContext(RuntimeContext)
+  const runtime = useRuntime()
   // const [browserUrl, setBrowserUrl] = useState(runtime.ssr?.url || globalThis.location.pathname + globalThis.location.search) // prettier-ignore
   const [prevUrl, setPrevUrl] = useState(null)
   const [currUrl, setCurrUrl] = useState(() => runtime.ssr?.url || globalThis.location.pathname + globalThis.location.search) // prettier-ignore
@@ -269,7 +330,7 @@ function useForceUpdate() {
 
 export function useData(id, ...args) {
   const forceUpdate = useForceUpdate()
-  const runtime = useContext(RuntimeContext)
+  const runtime = useRuntime()
   const loader = runtime.getLoader(id, args)
   useEffect(() => {
     return loader.watch(forceUpdate)
@@ -278,23 +339,23 @@ export function useData(id, ...args) {
 }
 
 export function useAction(id) {
-  const runtime = useContext(RuntimeContext)
+  const runtime = useRuntime()
   const action = runtime.getAction(id)
   return action
 }
 
 export function useCache() {
-  const runtime = useContext(RuntimeContext)
+  const runtime = useRuntime()
   return runtime.getCache()
 }
 
 // export function useCookies() {
-//   const runtime = useContext(RuntimeContext)
+//   const runtime = useRuntime()
 //   return runtime.getCookieInterface()
 // }
 
-export function useCookie(key) {
-  const runtime = useContext(RuntimeContext)
+export function useCookie(key, defaultValue = null) {
+  const runtime = useRuntime()
   const [value, setValue] = useState(() => runtime.getCookie(key))
   const update = useMemo(() => {
     return (value, options) => runtime.setCookie(key, value, options)
@@ -302,7 +363,7 @@ export function useCookie(key) {
   useEffect(() => {
     return runtime.watchCookie(key, setValue)
   }, [])
-  return [value, update]
+  return [value || defaultValue, update]
 }
 
 // export function ErrorBoundary() {
@@ -337,3 +398,28 @@ export function useCookie(key) {
 //     return this.props.children;
 //   }
 // }
+
+export function Root({ runtime }) {
+  return (
+    <RuntimeProvider runtime={runtime}>
+      <Document>
+        <Router />
+      </Document>
+    </RuntimeProvider>
+  )
+}
+
+export function cls(...args) {
+  let str = ''
+  for (const arg of args) {
+    if (typeof arg === 'string') {
+      str += ' ' + arg
+    } else if (typeof arg === 'object') {
+      for (const key in arg) {
+        const value = arg[key]
+        if (value) str += ' ' + key
+      }
+    }
+  }
+  return str
+}
