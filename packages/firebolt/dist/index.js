@@ -440,7 +440,7 @@ async function compile(opts) {
         ".js": "jsx"
       },
       jsx: "automatic",
-      jsxImportSource: "@emotion/react",
+      jsxImportSource: "firebolt-css",
       plugins: []
     });
     const { getConfig } = await reimport(tmpConfigFile);
@@ -518,7 +518,7 @@ async function compile(opts) {
       platform: "node",
       // format: 'esm',
       packages: "external",
-      // external: ['react', 'react-dom', '@emotion/react', ...config.external],
+      // external: ['react', 'react-dom', 'firebolt-css', ...config.external],
       // external: [...config.external],
       logLevel: "silent",
       alias: {
@@ -532,7 +532,7 @@ async function compile(opts) {
         ".js": "jsx"
       },
       jsx: "automatic",
-      jsxImportSource: "@emotion/react",
+      jsxImportSource: "firebolt-css",
       plugins: []
     });
     const core = await reimport(tmpCoreFile);
@@ -583,7 +583,7 @@ async function compile(opts) {
         ".js": "jsx"
       },
       jsx: "automatic",
-      jsxImportSource: "@emotion/react",
+      jsxImportSource: "firebolt-css",
       keepNames: !prod,
       plugins: [
         registryPlugin({ registry })
@@ -657,7 +657,7 @@ async function compile(opts) {
         ".js": "jsx"
       },
       jsx: "automatic",
-      jsxImportSource: "@emotion/react",
+      jsxImportSource: "firebolt-css",
       keepNames: !prod,
       plugins: [
         registryPlugin({ registry: null }),

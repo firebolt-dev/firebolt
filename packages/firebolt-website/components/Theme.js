@@ -1,10 +1,10 @@
-import { useCookie, Global, css } from 'firebolt'
+import { useCookie, css } from 'firebolt'
 
 export function Theme() {
   const [theme] = useCookie('theme', 'system')
   return (
-    <Global
-      styles={css`
+    <style
+      global={css`
         ${theme === 'light' && lightVariables}
         ${theme === 'dark' && darkVariables}
         ${theme === 'system' &&

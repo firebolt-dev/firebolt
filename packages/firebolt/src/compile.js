@@ -92,7 +92,7 @@ export async function compile(opts) {
         '.js': 'jsx',
       },
       jsx: 'automatic',
-      jsxImportSource: '@emotion/react',
+      jsxImportSource: 'firebolt-css',
       plugins: [],
     })
     const { getConfig } = await reimport(tmpConfigFile)
@@ -186,7 +186,7 @@ export async function compile(opts) {
       platform: 'node',
       // format: 'esm',
       packages: 'external',
-      // external: ['react', 'react-dom', '@emotion/react', ...config.external],
+      // external: ['react', 'react-dom', 'firebolt-css', ...config.external],
       // external: [...config.external],
       logLevel: 'silent',
       alias: {
@@ -200,7 +200,7 @@ export async function compile(opts) {
         '.js': 'jsx',
       },
       jsx: 'automatic',
-      jsxImportSource: '@emotion/react',
+      jsxImportSource: 'firebolt-css',
       plugins: [],
     })
 
@@ -258,7 +258,7 @@ export async function compile(opts) {
         '.js': 'jsx',
       },
       jsx: 'automatic',
-      jsxImportSource: '@emotion/react',
+      jsxImportSource: 'firebolt-css',
       keepNames: !prod,
       plugins: [
         registryPlugin({ registry }),
@@ -300,6 +300,7 @@ export async function compile(opts) {
             '/_firebolt'
           )
         }
+        // bootstrap
         if (output.entryPoint === '.firebolt/bootstrap.js') {
           manifest.bootstrapFile = file.replace('.firebolt/public', '/_firebolt') // prettier-ignore
         }
@@ -342,7 +343,7 @@ export async function compile(opts) {
         '.js': 'jsx',
       },
       jsx: 'automatic',
-      jsxImportSource: '@emotion/react',
+      jsxImportSource: 'firebolt-css',
       keepNames: !prod,
       plugins: [
         registryPlugin({ registry: null }), // dont write to registry, we already have it from the client

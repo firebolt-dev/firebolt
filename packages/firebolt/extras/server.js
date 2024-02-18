@@ -9,7 +9,7 @@ import React from 'react'
 import { isbot } from 'isbot'
 import { PassThrough } from 'stream'
 import { defaultsDeep } from 'lodash'
-import { Root, mergeHeadGroups } from 'firebolt'
+import { Root } from 'firebolt'
 
 import { matcher } from './matcher'
 import { getConfig } from './config.js'
@@ -80,7 +80,7 @@ app.use(cookieParser())
 app.use(express.static('public'))
 app.use('/_firebolt', express.static('.firebolt/public'))
 
-// handle route fn calls (useData and useAction)
+// handle route fn calls (useData & useAction)
 app.post('/_firebolt_fn', async (req, res) => {
   const { id, args } = req.body
   const request = new Request(req)
@@ -185,54 +185,19 @@ app.use('*', async (req, res) => {
       routes: core.routes,
     })
 
-    function getHeadContent() {
-      const docHead = runtime.getDocHead()
-      const pageHeads = runtime.getPageHeads()
-      const elem = mergeHeadGroups(docHead, ...pageHeads)
-      return renderToStaticMarkup(elem) || ''
-    }
-
     const isBot = isbot(req.get('user-agent') || '')
 
-    // transform stream to:
-    // 1. insert head content
-    // 2. insert streamed loader data and redirect scripts
-    // 3. extract and prepend inlined emotion styles
-    let headSent
-    let afterHtml
     const stream = new PassThrough()
     stream.on('data', chunk => {
       let str = chunk.toString()
-      // extract and prepend any inline emotion styles
-      // so they don't cause hydration errors
-      if (afterHtml) {
-        // regex to match all style tags and their contents
-        const regex = /<style[^>]*>[\s\S]*?<\/style>/gi
-        // find all style tags and their contents
-        const matches = str.match(regex) || []
-        const styles = matches.join('')
-        // extract and prepend styles
-        str = styles + str.replace(regex, '')
-      }
+
       // append any inserts (loader data, redirects etc)
-      if (afterHtml && str.endsWith('</script>')) {
-        str += inserts.read()
-      }
-      // inject head content
-      if (str.includes('<head>') && !headSent) {
-        str = str.replace('<head>', '<head>' + getHeadContent())
-        headSent = true
-      }
-      // mark after html
-      if (str.includes('</html>')) {
-        afterHtml = true
-      }
+      str += inserts.read()
+
       // console.log('---')
       // console.log(str)
       res.write(str)
-      if (afterHtml) {
-        res.flush()
-      }
+      res.flush()
     })
     stream.on('end', () => {
       res.end()

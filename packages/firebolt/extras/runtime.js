@@ -174,6 +174,9 @@ export function createRuntime({ ssr, routes, stack = [] }) {
         invalidateCookies(result.cookies)
         return result
       },
+      read() {
+        return value
+      },
       get() {
         // invalidate if expired
         if (expiresAt !== null) {

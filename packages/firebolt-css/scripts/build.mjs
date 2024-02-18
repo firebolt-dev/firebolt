@@ -17,13 +17,12 @@ let firstBuild = true
 
 async function build() {
   await fs.emptyDir(buildDir)
-  console.log(
-    firstBuild ? '[firebolt] building cli' : '[firebolt] rebuilding cli'
-  )
+  console.log(firstBuild ? '[firebolt-css] build' : '[firebolt-css] rebuild')
   firstBuild = false
   await esbuild.build({
-    entryPoints: ['src/index.js'],
-    outfile: 'dist/index.js',
+    entryPoints: ['src/index.js', 'src/jsx-runtime.js'],
+    // outfile: 'dist/index.js',
+    outdir: 'dist',
     bundle: true,
     treeShaking: true,
     sourcemap: true,
@@ -40,10 +39,8 @@ async function build() {
       '.js': 'jsx',
     },
     jsx: 'automatic',
-    jsxImportSource: 'firebolt-css',
+    // jsxImportSource: 'firebolt-css',
   })
-  const bin = path.join(cwd, 'dist/index.js')
-  await fs.chmod(bin, '755')
 }
 
 async function watch() {
@@ -57,7 +54,7 @@ async function watch() {
   watcher.on('all', async () => {
     handleChanges()
   })
-  console.log('[firebolt] watching for changes...')
+  console.log('[firebolt-css] watching for changes...')
 }
 
 await build()

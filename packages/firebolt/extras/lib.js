@@ -1,5 +1,4 @@
 import React, {
-  Children,
   cloneElement,
   createContext,
   isValidElement,
@@ -10,35 +9,10 @@ import React, {
   useInsertionEffect,
   useMemo,
   Suspense,
-  useLayoutEffect,
-  Fragment,
 } from 'react'
-import { Global, css } from '@emotion/react'
+export { css } from 'firebolt-css'
 
 import { Document } from '../document.js'
-
-export { Global, css }
-
-export const mergeHeadGroups = (...groups) => {
-  const flattened = []
-  for (const children of groups) {
-    flattened.push(...Children.toArray(children))
-  }
-  const merged = []
-  flattened.forEach(child => {
-    if (child.key && child.key.startsWith('.$')) {
-      const idx = merged.findIndex(c => c.key === child.key)
-      if (idx !== -1) {
-        merged[idx] = child
-      } else {
-        merged.push(child)
-      }
-    } else {
-      merged.push(child)
-    }
-  })
-  return merged.map((child, idx) => cloneElement(child, { key: `.$fb${idx}` }))
-}
 
 export function Link({ to, replace, onClick, children, ...rest }) {
   const runtime = useRuntime()
@@ -72,107 +46,8 @@ export function Link({ to, replace, onClick, children, ...rest }) {
 const RuntimeContext = createContext()
 
 function useRuntime() {
-  return useContext(RuntimeContext)
-}
-
-export function Head({ children }) {
-  const runtime = useRuntime()
-  const location = useLocation()
-  // if location is defined then we are a child of the router
-  if (location) return <PageHead>{children}</PageHead>
-  // if ssr use our doc head collector
-  if (runtime.ssr) return <DocHeadServer>{children}</DocHeadServer>
-  // otherwise we must be the document head
-  return <DocHeadClient>{children}</DocHeadClient>
-}
-
-function DocHeadServer({ children }) {
-  const runtime = useRuntime()
-  runtime.insertDocHead(children)
-  return <head />
-}
-
-function DocHeadClient({ children }) {
-  const runtime = useRuntime()
-  const [pageHeads, setPageHeads] = useState(() => runtime.getPageHeads())
-  useEffect(() => {
-    return runtime.watchPageHeads(pageHeads => {
-      setPageHeads(pageHeads)
-    })
-  }, [])
-
-  // if (!globalThis.__fireboltHeadHydrated) {
-  //   globalThis.__fireboltHeadHydrated = true
-  //   return (
-  //     <head dangerouslySetInnerHTML={{ __html: document.head.innerHTML }} />
-  //   )
-  // }
-  const tags = mergeHeadGroups(children, ...pageHeads)
-  console.log(tags)
-  return <head>{tags}</head>
-  // const [mounted, setMounted] = useState(false)
-  // if (runtime.ssr) {
-  //   runtime.insertDocHead(children)
-  //   return <head />
-  // }
-  // console.log('DocHead', children)
-  // useEffect(() => {
-  //   setMounted(true)
-  //   // if (mounted) return
-  //   // return runtime.watchPageHeads(pageHeads => {
-  //   //   setMounted(true)
-  //   // })
-  // }, [mounted])
-  // if (!mounted) {
-  //   console.log('DocHead mount head')
-  //   return (
-  //     <head dangerouslySetInnerHTML={{ __html: document.head.innerHTML }} />
-  //   )
-  // }
-  // console.log('moutned')
-  // if (!globalThis.__fireboltHeadHydrated) {
-  //   globalThis.__fireboltHeadHydrated = true
-  //   return (
-  //     <head dangerouslySetInnerHTML={{ __html: document.head.innerHTML }} />
-  //   )
-  // }
-  // return (
-  //   <head>
-  //     <DocHeadContent>{children}</DocHeadContent>
-  //   </head>
-  // )
-}
-
-// function DocHeadContent({ children }) {
-//   const runtime = useRuntime()
-//   // server renders empty head and registers children to be inserted on first flush
-//   // if (runtime.ssr) {
-//   //   runtime.insertDocHead(children)
-//   //   return null
-//   // }
-//   // client first renders server provided head to match and then subscribes to changes
-//   const [pageHeads, setPageHeads] = useState(() => runtime.getPageHeads())
-//   useEffect(() => {
-//     return runtime.watchPageHeads(pageHeads => {
-//       setPageHeads(pageHeads)
-//     })
-//   }, [])
-//   console.log({ pageHeads })
-//   const tags = mergeHeadGroups(children, ...pageHeads)
-//   return tags
-// }
-
-function PageHead({ children }) {
-  const runtime = useRuntime()
-  // server inserts immediately for injection
-  if (runtime.ssr) {
-    runtime.insertPageHead(children)
-  }
-  // client inserts on mount (post hydration)
-  useLayoutEffect(() => {
-    console.log('page heads change', children)
-    return runtime.insertPageHead(children)
-  }, [children])
+  const runtime = useContext(RuntimeContext)
+  return runtime
 }
 
 export function RuntimeProvider({ runtime, children }) {
@@ -218,7 +93,8 @@ function LocationProvider({ value, children }) {
 }
 
 export function useLocation() {
-  return useContext(LocationContext)
+  const location = useContext(LocationContext)
+  return location
 }
 
 const historyEvents = ['popstate', 'pushState', 'replaceState', 'hashchange']
@@ -348,11 +224,6 @@ export function useCache() {
   const runtime = useRuntime()
   return runtime.getCache()
 }
-
-// export function useCookies() {
-//   const runtime = useRuntime()
-//   return runtime.getCookieInterface()
-// }
 
 export function useCookie(key, defaultValue = null) {
   const runtime = useRuntime()
