@@ -12,6 +12,12 @@ export function Header() {
     <div
       className='header'
       css={css`
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background-color: var(--header-bg);
+        backdrop-filter: blur(8px);
         padding: 0 20px;
         .header-inner {
           width: 100%;

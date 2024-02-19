@@ -21,6 +21,7 @@ import {
 } from './utils/errors'
 import { virtualModule } from './utils/virtualModule'
 import { registryPlugin } from './utils/registryPlugin'
+import { markdownLoader } from './utils/markdownLoader'
 
 export async function compile(opts) {
   const prod = !!opts.production
@@ -93,7 +94,7 @@ export async function compile(opts) {
       },
       jsx: 'automatic',
       jsxImportSource: 'firebolt-css',
-      plugins: [],
+      plugins: [markdownLoader],
     })
     const { getConfig } = await reimport(tmpConfigFile)
     config = getConfig()
@@ -201,7 +202,7 @@ export async function compile(opts) {
       },
       jsx: 'automatic',
       jsxImportSource: 'firebolt-css',
-      plugins: [],
+      plugins: [markdownLoader],
     })
 
     // import and validate core page exports etc
@@ -262,6 +263,7 @@ export async function compile(opts) {
       keepNames: !prod,
       plugins: [
         registryPlugin({ registry }),
+        markdownLoader,
         // polyfill fs, path etc for browser environment
         // polyfillNode({}),
         // ensure pages are marked side-effect free for tree shaking
@@ -353,6 +355,7 @@ export async function compile(opts) {
             contents: coreCode,
           },
         ]),
+        markdownLoader,
       ],
     })
 

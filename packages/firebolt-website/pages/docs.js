@@ -5,7 +5,7 @@ import { Page } from '../components/Page'
 export default function Docs() {
   return (
     <Page title='Documentation'>
-      <div>Blog!</div>
+      <div>Documentation</div>
     </Page>
   )
 }

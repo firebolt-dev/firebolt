@@ -16,7 +16,7 @@ export function Content() {
   const data = useData(getTitle)
   const [on, setOn] = useState()
   console.log('test2 render')
-  const title = data.get()
+  const title = data.read()
   console.log('title', title)
   return (
     <div>

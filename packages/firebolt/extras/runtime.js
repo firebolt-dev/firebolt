@@ -174,10 +174,8 @@ export function createRuntime({ ssr, routes, stack = [] }) {
         invalidateCookies(result.cookies)
         return result
       },
+
       read() {
-        return value
-      },
-      get() {
         // invalidate if expired
         if (expiresAt !== null) {
           const now = new Date().getTime()
@@ -229,6 +227,9 @@ export function createRuntime({ ssr, routes, stack = [] }) {
         if (status === 'error') {
           throw value
         }
+      },
+      get() {
+        return value
       },
       set(value) {
         setData({ value })

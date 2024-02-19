@@ -12,7 +12,7 @@ export function Profile() {
 function Content() {
   // const [auth, setAuth] = useCookie('auth')
   const data = useData(getUser)
-  const user = data.get()
+  const user = data.read()
   return (
     <div
       css={css`

@@ -10,7 +10,7 @@ const getStyle = css => {
   const key = css
   if (cache[key]) return cache[key]
   const hash = hashString(css)
-  const className = `css-${hash}`
+  const className = `_${hash}`
   const wrappedCSS = `.${className} { ${css} }`
   const string = serialize(
     compile(wrappedCSS),

@@ -19,7 +19,7 @@ function Loading() {
 function Item({ id }) {
   // const { id } = useLocation().params
   const data = useData(getItem, id)
-  const item = data.get()
+  const item = data.read()
   const update = useAction(updateItem)
   // const cache = useCache()
   const save = async () => {
@@ -91,7 +91,7 @@ async function examples() {
   // get a loader
   const loader = useData(getItem, '123')
   // read the loader or suspend while it loads
-  const item = loader.get()
+  const item = loader.read()
   // check if the loader is refetching in the background
   loader.refetching
   // invalidate loader (background refetch)

@@ -4,7 +4,7 @@ import Account from '../components/Account'
 
 export default function Page() {
   const data = useData(getThing)
-  const thing = data.get()
+  const thing = data.read()
 
   return (
     <div>

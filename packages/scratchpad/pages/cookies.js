@@ -14,7 +14,7 @@ export function Content() {
   const [lastFetched] = useCookie('lastFetched')
   const toggleOnServer = useAction(toggle)
   const data = useData(getBoop)
-  const boop = data.get()
+  const boop = data.read()
   return (
     <div>
       <div>Cookies</div>

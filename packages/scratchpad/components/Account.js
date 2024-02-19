@@ -2,7 +2,7 @@ import { useData } from 'firebolt'
 
 export default function Account() {
   const data = useData(getAccount)
-  const account = data.get()
+  const account = data.read()
   return <div onClick={() => data.invalidate()}>Name: {account.name}</div>
 }
 
