@@ -36,6 +36,7 @@ export function Link({ to, replace, onClick, children, ...rest }) {
     }
   })
   useEffect(() => {
+    if (!to) return
     // prefetch routes
     runtime.loadRouteByUrl(to)
   }, [])
