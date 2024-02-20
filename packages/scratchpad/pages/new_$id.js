@@ -1,5 +1,5 @@
 import { Suspense, useState } from 'react'
-import { Head, Link, useLocation, useData, useAction, useCache } from 'firebolt'
+import { Link, useLocation, useData, useAction, useCache } from 'firebolt'
 
 export default function Page() {
   return (
@@ -30,9 +30,7 @@ function Item({ id }) {
   }
   return (
     <>
-      <Head>
-        <title key='title'>{item.name}</title>
-      </Head>
+      <title key='title'>{item.name}</title>
       <div>Name</div>
       <input
         type='text'
@@ -54,10 +52,10 @@ function Item({ id }) {
       <div>Desc: {item.desc}</div>
       <Test />
       <div>
-        <Link href='/new/123'>Go 123</Link>
+        <Link to='/new/123'>Go 123</Link>
       </div>
       <div>
-        <Link href='/new/456'>Go 456</Link>
+        <Link to='/new/456'>Go 456</Link>
       </div> */}
     </>
   )

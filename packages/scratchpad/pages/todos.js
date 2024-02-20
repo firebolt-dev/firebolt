@@ -11,8 +11,8 @@ export default function Page() {
 
 export function Todos() {
   const data = useData(list)
-  const create = useAction(create)
   const todos = data.read()
+  const create = useAction(create)
   const [text, setText] = useState('')
   const submit = async e => {
     e.preventDefault()
@@ -43,8 +43,8 @@ export function Todos() {
 export async function list(req) {
   // await new Promise(resolve => setTimeout(resolve, 1000))
   // req.redirect('/about')
-  console.log('get foo cookie', req.cookies.get('foo'))
-  console.log('get foo2 cookie', req.cookies.get('foo2'))
+  // console.log('get foo cookie', req.cookies.get('foo'))
+  // console.log('get foo2 cookie', req.cookies.get('foo2'))
   return await req.db('todos')
 }
 

@@ -1,5 +1,5 @@
 import { Suspense, useState } from 'react'
-import { Head, useLocation } from 'firebolt'
+import { useLocation } from 'firebolt'
 
 /**
  * Basic + Head
@@ -9,9 +9,7 @@ export default function Page() {
   const [foo, setFoo] = useState(false)
   return (
     <>
-      <Head>
-        <title>Page</title>
-      </Head>
+      <title>Page</title>
       <div>Page</div>
     </>
   )

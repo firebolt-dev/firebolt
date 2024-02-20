@@ -6,7 +6,7 @@ export default function () {
     <div>
       <div>Test 1</div>
       <div>
-        <Link href='/test2'>Test 2</Link>
+        <Link to='/test2'>Test 2</Link>
       </div>
     </div>
   )
