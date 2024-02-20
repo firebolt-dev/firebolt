@@ -162,6 +162,7 @@ app.use('*', async (req, res) => {
         cookies,
         async callRegistry(...args) {
           const request = new Request(req)
+          let value
           try {
             value = await callRegistry(request, ...args)
           } catch (err) {
