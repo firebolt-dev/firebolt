@@ -66,5 +66,5 @@ if (opts.watch) {
 }
 
 function log(...args) {
-  console.log('[create-firebolt-app]', ...args)
+  console.log('[create-firebolt]', ...args)
 }

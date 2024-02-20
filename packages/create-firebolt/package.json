@@ -1,11 +1,11 @@
 {
-  "name": "create-firebolt-app",
+  "name": "create-firebolt",
   "version": "0.0.1",
   "description": "",
   "license": "MIT",
   "type": "module",
   "bin": {
-    "create-firebolt-app": "dist/index.js"
+    "create-firebolt": "dist/index.js"
   },
   "scripts": {
     "dev": "node scripts/build.mjs --watch",
