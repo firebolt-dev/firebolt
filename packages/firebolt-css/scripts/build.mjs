@@ -1,4 +1,4 @@
-import _ from 'lodash'
+import _ from 'lodash-es'
 import fs from 'fs-extra'
 import path from 'path'
 import chokidar from 'chokidar'
@@ -28,6 +28,7 @@ async function build() {
     sourcemap: true,
     minify: prod,
     platform: 'node',
+    format: 'esm',
     packages: 'external',
     define: {
       'process.env.NODE_ENV': JSON.stringify(env),

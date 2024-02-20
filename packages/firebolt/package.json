@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "license": "MIT",
+  "type": "module",
   "bin": {
     "firebolt": "dist/index.js"
   },
@@ -26,9 +27,9 @@
     "fs-extra": "^11.2.0",
     "immer": "^10.0.3",
     "isbot": "^4.4.0",
-    "lodash": "^4.17.21",
     "react": "18.3.0-canary-a9cc32511-20240215",
     "react-dom": "18.3.0-canary-a9cc32511-20240215",
+    "lodash-es": "^4.17.21",
     "source-map-support": "^0.5.21"
   },
   "engines": {

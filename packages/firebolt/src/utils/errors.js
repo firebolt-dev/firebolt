@@ -1,5 +1,5 @@
 import fs from 'fs-extra'
-import { padStart } from 'lodash'
+import { padStart } from 'lodash-es'
 import path from 'path'
 
 import * as s from './style'

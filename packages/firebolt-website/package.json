@@ -1,6 +1,7 @@
 {
   "name": "firebolt-website",
   "version": "1.0.0",
+  "type": "module",
   "scripts": {
     "dev": "firebolt dev",
     "build": "firebolt build",

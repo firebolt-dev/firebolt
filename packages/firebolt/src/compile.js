@@ -1,10 +1,11 @@
 import fs from 'fs-extra'
 import path from 'path'
+import { fileURLToPath } from 'url'
 import { fork } from 'child_process'
 import { performance } from 'perf_hooks'
 import chokidar from 'chokidar'
 import * as esbuild from 'esbuild'
-import { debounce, defaultsDeep } from 'lodash'
+import { debounce, defaultsDeep } from 'lodash-es'
 import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 
 import * as style from './utils/style'
@@ -22,6 +23,9 @@ import {
 import { virtualModule } from './utils/virtualModule'
 import { registryPlugin } from './utils/registryPlugin'
 import { markdownLoader } from './utils/markdownLoader'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 export async function compile(opts) {
   const prod = !!opts.production
@@ -83,6 +87,7 @@ export async function compile(opts) {
       sourcemap: true,
       minify: false,
       platform: 'node',
+      format: 'esm',
       packages: 'external',
       logLevel: 'silent',
       define: {
@@ -185,7 +190,7 @@ export async function compile(opts) {
       sourcemap: true,
       minify: false,
       platform: 'node',
-      // format: 'esm',
+      format: 'esm',
       packages: 'external',
       // external: ['react', 'react-dom', 'firebolt-css', ...config.external],
       // external: [...config.external],
@@ -331,7 +336,7 @@ export async function compile(opts) {
       sourcemap: true,
       minify: prod,
       platform: 'node',
-      // format: 'esm',
+      format: 'esm',
       packages: 'external',
       logLevel: 'silent',
       alias: {
