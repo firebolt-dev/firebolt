@@ -1,0 +1,23 @@
+{
+  "name": "create-firebolt-app",
+  "version": "0.0.1",
+  "description": "",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "create-firebolt-app": "dist/index.js"
+  },
+  "scripts": {
+    "dev": "node scripts/build.mjs --watch",
+    "build": "node scripts/build.mjs --minify"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "fs-extra": "^11.2.0",
+    "prompts": "^2.4.2",
+    "validate-npm-package-name": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
