@@ -60,7 +60,7 @@ export async function compile(opts) {
   const mdxPlugin = mdx({
     jsx: false,
     jsxRuntime: 'automatic',
-    jsxImportSource: 'firebolt-css',
+    jsxImportSource: '@firebolt/jsx',
     rehypePlugins: [rehypeMdxCodeProps],
   })
 
@@ -108,7 +108,7 @@ export async function compile(opts) {
         '.js': 'jsx',
       },
       jsx: 'automatic',
-      jsxImportSource: 'firebolt-css',
+      jsxImportSource: '@firebolt/jsx',
       plugins: [
         // markdownLoader,
         mdxPlugin,
@@ -129,7 +129,7 @@ export async function compile(opts) {
     }
 
     // get a list of page files
-    const pageFiles = await getFilePaths(appPagesDir)
+    const pageFiles = await getFilePaths(appPagesDir, ['js', 'mdx'])
 
     // generate route details
     let ids = 0
@@ -187,7 +187,7 @@ export async function compile(opts) {
       platform: 'node',
       format: 'esm',
       packages: 'external',
-      // external: ['react', 'react-dom', 'firebolt-css', ...config.external],
+      // external: ['react', 'react-dom', '@firebolt/jsx', ...config.external],
       // external: [...config.external],
       logLevel: 'silent',
       alias: {
@@ -201,7 +201,7 @@ export async function compile(opts) {
         '.js': 'jsx',
       },
       jsx: 'automatic',
-      jsxImportSource: 'firebolt-css',
+      jsxImportSource: '@firebolt/jsx',
       plugins: [
         // markdownLoader,
         mdxPlugin,
@@ -300,7 +300,7 @@ export async function compile(opts) {
         '.js': 'jsx',
       },
       jsx: 'automatic',
-      jsxImportSource: 'firebolt-css',
+      jsxImportSource: '@firebolt/jsx',
       keepNames: !prod,
       plugins: [
         // markdownLoader,
@@ -387,7 +387,7 @@ export async function compile(opts) {
         '.js': 'jsx',
       },
       jsx: 'automatic',
-      jsxImportSource: 'firebolt-css',
+      jsxImportSource: '@firebolt/jsx',
       keepNames: !prod,
       plugins: [
         // markdownLoader,

@@ -1,7 +1,7 @@
 import fs from 'fs-extra'
 import path from 'path'
 
-export async function getFilePaths(baseDir) {
+export async function getFilePaths(baseDir, exts) {
   let filePaths = []
 
   async function traverse(dir) {
@@ -9,8 +9,7 @@ export async function getFilePaths(baseDir) {
     for (const file of files) {
       const filePath = path.join(dir, file)
       const stat = await fs.stat(filePath)
-
-      if (stat.isFile()) {
+      if (stat.isFile() && hasExt(filePath, exts)) {
         filePaths.push(filePath)
       }
       if (stat.isDirectory()) {
@@ -21,4 +20,9 @@ export async function getFilePaths(baseDir) {
 
   await traverse(baseDir)
   return filePaths
+}
+
+function hasExt(filePath, exts) {
+  const fileExt = path.extname(filePath).slice(1)
+  return exts.includes(fileExt)
 }

@@ -10,7 +10,7 @@ import React, {
   useMemo,
   Suspense,
 } from 'react'
-export { css } from 'firebolt-css'
+export { css } from '@firebolt/css'
 
 import { Document } from '../document.js'
 

@@ -15,7 +15,9 @@
   "dependencies": {
     "@mdx-js/esbuild": "^3.0.1",
     "@mdx-js/react": "^3.0.1",
-    "chalk": "^4.1.2",
+    "@firebolt/css": "*",
+    "@firebolt/jsx": "*",
+    "chalk": "^5.3.0",
     "chokidar": "^3.6.0",
     "commander": "^11.1.0",
     "compression": "^1.7.4",
@@ -25,7 +27,6 @@
     "esbuild": "^0.19.11",
     "esbuild-plugin-polyfill-node": "^0.3.0",
     "express": "^4.18.2",
-    "firebolt-css": "*",
     "fs-extra": "^11.2.0",
     "immer": "^10.0.3",
     "isbot": "^4.4.0",

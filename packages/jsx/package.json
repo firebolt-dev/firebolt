@@ -1,0 +1,20 @@
+{
+  "name": "@firebolt/jsx",
+  "version": "0.0.1",
+  "main": "./dist/index.js",
+  "type": "module",
+  "exports": {
+    "./jsx-runtime": "./dist/index.js"
+  },
+  "scripts": {
+    "dev": "node scripts/build.mjs --watch",
+    "build": "node scripts/build.mjs --minify"
+  },
+  "dependencies": {
+    "@firebolt/css": "*",
+    "react": "canary"
+  },
+  "overrides": {
+    "react": "canary"
+  }
+}

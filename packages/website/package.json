@@ -1,6 +1,7 @@
 {
-  "name": "firebolt-website",
+  "name": "@firebolt/website",
   "version": "0.0.1",
+  "private": true,
   "type": "module",
   "scripts": {
     "dev": "firebolt dev",

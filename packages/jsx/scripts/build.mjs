@@ -39,10 +39,8 @@ async function build() {
       '.js': 'jsx',
     },
     jsx: 'automatic',
-    jsxImportSource: '@firebolt/jsx',
+    // jsxImportSource: '@firebolt/jsx',
   })
-  const bin = path.join(cwd, 'dist/index.js')
-  await fs.chmod(bin, '755')
 }
 
 async function watch() {
@@ -66,5 +64,5 @@ if (opts.watch) {
 }
 
 function log(...args) {
-  console.log('[firebolt]', ...args)
+  console.log('[jsx]', ...args)
 }

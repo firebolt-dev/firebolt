@@ -53,7 +53,7 @@ export const components = {
   code({ className, ...props }) {
     // this is both block and inline code.
     // if we have a language we
-    console.log({ className, props })
+    // console.log({ className, props })
     const match = /language-(\w+)/.exec(className || '')
     // console.log({ match })
     const lang = match?.[1]
@@ -75,7 +75,7 @@ export const components = {
   },
   pre({ children, filename, ...props }) {
     // this is just the wrapper around code blocks
-    console.log('RRR', props)
+    // console.log('RRR', props)
     return (
       <div
         css={css`
