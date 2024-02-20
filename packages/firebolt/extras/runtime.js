@@ -237,7 +237,7 @@ export function createRuntime({ ssr, routes, stack = [] }) {
       },
       edit(fn) {
         const newValue = produce(value, draft => {
-          return fn(draft)
+          fn(draft)
         })
         setData({ value: newValue })
         loader.notify()
