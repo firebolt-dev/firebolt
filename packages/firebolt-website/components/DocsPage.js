@@ -1,10 +1,8 @@
 import { css } from 'firebolt'
 
 import { Page } from './Page'
-import { Markdown } from './Markdown'
-import * as DocsMarkdown from './DocsMarkdown'
 
-export function DocsPage({ title, description, markdown, children }) {
+export function DocsPage({ title, description, children }) {
   return (
     <Page title={title} description={description}>
       <div
@@ -27,7 +25,6 @@ export function DocsPage({ title, description, markdown, children }) {
           <div>Sidebar</div>
         </div>
         <div className='docs-content'>
-          <Markdown components={DocsMarkdown}>{markdown}</Markdown>
           {children}
         </div>
       </div>

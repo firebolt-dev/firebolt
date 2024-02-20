@@ -6,6 +6,8 @@ import { performance } from 'perf_hooks'
 import chokidar from 'chokidar'
 import * as esbuild from 'esbuild'
 import { debounce, defaultsDeep } from 'lodash-es'
+import mdx from '@mdx-js/esbuild'
+import rehypeMdxCodeProps from 'rehype-mdx-code-props'
 import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 
 import * as style from './utils/style'
@@ -22,7 +24,7 @@ import {
 } from './utils/errors'
 import { virtualModule } from './utils/virtualModule'
 import { registryPlugin } from './utils/registryPlugin'
-import { markdownLoader } from './utils/markdownLoader'
+// import { markdownLoader } from './utils/markdownLoader'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -46,13 +48,21 @@ export async function compile(opts) {
   const buildBoostrapFile = path.join(appDir, '.firebolt/bootstrap.js')
   const buildRegistryFile = path.join(appDir, '.firebolt/registry.js')
   const buildServerFile = path.join(appDir, '.firebolt/server.js')
+  const buildInspectionFile = path.join(appDir, '.firebolt/inspection.js')
 
   const extrasDir = path.join(dir, '../extras')
 
   const serverServerFile = path.join(appDir, '.firebolt/server/index.js')
 
   const tmpConfigFile = path.join(appDir, '.firebolt/tmp/config.js')
-  const tmpCoreFile = path.join(appDir, '.firebolt/tmp/core.js')
+  const tmpInspectionFile = path.join(appDir, '.firebolt/tmp/inspection.js')
+
+  const mdxPlugin = mdx({
+    jsx: false,
+    jsxRuntime: 'automatic',
+    jsxImportSource: 'firebolt-css',
+    rehypePlugins: [rehypeMdxCodeProps],
+  })
 
   let firstBuild = true
   let config
@@ -99,7 +109,10 @@ export async function compile(opts) {
       },
       jsx: 'automatic',
       jsxImportSource: 'firebolt-css',
-      plugins: [markdownLoader],
+      plugins: [
+        // markdownLoader,
+        mdxPlugin,
+      ],
     })
     const { getConfig } = await reimport(tmpConfigFile)
     config = getConfig()
@@ -123,10 +136,12 @@ export async function compile(opts) {
     const routes = []
     for (const pageFile of pageFiles) {
       const id = `route${++ids}`
+      const isMDX = pageFile.endsWith('.mdx')
       const prettyFileBase = path.relative(appDir, pageFile)
       const pageFileBase = path.relative(appPagesDir, pageFile)
-      const shimFile = path.join(buildPageShimsDir, pageFileBase.replace('/', '.')) // prettier-ignore
-      const shimFileName = path.relative(path.dirname(shimFile), shimFile) // prettier-ignore
+      let shimFile = path.join(buildPageShimsDir, pageFileBase.replace('/', '.')) // prettier-ignore
+      if (isMDX) shimFile = shimFile.replace('.mdx', '.js')
+      let shimFileName = path.relative(path.dirname(shimFile), shimFile) // prettier-ignore
       const pattern = fileToRoutePattern('/' + pageFileBase)
       const relBuildToPageFile = path.relative(buildDir, pageFile)
       const relShimToPageFile = path.relative(path.dirname(shimFile), pageFile) // prettier-ignore
@@ -138,6 +153,7 @@ export async function compile(opts) {
         shimFileName,
         relBuildToPageFile,
         relShimToPageFile,
+        isMDX,
       })
     }
 
@@ -156,35 +172,14 @@ export async function compile(opts) {
     // copy over extras
     await fs.copy(extrasDir, buildDir)
 
-    // create core
-    const coreCode = `
-      ${routes.map(route => `import * as ${route.id} from '${route.relBuildToPageFile}'`).join('\n')}
-      export const routes = [
-        ${routes
-          .map(route => {
-            return `
-            {
-              module: ${route.id},
-              id: '${route.id}',
-              prettyFileBase: '${route.prettyFileBase}',
-              pattern: '${route.pattern}',
-              shimFile: '${route.shimFile}',
-              shimFileName: '${route.shimFileName}',
-              relBuildToPageFile: '${route.relBuildToPageFile}',
-              relShimToPageFile: '${route.relShimToPageFile}',
-              Page: ${route.id}.default,
-            },
-          `
-          })
-          .join('\n')}
-      ]
+    // build and inspect pages
+    const inspectionCode = `
+      ${routes.map(route => `export * as ${route.id} from '${route.relBuildToPageFile}'`).join('\n')}
     `
-    await fs.outputFile(buildCoreFile, coreCode)
-
-    // temporarily build core for validation
+    await fs.outputFile(buildInspectionFile, inspectionCode)
     await esbuild.build({
-      entryPoints: [buildCoreFile],
-      outfile: tmpCoreFile,
+      entryPoints: [buildInspectionFile],
+      outfile: tmpInspectionFile,
       bundle: true,
       treeShaking: true,
       sourcemap: true,
@@ -207,25 +202,66 @@ export async function compile(opts) {
       },
       jsx: 'automatic',
       jsxImportSource: 'firebolt-css',
-      plugins: [markdownLoader],
+      plugins: [
+        // markdownLoader,
+        mdxPlugin,
+      ],
     })
-
-    // import and validate core page exports etc
-    const core = await reimport(tmpCoreFile)
-    for (const route of core.routes) {
-      if (!route.Page) {
+    const inspection = await reimport(tmpInspectionFile)
+    // console.log('inspection', inspection)
+    for (const route of routes) {
+      if (!inspection[route.id].default) {
         throw new BundlerError(
-          `missing default export for ${$mark(route.prettyFileBase)}`
+          `missing default page export for ${$mark(route.prettyFileBase)}`
         )
+      }
+      if (route.isMDX && inspection[route.id].components) {
+        route.hasMDXComponents = true
       }
     }
 
+    // create core
+    const coreCode = `
+      ${routes.map(route => `import * as ${route.id} from '${route.relBuildToPageFile}'`).join('\n')}
+      export const routes = [
+        ${routes
+          .map(route => {
+            return `
+            {
+              module: ${route.id},
+              id: '${route.id}',
+              prettyFileBase: '${route.prettyFileBase}',
+              pattern: '${route.pattern}',
+              shimFile: '${route.shimFile}',
+              shimFileName: '${route.shimFileName}',
+              relBuildToPageFile: '${route.relBuildToPageFile}',
+              relShimToPageFile: '${route.relShimToPageFile}',
+              Page: ${route.hasMDXComponents ? `function MDXPage() { return <${route.id}.default components={${route.id}.components} /> }` : `${route.id}.default`},
+            },
+          `
+          })
+          .join('\n')}
+      ]
+    `
+    await fs.outputFile(buildCoreFile, coreCode)
+
     // generate page shims for client (tree shaking)
     for (const route of routes) {
-      const code = `
-        import Page from '${route.relShimToPageFile}'
-        globalThis.$firebolt.push('registerPage', '${route.id}', Page)
-      `
+      let code
+      if (route.hasMDXComponents) {
+        code = `
+          import Page, { components } from '${route.relShimToPageFile}'
+          function MDXPage() {
+            return <Page components={components} />
+          }
+          globalThis.$firebolt.push('registerPage', '${route.id}', MDXPage)
+        `
+      } else {
+        code = `
+          import Page from '${route.relShimToPageFile}'
+          globalThis.$firebolt.push('registerPage', '${route.id}', Page)
+        `
+      }
       await fs.outputFile(route.shimFile, code)
     }
 
@@ -267,8 +303,9 @@ export async function compile(opts) {
       jsxImportSource: 'firebolt-css',
       keepNames: !prod,
       plugins: [
+        // markdownLoader,
+        mdxPlugin,
         registryPlugin({ registry }),
-        markdownLoader,
         // polyfill fs, path etc for browser environment
         // polyfillNode({}),
         // ensure pages are marked side-effect free for tree shaking
@@ -353,6 +390,8 @@ export async function compile(opts) {
       jsxImportSource: 'firebolt-css',
       keepNames: !prod,
       plugins: [
+        // markdownLoader,
+        mdxPlugin,
         registryPlugin({ registry: null }), // dont write to registry, we already have it from the client
         virtualModule([
           {
@@ -360,7 +399,6 @@ export async function compile(opts) {
             contents: coreCode,
           },
         ]),
-        markdownLoader,
       ],
     })
 

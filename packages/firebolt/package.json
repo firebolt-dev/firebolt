@@ -13,6 +13,8 @@
     "build": "node scripts/build.mjs --minify"
   },
   "dependencies": {
+    "@mdx-js/esbuild": "^3.0.1",
+    "@mdx-js/react": "^3.0.1",
     "chalk": "^4.1.2",
     "chokidar": "^3.6.0",
     "commander": "^11.1.0",
@@ -30,6 +32,7 @@
     "lodash-es": "^4.17.21",
     "react": "canary",
     "react-dom": "canary",
+    "rehype-mdx-code-props": "^2.0.0",
     "source-map-support": "^0.5.21"
   },
   "engines": {

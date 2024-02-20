@@ -82,7 +82,7 @@ export default function Home() {
         </Link>
         <div className='home-install'>
           <ChevronRight className='home-install-chevron' size={20} />
-          <span className='home-install-text'>npx firebolt create</span>
+          <span className='home-install-text'>npx create-firebolt-app</span>
           <Copy className='home-install-copy' size={16} />
         </div>
       </div>

@@ -1,0 +1,105 @@
+export { DocsPage as default } from '../components/DocsPage'
+export { components } from '../components/DocsMarkdown'
+
+# Installation
+
+To create a new Firebolt app, run `npx create-firebolt-app@latest`.
+
+This will create a new `<project>` directory with a bare bones firebolt app.
+
+## Development
+
+Inside your project directory, run `npm run dev` to build, watch and serve your app.
+
+---
+
+# Heading 1
+
+## Heading 2
+
+### Heading 3
+
+This is a paragraph with **bold text**.
+
+This is a pragraph with _italic text_.
+
+> This is a block quote
+
+1. This is
+2. An ordered
+3. List
+
+And...
+
+- This is
+- An unordered
+- List
+
+Inline code `const foo = true`.
+
+```jsx filename="foo.js"
+import { foo } from 'bar'
+
+export default function Home() {
+  return <div>Home page</div>
+}
+```
+
+```
+hello
+```
+
+Below this is paragraph is a horizontal rule:
+
+---
+
+Here is a [Link](https://www.google.com)
+
+And here is an image:
+
+![An image of a cat](cat.jpg)
+
+Table:
+
+| Syntax    | Description |
+| --------- | ----------- |
+| Header    | Title       |
+| Paragraph | Text        |
+
+Checkboxes:
+
+- [x] Get milk
+- [ ] Get bread
+
+1. [x] Get milk
+2. [ ] Get bread
+
+Don't forget to [] DO IT!
+
+---
+
+# GFM
+
+## Autolink literals
+
+www.example.com, https://example.com, and contact@example.com.
+
+## Footnote
+
+A note[^1]
+
+[^1]: Big note.
+
+## Strikethrough
+
+~one~ or ~~two~~ tildes.
+
+## Table
+
+| a   | b   |   c |  d  |
+| --- | :-- | --: | :-: |
+
+## Tasklist
+
+- [ ] to do
+- [x] done
