@@ -12,7 +12,10 @@
     "build": "node scripts/build.mjs --minify"
   },
   "dependencies": {
-    "react": "18.3.0-canary-a9cc32511-20240215",
+    "react": "canary",
     "stylis": "^4.3.1"
+  },
+  "overrides": {
+    "react": "canary"
   }
 }

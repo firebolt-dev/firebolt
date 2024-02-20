@@ -11,7 +11,7 @@
     "firebolt": "*",
     "lucide-react": "^0.331.0",
     "marked": "^12.0.0",
-    "react": "18.3.0-canary-a9cc32511-20240215",
-    "react-dom": "18.3.0-canary-a9cc32511-20240215"
+    "react": "canary",
+    "react-dom": "canary"
   }
 }

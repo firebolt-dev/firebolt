@@ -7,5 +7,9 @@
   ],
   "dependencies": {
     "prettier": "^3.2.5"
+  },
+  "overrides": {
+    "react": "canary",
+    "react-dom": "canary"
   }
 }
