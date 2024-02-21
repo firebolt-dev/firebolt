@@ -7,7 +7,6 @@ import chokidar from 'chokidar'
 import * as esbuild from 'esbuild'
 import { debounce, defaultsDeep } from 'lodash-es'
 import mdx from '@mdx-js/esbuild'
-import rehypeShiki from '@shikijs/rehype'
 import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 
 import * as style from './utils/style'
@@ -57,39 +56,6 @@ export async function compile(opts) {
   const tmpConfigFile = path.join(appDir, '.firebolt/tmp/config.js')
   const tmpInspectionFile = path.join(appDir, '.firebolt/tmp/inspection.js')
 
-  const mdxPlugin = mdx({
-    jsx: false,
-    jsxRuntime: 'automatic',
-    jsxImportSource: '@firebolt/jsx',
-    // remarkPlugins: [remarkParse, remarkRehype],
-    rehypePlugins: [
-      [
-        rehypeShiki,
-        {
-          themes: {
-            light: 'github-light',
-            dark: 'github-dark',
-          },
-          defaultColor: false,
-          // cssVariablePrefix: '--shiki-x-',
-          parseMetaString(str) {
-            const meta = {}
-            const tokens = str.match(/(?:[^\s"]+|"[^"]*")+/g)
-            tokens?.forEach(token => {
-              if (token.includes('=')) {
-                const [key, value] = token.split('=')
-                meta[key] = value.replace(/^"|"$/g, '')
-              } else {
-                meta[token] = true
-              }
-            })
-            return meta
-          },
-        },
-      ],
-    ],
-  })
-
   let firstBuild = true
   let config
 
@@ -137,7 +103,7 @@ export async function compile(opts) {
       jsxImportSource: '@firebolt/jsx',
       plugins: [
         // markdownLoader,
-        mdxPlugin,
+        // mdxPlugin,
       ],
     })
     const { getConfig } = await reimport(tmpConfigFile)
@@ -146,6 +112,15 @@ export async function compile(opts) {
       port: 3000,
       external: [],
       productionBrowserSourceMaps: false,
+    })
+
+    // create mdx plugin
+    const mdxPlugin = mdx({
+      jsx: false,
+      jsxRuntime: 'automatic',
+      jsxImportSource: '@firebolt/jsx',
+      remarkPlugins: config.mdx?.remarkPlugins || [],
+      rehypePlugins: config.mdx?.rehypePlugins || [],
     })
 
     // initialize manifest

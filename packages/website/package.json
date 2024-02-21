@@ -9,6 +9,7 @@
     "start": "firebolt start"
   },
   "dependencies": {
+    "@shikijs/rehype": "^1.1.6",
     "firebolt": "*",
     "lucide-react": "^0.331.0",
     "react": "canary",
