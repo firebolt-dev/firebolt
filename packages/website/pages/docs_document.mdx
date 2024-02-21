@@ -1,0 +1,24 @@
+export { DocsPage as default } from '../components/DocsPage'
+export { components } from '../components/DocsMarkdown'
+
+# Document
+
+This is the root component of your app.
+
+It should render the outer `<html>` shell that will wrap all of your pages.
+
+```jsx title="components/Document.js" lineNumbers
+export function Document({ children }) {
+  return (
+    <html lang='en'>
+      <head>
+        <meta charSet='utf-8' />
+        <meta name='viewport' content='width=device-width, initial-scale=1' />
+      </head>
+      <body>{children}</body>
+    </html>
+  )
+}
+```
+
+This is where you can set up any global things such as styles and fonts.

@@ -7,7 +7,7 @@ import chokidar from 'chokidar'
 import * as esbuild from 'esbuild'
 import { debounce, defaultsDeep } from 'lodash-es'
 import mdx from '@mdx-js/esbuild'
-import rehypeMdxCodeProps from 'rehype-mdx-code-props'
+import rehypeShiki from '@shikijs/rehype'
 import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 
 import * as style from './utils/style'
@@ -61,7 +61,33 @@ export async function compile(opts) {
     jsx: false,
     jsxRuntime: 'automatic',
     jsxImportSource: '@firebolt/jsx',
-    rehypePlugins: [rehypeMdxCodeProps],
+    // remarkPlugins: [remarkParse, remarkRehype],
+    rehypePlugins: [
+      [
+        rehypeShiki,
+        {
+          themes: {
+            light: 'github-light',
+            dark: 'github-dark',
+          },
+          defaultColor: false,
+          // cssVariablePrefix: '--shiki-x-',
+          parseMetaString(str) {
+            const meta = {}
+            const tokens = str.match(/(?:[^\s"]+|"[^"]*")+/g)
+            tokens?.forEach(token => {
+              if (token.includes('=')) {
+                const [key, value] = token.split('=')
+                meta[key] = value.replace(/^"|"$/g, '')
+              } else {
+                meta[token] = true
+              }
+            })
+            return meta
+          },
+        },
+      ],
+    ],
   })
 
   let firstBuild = true
