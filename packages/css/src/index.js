@@ -47,6 +47,10 @@ export function GlobalStyle(props) {
   const style = getGlobalStyle(css)
   return (
     <style
+      // react style hoisting doesn't remove styles when the owned component unmounts/remounts.
+      // this is problematic because global styles that swap in and out (eg light and dark themes) will result in
+      // both stylesheets being inserted into the header at the same time.
+      // we need global styles to always unmount with components, so we stick to regular style inlining.
       // href={style.hash}
       // precedence='high'
       dangerouslySetInnerHTML={{ __html: style.string }}
@@ -76,8 +80,8 @@ export const Style = forwardRef(function Style(props, ref) {
   return (
     <>
       <style
-        // href={style.hash}
-        // precedence='medium'
+        href={style.hash}
+        precedence='medium'
         dangerouslySetInnerHTML={{ __html: style.string }}
       />
       <Component {...newProps} />
