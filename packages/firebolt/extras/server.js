@@ -31,7 +31,6 @@ const match = matcher()
 const config = getConfig()
 defaultsDeep(config, {
   port: 3000,
-  external: [],
   productionBrowserSourceMaps: false,
 })
 

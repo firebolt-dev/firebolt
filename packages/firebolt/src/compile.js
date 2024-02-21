@@ -108,9 +108,9 @@ export async function compile(opts) {
     })
     const { getConfig } = await reimport(tmpConfigFile)
     config = getConfig()
+
     defaultsDeep(config, {
       port: 3000,
-      external: [],
       productionBrowserSourceMaps: false,
     })
 
@@ -188,8 +188,8 @@ export async function compile(opts) {
       platform: 'node',
       format: 'esm',
       packages: 'external',
-      // external: ['react', 'react-dom', '@firebolt/jsx', ...config.external],
-      // external: [...config.external],
+      // external: ['react', 'react-dom', '@firebolt/jsx'],
+      // external: [],
       logLevel: 'silent',
       alias: {
         firebolt: buildLibFile,
@@ -285,7 +285,7 @@ export async function compile(opts) {
       splitting: true,
       platform: 'browser',
       // mainFields: ["browser", "module", "main"],
-      // external: ['fs', 'path', 'util', /*...config.external*/],
+      // external: ['fs', 'path', 'util'],
       format: 'esm',
       minify: prod,
       metafile: true,
