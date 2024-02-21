@@ -58,6 +58,7 @@ export async function compile(opts) {
 
   let firstBuild = true
   let config
+  let mdxPlugin
 
   log.intro()
 
@@ -76,7 +77,7 @@ export async function compile(opts) {
 
     // create config entry
     const configCode = `
-      export { default as getConfig } from '../firebolt.config.js'
+    export { default as getConfig } from '../firebolt.config.js'
     `
     await fs.writeFile(buildConfigFile, configCode)
 
@@ -115,13 +116,16 @@ export async function compile(opts) {
     })
 
     // create mdx plugin
-    const mdxPlugin = mdx({
-      jsx: false,
-      jsxRuntime: 'automatic',
-      jsxImportSource: '@firebolt/jsx',
-      remarkPlugins: config.mdx?.remarkPlugins || [],
-      rehypePlugins: config.mdx?.rehypePlugins || [],
-    })
+    // NOTE: mdx caches rebuilds so we only want to rebuild this plugin if the app config changes
+    if (!mdxPlugin) {
+      mdxPlugin = mdx({
+        jsx: false,
+        jsxRuntime: 'automatic',
+        jsxImportSource: '@firebolt/jsx',
+        remarkPlugins: config.mdx?.remarkPlugins || [],
+        rehypePlugins: config.mdx?.rehypePlugins || [],
+      })
+    }
 
     // initialize manifest
     const manifest = {
@@ -509,7 +513,14 @@ export async function compile(opts) {
     }
     const watcher = chokidar.watch([appDir], watchOptions)
     const onChange = async (type, file) => {
-      log.change(`~/${path.relative(appDir, file)}`)
+      const relFile = path.relative(appDir, file)
+      log.change(`~/${relFile}`)
+
+      // if config file changed, we need to force the mdxPlugin to rebuild
+      if (relFile === 'firebolt.config.js') {
+        mdxPlugin = null
+      }
+
       run()
     }
     watcher.on('all', debounce(onChange))
