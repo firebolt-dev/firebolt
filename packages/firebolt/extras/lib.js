@@ -12,7 +12,7 @@ import React, {
 } from 'react'
 export { css } from '@firebolt/css'
 
-import { Document } from '../document.js'
+import { Document } from '../components/Document.js'
 
 export function Link({ to, replace, onClick, children, ...rest }) {
   const runtime = useRuntime()
