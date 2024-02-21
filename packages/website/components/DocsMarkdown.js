@@ -1,5 +1,6 @@
 import { css, cls } from 'firebolt'
-import { Copy, File } from 'lucide-react'
+import { Check, Copy, File } from 'lucide-react'
+import { useRef, useState } from 'react'
 
 export const components = {
   h1(props) {
@@ -52,41 +53,62 @@ export const components = {
     )
   },
   pre(props) {
+    const ref = useRef()
+    const [copied, setCopied] = useState(false)
+    const copy = () => {
+      const elem = ref.current.querySelector('code')
+      navigator.clipboard.writeText(elem.innerText)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 3000)
+    }
     // this is the wrapper around a <code> block
-    console.log('pre', props)
+    // console.log('pre', props)
     const { title, lineNumbers, children } = props
     return (
       <pre
+        ref={ref}
         className={cls('shiki', { lineNumbers })}
-        // className='mdx-pre shiki'
-        // className={`mdx-pre ${props.className || ''}`}
         css={css`
           border: 1px solid var(--line-color);
           margin: 16px 0;
           border-radius: 8px;
-          .code-header {
+          .pre-header {
             display: flex;
             align-items: center;
             border-bottom: 1px solid var(--line-color);
-            padding: 16px;
+            height: 50px;
+            padding: 0 8px 0 16px;
           }
-          .code-file {
+          .pre-file {
             margin-right: 8px;
           }
-          .code-filename {
+          .pre-filename {
             flex: 1;
             font-size: 14px;
             font-family: 'Roboto Mono';
             font-weight: 400;
           }
-          .code-copy {
+          .pre-copy {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             color: var(--icon-color-dim);
             &:hover {
               cursor: pointer;
               color: var(--icon-color);
             }
           }
-          .code-content {
+          .pre-copied {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--icon-color);
+          }
+          .pre-content {
             padding: 16px;
             overflow-x: auto;
             font-size: 14px;
@@ -112,21 +134,49 @@ export const components = {
         `}
       >
         {title && (
-          <div className='code-header'>
-            <File className='code-file' size={16} />
-            <div className='code-filename'>{title}</div>
-            <Copy className='code-copy' size={16} />
+          <div className='pre-header'>
+            <File className='pre-file' size={16} />
+            <div className='pre-filename'>{title}</div>
+            {!copied && (
+              <div className='pre-copy' onClick={copy}>
+                <Copy size={16} />
+              </div>
+            )}
+            {copied && (
+              <div className='pre-copied'>
+                <Check size={18} />
+              </div>
+            )}
           </div>
         )}
-        <div className='code-content'>{children}</div>
+        <div className='pre-content'>{children}</div>
       </pre>
     )
   },
   code(props) {
     // this is either inline code or a code block wrapped with a <pre>
-    console.log('code', props)
+    // console.log('code', props)
     return (
-      <code className={`mdx-code ${props.className || ''}`}>
+      <code
+        className={`${props.className || ''}`}
+        css={css`
+          font-size: 14px;
+          font-family: 'Roboto Mono', monospace;
+          font-weight: 400;
+          // inline code
+          :not(pre) & {
+            background: var(--inline-code-color);
+            padding: 2px 5px;
+            border-radius: 6px;
+          }
+          // block code
+          pre & {
+            background: none;
+            padding: 0;
+            border-radius: 0;
+          }
+        `}
+      >
         {props.children}
       </code>
     )
