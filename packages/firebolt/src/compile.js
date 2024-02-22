@@ -1,4 +1,4 @@
-import fs from 'fs-extra'
+import fs, { outputFile } from 'fs-extra'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { fork } from 'child_process'
@@ -22,6 +22,8 @@ import {
   parseServerError,
 } from './utils/errors'
 import { registryPlugin } from './utils/registryPlugin'
+import { zombieImportPlugin } from './utils/zombieImportPlugin'
+import { virtualModule } from './utils/virtualModule'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -54,16 +56,17 @@ export async function compile(opts) {
   const tmpConfigFile = path.join(appDir, '.firebolt/tmp/config.js')
   const tmpInspectionFile = path.join(appDir, '.firebolt/tmp/inspection.js')
 
-  let firstBuild = true
+  let freshBuild = true
+  let freshConfig = true
   let config
   let mdxPlugin
+  const mdxCache = {} // pageFile -> js
   const ctx = {
     configValidator: null,
     pageInspector: null,
     clientBundles: null,
     serverEntry: null,
   }
-  let configChanged = true
   let clientEntryPoints = []
 
   log.intro()
@@ -71,10 +74,10 @@ export async function compile(opts) {
   async function build() {
     // start tracking build time
     const startAt = performance.now()
-    log.info(`${firstBuild ? 'building...' : 'rebuilding...'}`)
+    log.info(`${freshBuild ? 'building...' : 'rebuilding...'}`)
 
     // ensure empty build directory
-    if (firstBuild) {
+    if (freshBuild) {
       await fs.emptyDir(buildDir)
     }
 
@@ -85,7 +88,7 @@ export async function compile(opts) {
 
     // create config entry
     // todo: couldn't this be an `extras` file?
-    if (firstBuild) {
+    if (freshBuild) {
       const configCode = `
         export { default as getConfig } from '../firebolt.config.js'
       `
@@ -119,9 +122,9 @@ export async function compile(opts) {
         ],
       })
     }
-    // console.time('configValidator')
+    console.time('configValidator')
     await ctx.configValidator.rebuild()
-    // console.timeEnd('configValidator')
+    console.timeEnd('configValidator')
     const { getConfig } = await reimport(tmpConfigFile)
     config = getConfig()
 
@@ -131,8 +134,9 @@ export async function compile(opts) {
     })
 
     // create mdx plugin
-    // NOTE: mdx caches rebuilds so we only want to rebuild this plugin if the app config changes
-    if (configChanged) {
+    // we try to re-use the same mdx plugin across builds for performance
+    // but if our config changes then our mdx options might have changed, so we re-create it!
+    if (freshConfig) {
       mdxPlugin = mdx({
         jsx: false,
         jsxRuntime: 'automatic',
@@ -156,6 +160,7 @@ export async function compile(opts) {
     const routes = []
     for (const pageFile of pageFiles) {
       const id = `route${++ids}`
+      const file = pageFile
       const isMDX = pageFile.endsWith('.mdx')
       const prettyFileBase = path.relative(appDir, pageFile)
       const pageFileBase = path.relative(appPagesDir, pageFile)
@@ -167,6 +172,7 @@ export async function compile(opts) {
       const relShimToPageFile = path.relative(path.dirname(shimFile), pageFile) // prettier-ignore
       routes.push({
         id,
+        file,
         prettyFileBase,
         pattern,
         shimFile,
@@ -189,8 +195,65 @@ export async function compile(opts) {
       return 0
     })
 
+    // build any mdx pages missing from our cache.
+    // building mdx pages is really slow so we build them once and use their output in future builds (and rebuilds) as a virtual module.
+    // our file watcher will evict mdx pages from the cache so they get rebuilt.
+    const routesNeedingMDXBuild = routes.filter(route => {
+      // if config changed then all mdx pages need building
+      if (freshConfig) return route.isMDX
+      // otherwise only include mdx pages not cached
+      return route.isMDX && !mdxCache[route.file]
+    })
+    if (routesNeedingMDXBuild.length) {
+      console.log(
+        'building mdx',
+        routesNeedingMDXBuild.map(r => r.prettyFileBase)
+      )
+      console.time('mdx')
+      const result = await esbuild.build({
+        entryPoints: routesNeedingMDXBuild.map(r => r.file),
+        outdir: 'out',
+        write: false,
+        // bundle: true,
+        // treeShaking: true,
+        // sourcemap: true,
+        // minify: false,
+        platform: 'neutral',
+        format: 'esm',
+        packages: 'external',
+        // external: ['react', 'react-dom', '@firebolt/jsx'],
+        // external: [],
+        logLevel: 'silent',
+        // alias: {
+        //   firebolt: buildLibFile,
+        // },
+        define: {
+          'process.env.NODE_ENV': JSON.stringify(env),
+          FIREBOLT_NODE_ENV: JSON.stringify(env),
+        },
+        // loader: {
+        //   '.js': 'jsx',
+        // },
+        // jsx: 'automatic',
+        // jsxImportSource: '@firebolt/jsx',
+        plugins: [mdxPlugin, zombieImportPlugin],
+      })
+      // todo: this doesn't feel like a robust way to match output files
+      // back to routes but it seems to work :sweat:
+      let i = 0
+      for (let out of result.outputFiles) {
+        const route = routesNeedingMDXBuild[i]
+        // console.log(route.file)
+        // console.log(out.path)
+        mdxCache[route.file] = out.text
+        console.log(out.text)
+        i++
+      }
+      console.timeEnd('mdx')
+    }
+
     // copy over extras
-    if (firstBuild) {
+    if (freshBuild) {
       await fs.copy(extrasDir, buildDir)
     }
 
@@ -199,8 +262,7 @@ export async function compile(opts) {
       ${routes.map(route => `export * as ${route.id} from '${route.relBuildToPageFile}'`).join('\n')}
     `
     await fs.outputFile(buildInspectionFile, inspectionCode)
-    if (!ctx.pageInspector || configChanged) {
-      // config changes require new mdxPlugin
+    if (!ctx.pageInspector) {
       ctx.pageInspector = await esbuild.context({
         entryPoints: [buildInspectionFile],
         outfile: tmpInspectionFile,
@@ -226,12 +288,15 @@ export async function compile(opts) {
         },
         jsx: 'automatic',
         jsxImportSource: '@firebolt/jsx',
-        plugins: [mdxPlugin],
+        plugins: [
+          // mdxPlugin,
+          virtualModule(mdxCache),
+        ],
       })
     }
-    // console.time('pageInspector')
+    console.time('pageInspector')
     await ctx.pageInspector.rebuild()
-    // console.timeEnd('pageInspector')
+    console.timeEnd('pageInspector')
     const inspection = await reimport(tmpInspectionFile)
     // console.log('inspection', inspection)
     for (const route of routes) {
@@ -271,6 +336,7 @@ export async function compile(opts) {
     await fs.outputFile(buildCoreFile, coreCode)
 
     // generate page shims for client (tree shaking)
+    // TODO: can't we just import * and always use a wrapper for simplicity?
     for (const route of routes) {
       let code
       if (route.hasMDXComponents) {
@@ -306,7 +372,7 @@ export async function compile(opts) {
     if (clientEntryPointsChanged) {
       clientEntryPoints = newClientEntryPoints
     }
-    if (!ctx.clientBundles || configChanged || clientEntryPointsChanged) {
+    if (!ctx.clientBundles || freshConfig || clientEntryPointsChanged) {
       // config changes require new mdxPlugin + productionBrowserSourceMaps value
       ctx.clientBundles = await esbuild.context({
         entryPoints: clientEntryPoints,
@@ -336,7 +402,8 @@ export async function compile(opts) {
         jsx: 'automatic',
         jsxImportSource: '@firebolt/jsx',
         plugins: [
-          mdxPlugin,
+          // mdxPlugin,
+          virtualModule(mdxCache),
           registryPlugin({ registry }),
           // polyfill fs, path etc for browser environment
           // polyfillNode({}),
@@ -360,9 +427,9 @@ export async function compile(opts) {
         ],
       })
     }
-    // console.time('clientBundles')
+    console.time('clientBundles')
     const bundleResult = await ctx.clientBundles.rebuild()
-    // console.timeEnd('clientBundles')
+    console.timeEnd('clientBundles')
     // reconcile hashed build files with their source
     const metafile = bundleResult.metafile
     for (const file in metafile.outputs) {
@@ -400,7 +467,7 @@ export async function compile(opts) {
     await fs.outputFile(buildRegistryFile, registryCode)
 
     // build server entry
-    if (!ctx.serverEntry || configChanged) {
+    if (!ctx.serverEntry || freshConfig) {
       // config changes require new mdxPlugin
       ctx.serverEntry = await esbuild.context({
         entryPoints: [buildServerFile],
@@ -431,13 +498,13 @@ export async function compile(opts) {
         ],
       })
     }
-    // console.time('serverEntry')
+    console.time('serverEntry')
     await ctx.serverEntry.rebuild()
-    // console.timeEnd('serverEntry')
+    console.timeEnd('serverEntry')
     const elapsed = (performance.now() - startAt).toFixed(0)
-    log.info(`${firstBuild ? 'built' : 'rebuilt'} ${style.dim(`(${elapsed}ms)`)}\n`) // prettier-ignore
-    firstBuild = false
-    configChanged = false
+    log.info(`${freshBuild ? 'built' : 'rebuilt'} ${style.dim(`(${elapsed}ms)`)}\n`) // prettier-ignore
+    freshBuild = false
+    freshConfig = false
   }
 
   let server
@@ -546,7 +613,12 @@ export async function compile(opts) {
 
       // track config file changes
       if (relFile === 'firebolt.config.js') {
-        configChanged = true
+        freshConfig = true
+      }
+
+      // track mdx pages and evict from cache
+      if (relFile.endsWith('.mdx')) {
+        delete mdxCache[file]
       }
 
       run()

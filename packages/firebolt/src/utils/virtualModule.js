@@ -1,21 +1,18 @@
 import _path from 'path'
 
-export function virtualModule(modules) {
+export function virtualModule(virtuals) {
   return {
-    name: 'virtual-modules',
+    name: 'virtual-module',
     setup(build) {
-      for (const module of modules) {
-        const { path, contents } = module
-        const escapedPath = path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        const filter = new RegExp(`^${escapedPath}$`)
-        const namespace = 'ns' + Math.random()
-        build.onResolve({ filter }, args => {
-          return { path, namespace }
-        })
-        build.onLoad({ filter: /.*/, namespace }, () => {
-          return { contents, resolveDir: _path.dirname(path) }
-        })
-      }
+      build.onLoad({ filter: /.*/ }, args => {
+        const contents = virtuals[args.path]
+        if (contents) {
+          return {
+            contents,
+            resolveDir: _path.dirname(args.path),
+          }
+        }
+      })
     },
   }
 }
