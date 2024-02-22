@@ -1,3 +1,4 @@
+import remarkGFM from 'remark-gfm'
 import rehypeShiki from '@shikijs/rehype'
 
 export default function config() {
@@ -8,6 +9,7 @@ export default function config() {
       // ...
     },
     mdx: {
+      remarkPlugins: [remarkGFM],
       rehypePlugins: [
         [
           rehypeShiki,
@@ -20,11 +22,11 @@ export default function config() {
             // cssVariablePrefix: '--shiki-x-',
             parseMetaString(str) {
               const meta = {}
-              const tokens = str.match(/(?:[^\s"]+|"[^"]*")+/g)
+              const tokens = str.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g)
               tokens?.forEach(token => {
                 if (token.includes('=')) {
                   const [key, value] = token.split('=')
-                  meta[key] = value.replace(/^"|"$/g, '')
+                  meta[key] = value.replace(/^["']|["']$/g, '')
                 } else {
                   meta[token] = true
                 }

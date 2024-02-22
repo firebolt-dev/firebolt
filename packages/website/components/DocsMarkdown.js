@@ -1,4 +1,4 @@
-import { css, cls } from 'firebolt'
+import { Link, css, cls } from 'firebolt'
 import { Check, Copy, File } from 'lucide-react'
 import { useRef, useState } from 'react'
 
@@ -32,7 +32,7 @@ export const components = {
     return (
       <h3
         css={css`
-          font-size: 20px;
+          font-size: 18px;
           font-weight: 700;
           margin-top: 32px;
           margin-bottom: 16px;
@@ -46,10 +46,22 @@ export const components = {
       <p
         css={css`
           margin: 0 0 16px;
-          line-height: 1.5;
+          line-height: 1.6;
         `}
         {...props}
       />
+    )
+  },
+  a(props) {
+    return (
+      <Link
+        to={props.href}
+        css={css`
+          color: var(--primary-color);
+        `}
+      >
+        {props.children}
+      </Link>
     )
   },
   pre(props) {
@@ -70,7 +82,7 @@ export const components = {
         className={cls('shiki', { lineNumbers })}
         css={css`
           border: 1px solid var(--line-color);
-          margin: 16px 0;
+          margin: 24px 0;
           border-radius: 8px;
           .pre-header {
             display: flex;
@@ -165,20 +177,53 @@ export const components = {
           font-weight: 400;
           // inline code
           :not(pre) & {
-            background: var(--inline-code-color);
+            background: var(--inline-code-bg);
             padding: 2px 5px;
             border-radius: 6px;
+            line-height: 1;
+            white-space: nowrap;
           }
           // block code
           pre & {
             background: none;
             padding: 0;
             border-radius: 0;
+            line-height: 1.6;
+            white-space: inherit;
           }
         `}
       >
         {props.children}
       </code>
+    )
+  },
+  table(props) {
+    return (
+      <div
+        css={css`
+          overflow-x: auto;
+          margin: 32px 0;
+          table {
+            width: 100%;
+            text-align: left;
+          }
+          th {
+            padding: 0 8px 16px;
+            font-weight: 500;
+          }
+          tr th:first-child {
+            padding-left: 0;
+          }
+          td {
+            padding: 0 8px 16px;
+          }
+          tr td:first-child {
+            padding-left: 0;
+          }
+        `}
+      >
+        <table {...props} />
+      </div>
     )
   },
 }

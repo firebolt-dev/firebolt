@@ -94,7 +94,7 @@ const lightVariables = `
     --menu-item-active-bg: var(--primary-color);
     --menu-item-active-color: white;
 
-    --inline-code-color: #e5e5e5;
+    --inline-code-bg: #f0f0f0;
 
     .shiki span {
       color: var(--shiki-light);
@@ -120,7 +120,7 @@ const darkVariables = `
     --menu-item-active-bg: var(--primary-color);
     --menu-item-active-color: white;
 
-    --inline-code-color: #303030;
+    --inline-code-bg: #2b2b2b;
 
     .shiki span {
       color: var(--shiki-dark);

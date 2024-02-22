@@ -13,7 +13,8 @@
     "firebolt": "*",
     "lucide-react": "^0.331.0",
     "react": "canary",
-    "react-dom": "canary"
+    "react-dom": "canary",
+    "remark-gfm": "^4.0.0"
   },
   "overrides": {
     "react": "canary",

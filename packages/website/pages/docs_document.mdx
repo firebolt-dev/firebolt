@@ -3,17 +3,24 @@ export { components } from '../components/DocsMarkdown'
 
 # Document
 
-This is the root component of your app.
+The Document component is used to generate the outer shell of your app. All of your pages will be wrapped with this component.
 
-It should render the outer `<html>` shell that will wrap all of your pages.
+```jsx title='components/Document.js' lineNumbers
+import { css } from 'firebolt'
 
-```jsx title="components/Document.js" lineNumbers
 export function Document({ children }) {
   return (
     <html lang='en'>
       <head>
         <meta charSet='utf-8' />
         <meta name='viewport' content='width=device-width, initial-scale=1' />
+        <style
+          global={css`
+            :root {
+              background: #ffffff;
+            }
+          `}
+        />
       </head>
       <body>{children}</body>
     </html>
@@ -21,4 +28,8 @@ export function Document({ children }) {
 }
 ```
 
-This is where you can set up any global things such as styles and fonts.
+This is generally where you'll add your global styles, meta tags, favicons and fonts.
+
+## Erm, wtf?
+
+You might be wondering why this is so much simpler than other frameworks that require you to use custom `<Head>`, `<Meta>` and `<Router>` components. Thanks to new features in React we no longer need them! Firebolt and React bring us back to the times where web development was simple.

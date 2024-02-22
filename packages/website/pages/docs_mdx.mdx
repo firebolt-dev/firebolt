@@ -1,0 +1,75 @@
+export { DocsPage as default } from '../components/DocsPage'
+export { components } from '../components/DocsMarkdown'
+
+# MDX
+
+Writing markdown makes it easier to create content based websites like blogs and documentation.
+
+Firebolt has support for MDX pages by simply giving your page an `.mdx` extension instead of `.js`
+
+```mdx title='pages/docs_quick-start.mdx' lineNumbers
+# Quick Start
+
+Lets get started...
+```
+
+## Wrappers
+
+If your `.mdx` file has a default export, it will be used as a wrapper component which is useful for shared layouts:
+
+```jsx title='components/DocsPage.js' lineNumbers
+export function DocsPage({ children }) {
+  return (
+    <>
+      <nav>{/* links etc */}</nav>
+      <main>{children}</main>
+    </>
+  )
+}
+```
+
+```mdx title='pages/docs_quick-start.mdx' lineNumbers
+export { DocsPage as default } from '../components/DocsPage'
+
+# Quick Start
+
+Lets get started...
+```
+
+## Components
+
+By default MDX will use basic elements such as `<h1>` and `<p>` but you can override these with a `components` export:
+
+```jsx title='components/docs-components.js' lineNumbers
+export const components = {
+  h1(props) {
+    return <h1 {...props} css='color:red' />
+  },
+}
+```
+
+```mdx title='pages/docs_quick-start.mdx' lineNumbers
+export { components } from '../components/docs-components.js'
+
+# Quick Start
+
+Lets get started...
+```
+
+## Plugins
+
+You can also enhance MDX with things like Syntax Highlighting and Github Flavored Markdown using Remark/Rehype plugins in your [Config](/docs/config) file.
+
+```jsx title='firebolt.config.js' lineNumbers
+import remarkGFM from 'remark-gfm'
+import rehypeShiki from '@shikijs/rehype'
+
+export default function config() {
+  return {
+    mdx: {
+      remarkPlugins: [remarkGFM],
+      rehypePlugins: [rehypeShiki],
+    },
+  }
+}
+```

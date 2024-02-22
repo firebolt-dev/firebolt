@@ -1,0 +1,121 @@
+export { DocsPage as default } from '../components/DocsPage'
+export { components } from '../components/DocsMarkdown'
+
+# Loaders
+
+Loaders let you fetch data securely from your database (or anywhere else) directly inside your components. You don't need to build an API or understand how React Server Components work.
+
+```jsx title='components/City.js' lineNumbers
+import { Suspense } from 'react'
+import { useLocation, useData } from 'firebolt'
+
+export default function City({ id }) {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CityContent id={id} />
+    </Suspense>
+  )
+}
+
+function CityContent({ id }) {
+  const data = useData(getCity, id)
+  const city = data.read()
+  return (
+    <main css='border: 2px solid blue'>
+      <h1>{city.name}</h1>
+      <p>{city.description}</p>
+    </main>
+  )
+}
+
+export async function getCity(req, id) {
+  return await req.db('cities').where({ id }).first()
+}
+```
+
+Loaders integrate perfectly with Suspense the way React intended. They work seamlessly via server streaming or on the client and you can load data anywhere in your hierarchy.
+
+## useData(fn, ...args)
+
+The first argument to the `useData` hook is the Loader function you want to call.
+
+Any additional arguments are passed to your Loader function and are also used to form a cache key for the data returned by that loader.
+These arguments can be used to signal your loader which data to load, but can also be used for tagging data that you might want to invalidate later.
+
+The `useData` hook returns a data resource:
+
+```jsx
+const data = useData(getTickets)
+const tickets = data.read()
+```
+
+In the example above, calling `data.read()` will throw a promise until the Loader responds with data. This triggers any Suspense boundaries and fallback/loading UI until the data is available.
+
+Data resources also have some utility methods for interacting with the cache:
+
+```jsx
+// invalidate data to be refetched in the background
+data.invalidate()
+
+// replace the data entirely
+data.set(newTickets)
+
+// edit the data
+data.edit(tickets => tickets.push(ticket))
+```
+
+## Loader
+
+The Loader function must be an async function exported from the current file OR an async function imported from somewhere else.
+
+When a Loader function is called, its first argument will be a `Request` object followed by any additional arguments you provided to the `useData` hook.
+
+```jsx
+export async function myLoader(req, someId, someOtherThing) {
+  // get and return some data...
+}
+```
+
+## Request
+
+The Request object provides additional control over the request including redirects and cookie access.
+
+You can also decorate the Request object to add things like database access as seen earlier. This is done using [Middleware](/docs/middleware).
+
+### Expire
+
+By default loader data will be cached until the user leaves, but if you need to you can set it to expire after a certain amount of time.
+
+When data expires it becomes invalidated. If any component is observing that data it will be refetched in the background and automatically updated, it won't trigger any suspense fallback UI etc.
+If no components are observing the data then the next time the data becomes observed it will trigger the usual suspense flow with any fallback UI.
+
+```jsx
+export async function getTickets(req) {
+  const tickets = await req.db('tickets')
+  req.expire(60) // data will become invalidated in 60 seconds
+  return tickets
+}
+```
+
+### Cookies
+
+Loaders can read and update cookies as needed. Firebolt has first class support for cookies with bi-directional synchronization that you can read more about on the [Cookies](/docs/cookies) page.
+
+```jsx
+// read a cookie
+const auth = req.cookies.get('auth')
+// update a cookie
+req.cookies.set('auth', auth)
+// remove a cookie
+req.cookies.set('auth', null)
+```
+
+### Redirects
+
+At any point inside a Loader you can cancel the request and redirect the user somewhere else.
+
+```jsx
+req.redirect('/login')
+```
+
+Note that calling `redirect()` will throw the request, which will cancel the call stack in its tracks!

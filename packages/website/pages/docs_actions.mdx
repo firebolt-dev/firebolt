@@ -1,0 +1,100 @@
+export { DocsPage as default } from '../components/DocsPage'
+export { components } from '../components/DocsMarkdown'
+
+# Actions
+
+Actions let you interact with data securely from your database (or anything else) directly inside your components. Loader and Action functions are almost identical in behavior.
+
+```jsx title='components/TodoInput.js' lineNumbers
+import { useState } from 'react'
+import { useAction, useCache } from 'firebolt'
+
+export function TodoInput() {
+  const [text, setText] = useState('')
+  const action = useAction(createTodo)
+  const cache = useCache()
+  const create = async () => {
+    setText('')
+    const todo = await action(text)
+    cache.invalidate('listTodos')
+  }
+  return (
+    <form action={create}>
+      <input
+        type='text'
+        value={text}
+        onChange={e => setText(e.current.value)}
+      />
+      <button>Create</button>
+    </form>
+  )
+}
+
+export async function createTodo(req, text) {
+  const todo = {
+    id: req.uuid(),
+    text,
+  }
+  await req.db('todos').insert(todo)
+  return todo
+}
+```
+
+## useAction(fn)
+
+The first argument to the `useAction` hook is the Action function you want to call.
+
+The hook returns a single function that can be used to call your Action:
+
+```jsx
+const action = useAction(login)
+// then later on...
+const user = await action(email, password)
+```
+
+## Action
+
+The Action function must be an async function exported from the current file OR an async function imported from somewhere else.
+
+When a Loader function is called, its first argument will be a `Request` object, followed by any additional arguments you provided to the action.
+
+```jsx
+export async function login(req, email, password) {
+  const user = await req.db('users').where({ email }).first()
+  if (!user) req.error('Not authorized')
+  const valid = checkPassword(user.password, password)
+  if (!valid) req.error('Not authorized')
+  const auth = createAuthToken(user)
+  req.cookies.set('auth', auth)
+  return user
+}
+```
+
+## Request
+
+The Request object provides additional control over the request including redirects and cookie access.
+
+You can also decorate the Request object to add things like database access as seen earlier. This is done using [Middleware](/docs/middleware).
+
+### Cookies
+
+Actions can read and update cookies as needed. Firebolt has first class support for cookies with bi-directional synchronization that you can read more about on the [Cookies](/docs/cookies) page.
+
+```jsx
+// read a cookie
+const auth = req.cookies.get('auth')
+// update a cookie
+req.cookies.set('auth', auth)
+// remove a cookie
+req.cookies.set('auth', null)
+```
+
+### Redirects
+
+At any point inside an Action you can cancel the request and redirect the user somewhere else.
+
+```jsx
+req.redirect('/login')
+```
+
+Note that calling `redirect()` will throw the request, which will cancel the call stack in its tracks!

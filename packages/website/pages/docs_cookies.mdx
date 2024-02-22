@@ -1,0 +1,74 @@
+export { DocsPage as default } from '../components/DocsPage'
+export { components } from '../components/DocsMarkdown'
+
+# Cookies
+
+Firebolt runs on both the server and the browser, which makes cookies a big deal due to how they act as a storage mechanism available in both places at once.
+
+Cookies are ideal for storing user data such as auth tokens, theme settings and other preferences.
+
+We've made cookies bi-directionally synchronized throughout the framework, meaning if you update a cookie on the server, you'll see any UI relying on that cookie update instantly.
+
+```jsx title='pages/index.js' lineNumbers
+import { useCookie } from 'firebolt'
+
+export default function Home() {
+  const [theme, setTheme] = useCookie('theme')
+  const action = useAction(setThemeOnServer)
+  return (
+    <main>
+      <h1>Theme: {theme || 'system'}</h1>
+      <button onClick={() => setTheme('light')}>Light</button>
+      <button onClick={() => setTheme('dark')}>Dark</button>
+      <button onClick={() => setTheme(null)}>System</button>
+      <button onClick={() => setThemeOnServer('light')}>Light (Server)</button>
+      <button onClick={() => setThemeOnServer('dark')}>Dark (Server)</button>
+      <button onClick={() => setThemeOnServer(null)}>System (Server)</button>
+    </main>
+  )
+}
+
+export async function setThemeOnServer(req, theme) {
+  req.cookies.set('theme', theme)
+}
+```
+
+In this example, you can set cookies locally or remotely and the UI will update as if by magic!
+
+## useCookie(name)
+
+The `useCookie` hook works similar to React's `useState` hook:
+
+```jsx
+const [count, setCount] = useCookie('count', 0)
+```
+
+The second argument allows you set the default value if there is no cookie.
+
+If a cookie isn't set its value will be `null` and setting a cookie to `null` will remove it.
+
+## Options
+
+When updating a cookie, you can supply an additional options object for the cookie:
+
+```jsx
+setCount(count => count + 1, { expires: 30 })
+```
+
+And from a Request like so:
+
+```jsx
+req.cookies.set('auth', authToken, { expires: 30 })
+```
+
+Here are all of the options you can use:
+
+| Key        | Type          | Default | Note                           |
+| ---------- | ------------- | ------- | ------------------------------ |
+| `expires`  | `Numer\|Date` | `null`  | Numbers are treated as days    |
+| `path`     | `String`      | `/`     |                                |
+| `domain`   | `String`      | `null`  |                                |
+| `secure`   | `Boolean`     | `false` |                                |
+| `sameSite` | `Enum`        | `lax`   | Can also be `strict` or `none` |
+
+By default all cookies are session based, but you can change your app wide defaults in your [Config](/docs/config) file.

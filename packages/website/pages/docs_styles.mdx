@@ -1,0 +1,79 @@
+export { DocsPage as default } from '../components/DocsPage'
+export { components } from '../components/DocsMarkdown'
+
+# Styles
+
+Firebolt includes it's own simple yet powerful CSS-in-JS that allows you to be productive immediately.
+
+## Element Styles
+
+You can style any element in your app using the `css` prop and the `css` tagged template literal:
+
+```jsx title='components/Account.js' lineNumbers
+import { css } from 'firebolt'
+import { User } from 'lucide-react'
+
+export function Account({ name }) {
+  return (
+    <div
+      css={css`
+        display: flex;
+        align-items: center;
+        span {
+          margin-left: 8px;
+        }
+      `}
+    >
+      <User />
+      <span>{name}</span>
+    </div>
+  )
+}
+```
+
+You can also just use a string for doing quick styles:
+
+```jsx
+<div css='color:red;'>
+```
+
+Behind the scenes, Firebolt will auto-prefix your styles, insert them into the `<head>` and give your element a className to scope its styles.
+
+## Global Styles
+
+Global styles can be placed anywhere using a regular old `<style>` element. Global styles are useful for css-resets, themes and css-variables:
+
+```jsx title='components/Document.js' lineNumbers
+export function Document({ children }) {
+  return (
+    <html>
+      <head>
+        <style
+          global={css`
+            :root {
+              --bg: #fff;
+            }
+            @media (prefers-color-scheme: dark) {
+              :root {
+                --bg: #000;
+              }
+            }
+            html {
+              background: var(--bg);
+            }
+          `}
+        />
+      </head>
+      <body>{children}</body>
+    </html>
+  )
+}
+```
+
+## Why CSS-in-JS?
+
+Firebolt ships with a ready to use CSS-in-JS implementation because of how well it works with a Component based architecture.
+
+Paired with Firebolt [Loaders](/docs/loaders) and [Actions](/docs/actions) this makes building web apps extremely efficient and ridiculously simple.
+
+Each part of your app can exist in a single component file that includes all the html, css and data access it needs. You can build entire apps using just the `pages` and `components` folders and most people don't even need to think about building an API.

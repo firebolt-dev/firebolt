@@ -1,0 +1,44 @@
+export { DocsPage as default } from '../components/DocsPage'
+export { components } from '../components/DocsMarkdown'
+
+# Pages
+
+Add new pages to your app by creating `.js` or `.mdx` file in the `pages` directory.
+
+```jsx title='pages/about.js' lineNumbers
+export default function About() {
+  return <h1>About Me</h1>
+}
+```
+
+That's it! There are no other special exports or anything needed for pages, they are just regular React components. The only difference between a Page and a Component is the filename format used for route matching.
+
+## Route Matching
+
+The filename you give a page determines how its route is matched:
+
+| Page                          | Example URL                | Params                              |
+| ----------------------------- | -------------------------- | ----------------------------------- |
+| `pages/index.js`              | `/`                        | `{}`                                |
+| `pages/dashboard_settings.js` | `/dashboard/settings`      | `{}`                                |
+| `pages/blog_$postId.js`       | `/blog/123`                | `{ postId: "123" }`                 |
+| `pages/cities_$tags+.js`      | `/cities/coastal/tech-hub` | `{ tags: ["coastal", "tech-hub"] }` |
+| `pages/cities_$tags-.js`      | `/cities/coastal/tech-hub` | `{ tags: ["coastal", "tech-hub"] }` |
+| `pages/cities_$tags-.js`      | `/cities`                  | `{ tags: [] }`                      |
+
+The `_` symbol is used to nest paths. For most apps its easier to keep all of your pages in a single folder like above, but as your app grows you can also nest files in folders if needed.
+
+The `$` symbol is used to create dynamic route segments.
+
+Adding a `+` suffix to a dynamic route segment will match one or more parameters while the `-` symbol will match zero or more.
+
+You can retrieve params for dynamic route segments anywhere in your app with the [useLocation](/docs/useLocation) hook:
+
+```jsx title='components/Post.js' lineNumbers
+import { useLocation } from 'firebolt'
+
+export function Post() {
+  const { postId } = useLocation().params
+  // ...
+}
+```
