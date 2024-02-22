@@ -2,9 +2,14 @@ import { Command } from 'commander'
 
 import { compile } from './compile'
 
+process.title = 'Firebolt'
+
 const program = new Command()
 
-program.name('firebolt').description('A description').version('1.0.0')
+program
+  .name('firebolt')
+  .description('Firebolt React Framework')
+  .version('1.0.0')
 
 program.command('dev').action(() => {
   compile({ build: true, watch: true, serve: true })
