@@ -13,8 +13,9 @@ export function fileToRoutePattern(filePath) {
   const pattern = filePath
     .map(segment => {
       // /index -> /
-      if (segment === '/index') {
-        return ''
+      if (segment.endsWith('/index')) {
+        segment = segment.replace('/index', '')
+        return segment
       }
       // dynamic
       if (segment.startsWith('$')) {
