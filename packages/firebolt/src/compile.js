@@ -5,7 +5,7 @@ import { fork } from 'child_process'
 import { performance } from 'perf_hooks'
 import chokidar from 'chokidar'
 import * as esbuild from 'esbuild'
-import { debounce, defaultsDeep } from 'lodash-es'
+import { isEqual, debounce, defaultsDeep } from 'lodash-es'
 import mdx from '@mdx-js/esbuild'
 import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 
@@ -21,9 +21,7 @@ import {
   parseEsbuildError,
   parseServerError,
 } from './utils/errors'
-import { virtualModule } from './utils/virtualModule'
 import { registryPlugin } from './utils/registryPlugin'
-// import { markdownLoader } from './utils/markdownLoader'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -59,6 +57,14 @@ export async function compile(opts) {
   let firstBuild = true
   let config
   let mdxPlugin
+  const ctx = {
+    configValidator: null,
+    pageInspector: null,
+    clientBundles: null,
+    serverEntry: null,
+  }
+  let configChanged = true
+  let clientEntryPoints = []
 
   log.intro()
 
@@ -68,45 +74,54 @@ export async function compile(opts) {
     log.info(`${firstBuild ? 'building...' : 'rebuilding...'}`)
 
     // ensure empty build directory
-    await fs.emptyDir(buildDir)
+    if (firstBuild) {
+      await fs.emptyDir(buildDir)
+    }
 
-    // check for config
+    // ensure app has config file
     if (!(await fs.exists(appConfigFile))) {
-      throw new BundlerError(`missing ${$mark('firebolt.config.js')} file`)
+      throw new BundlerError(`missing ${style.mark('firebolt.config.js')} file`)
     }
 
     // create config entry
-    const configCode = `
-    export { default as getConfig } from '../firebolt.config.js'
-    `
-    await fs.writeFile(buildConfigFile, configCode)
+    // todo: couldn't this be an `extras` file?
+    if (firstBuild) {
+      const configCode = `
+        export { default as getConfig } from '../firebolt.config.js'
+      `
+      await fs.writeFile(buildConfigFile, configCode)
+    }
 
     // temporarily build, import and validate config
-    await esbuild.build({
-      entryPoints: [buildConfigFile],
-      outfile: tmpConfigFile,
-      bundle: true,
-      treeShaking: true,
-      sourcemap: true,
-      minify: false,
-      platform: 'node',
-      format: 'esm',
-      packages: 'external',
-      logLevel: 'silent',
-      define: {
-        'process.env.NODE_ENV': JSON.stringify(env),
-        FIREBOLT_NODE_ENV: JSON.stringify(env),
-      },
-      loader: {
-        '.js': 'jsx',
-      },
-      jsx: 'automatic',
-      jsxImportSource: '@firebolt/jsx',
-      plugins: [
-        // markdownLoader,
-        // mdxPlugin,
-      ],
-    })
+    if (!ctx.configValidator) {
+      ctx.configValidator = await esbuild.context({
+        entryPoints: [buildConfigFile],
+        outfile: tmpConfigFile,
+        bundle: true,
+        treeShaking: true,
+        sourcemap: true,
+        minify: false,
+        platform: 'node',
+        format: 'esm',
+        packages: 'external',
+        logLevel: 'silent',
+        define: {
+          'process.env.NODE_ENV': JSON.stringify(env),
+          FIREBOLT_NODE_ENV: JSON.stringify(env),
+        },
+        loader: {
+          '.js': 'jsx',
+        },
+        jsx: 'automatic',
+        jsxImportSource: '@firebolt/jsx',
+        plugins: [
+          // mdxPlugin,
+        ],
+      })
+    }
+    // console.time('configValidator')
+    await ctx.configValidator.rebuild()
+    // console.timeEnd('configValidator')
     const { getConfig } = await reimport(tmpConfigFile)
     config = getConfig()
 
@@ -117,7 +132,7 @@ export async function compile(opts) {
 
     // create mdx plugin
     // NOTE: mdx caches rebuilds so we only want to rebuild this plugin if the app config changes
-    if (!mdxPlugin) {
+    if (configChanged) {
       mdxPlugin = mdx({
         jsx: false,
         jsxRuntime: 'automatic',
@@ -175,49 +190,54 @@ export async function compile(opts) {
     })
 
     // copy over extras
-    await fs.copy(extrasDir, buildDir)
+    if (firstBuild) {
+      await fs.copy(extrasDir, buildDir)
+    }
 
     // build and inspect pages
     const inspectionCode = `
       ${routes.map(route => `export * as ${route.id} from '${route.relBuildToPageFile}'`).join('\n')}
     `
     await fs.outputFile(buildInspectionFile, inspectionCode)
-    await esbuild.build({
-      entryPoints: [buildInspectionFile],
-      outfile: tmpInspectionFile,
-      bundle: true,
-      treeShaking: true,
-      sourcemap: true,
-      minify: false,
-      platform: 'node',
-      format: 'esm',
-      packages: 'external',
-      // external: ['react', 'react-dom', '@firebolt/jsx'],
-      // external: [],
-      logLevel: 'silent',
-      alias: {
-        firebolt: buildLibFile,
-      },
-      define: {
-        'process.env.NODE_ENV': JSON.stringify(env),
-        FIREBOLT_NODE_ENV: JSON.stringify(env),
-      },
-      loader: {
-        '.js': 'jsx',
-      },
-      jsx: 'automatic',
-      jsxImportSource: '@firebolt/jsx',
-      plugins: [
-        // markdownLoader,
-        mdxPlugin,
-      ],
-    })
+    if (!ctx.pageInspector || configChanged) {
+      // config changes require new mdxPlugin
+      ctx.pageInspector = await esbuild.context({
+        entryPoints: [buildInspectionFile],
+        outfile: tmpInspectionFile,
+        bundle: true,
+        treeShaking: true,
+        sourcemap: true,
+        minify: false,
+        platform: 'node',
+        format: 'esm',
+        packages: 'external',
+        // external: ['react', 'react-dom', '@firebolt/jsx'],
+        // external: [],
+        logLevel: 'silent',
+        alias: {
+          firebolt: buildLibFile,
+        },
+        define: {
+          'process.env.NODE_ENV': JSON.stringify(env),
+          FIREBOLT_NODE_ENV: JSON.stringify(env),
+        },
+        loader: {
+          '.js': 'jsx',
+        },
+        jsx: 'automatic',
+        jsxImportSource: '@firebolt/jsx',
+        plugins: [mdxPlugin],
+      })
+    }
+    // console.time('pageInspector')
+    await ctx.pageInspector.rebuild()
+    // console.timeEnd('pageInspector')
     const inspection = await reimport(tmpInspectionFile)
     // console.log('inspection', inspection)
     for (const route of routes) {
       if (!inspection[route.id].default) {
         throw new BundlerError(
-          `missing default page export for ${$mark(route.prettyFileBase)}`
+          `missing default page export for ${style.mark(route.prettyFileBase)}`
         )
       }
       if (route.isMDX && inspection[route.id].components) {
@@ -274,65 +294,75 @@ export async function compile(opts) {
 
     // build client bundles (pages + chunks + bootstrap)
     const publicDir = path.join(buildDir, 'public')
-    const publicFiles = []
+    const newClientEntryPoints = []
     for (const route of routes) {
-      publicFiles.push(route.shimFile)
+      newClientEntryPoints.push(route.shimFile)
     }
-    publicFiles.push(buildBoostrapFile)
-    const bundleResult = await esbuild.build({
-      entryPoints: publicFiles,
-      entryNames: '/[name]-[hash]',
-      outdir: publicDir,
-      bundle: true,
-      treeShaking: true,
-      sourcemap: prod ? config.productionBrowserSourceMaps : true,
-      splitting: true,
-      platform: 'browser',
-      // mainFields: ["browser", "module", "main"],
-      // external: ['fs', 'path', 'util'],
-      format: 'esm',
-      minify: prod,
-      metafile: true,
-      logLevel: 'silent',
-      alias: {
-        firebolt: buildLibFile,
-      },
-      define: {
-        'process.env.NODE_ENV': JSON.stringify(env),
-        FIREBOLT_NODE_ENV: JSON.stringify(env),
-      },
-      loader: {
-        '.js': 'jsx',
-      },
-      jsx: 'automatic',
-      jsxImportSource: '@firebolt/jsx',
-      keepNames: !prod,
-      plugins: [
-        // markdownLoader,
-        mdxPlugin,
-        registryPlugin({ registry }),
-        // polyfill fs, path etc for browser environment
-        // polyfillNode({}),
-        // ensure pages are marked side-effect free for tree shaking
-        // {
-        //   name: 'no-side-effects',
-        //   setup(build) {
-        //     build.onResolve({ filter: /.*/ }, async args => {
-        //       // ignore this if we called ourselves
-        //       if (args.pluginData) return
-        //       console.log(args.path)
-        //       const { path, ...rest } = args
-        //       // avoid infinite recursion
-        //       rest.pluginData = true
-        //       const result = await build.resolve(path, rest)
-        //       result.sideEffects = false
-        //       return result
-        //     })
-        //   },
-        // },
-      ],
-    })
-
+    newClientEntryPoints.push(buildBoostrapFile)
+    let clientEntryPointsChanged = !isEqual(
+      clientEntryPoints,
+      newClientEntryPoints
+    )
+    if (clientEntryPointsChanged) {
+      clientEntryPoints = newClientEntryPoints
+    }
+    if (!ctx.clientBundles || configChanged || clientEntryPointsChanged) {
+      // config changes require new mdxPlugin + productionBrowserSourceMaps value
+      ctx.clientBundles = await esbuild.context({
+        entryPoints: clientEntryPoints,
+        entryNames: '/[name]-[hash]',
+        outdir: publicDir,
+        bundle: true,
+        treeShaking: true,
+        sourcemap: prod ? config.productionBrowserSourceMaps : true,
+        splitting: true,
+        platform: 'browser',
+        // mainFields: ["browser", "module", "main"],
+        // external: ['fs', 'path', 'util'],
+        format: 'esm',
+        minify: prod,
+        metafile: true,
+        logLevel: 'silent',
+        alias: {
+          firebolt: buildLibFile,
+        },
+        define: {
+          'process.env.NODE_ENV': JSON.stringify(env),
+          FIREBOLT_NODE_ENV: JSON.stringify(env),
+        },
+        loader: {
+          '.js': 'jsx',
+        },
+        jsx: 'automatic',
+        jsxImportSource: '@firebolt/jsx',
+        plugins: [
+          mdxPlugin,
+          registryPlugin({ registry }),
+          // polyfill fs, path etc for browser environment
+          // polyfillNode({}),
+          // ensure pages are marked side-effect free for tree shaking
+          // {
+          //   name: 'no-side-effects',
+          //   setup(build) {
+          //     build.onResolve({ filter: /.*/ }, async args => {
+          //       // ignore this if we called ourselves
+          //       if (args.pluginData) return
+          //       console.log(args.path)
+          //       const { path, ...rest } = args
+          //       // avoid infinite recursion
+          //       rest.pluginData = true
+          //       const result = await build.resolve(path, rest)
+          //       result.sideEffects = false
+          //       return result
+          //     })
+          //   },
+          // },
+        ],
+      })
+    }
+    // console.time('clientBundles')
+    const bundleResult = await ctx.clientBundles.rebuild()
+    // console.timeEnd('clientBundles')
     // reconcile hashed build files with their source
     const metafile = bundleResult.metafile
     for (const file in metafile.outputs) {
@@ -370,46 +400,44 @@ export async function compile(opts) {
     await fs.outputFile(buildRegistryFile, registryCode)
 
     // build server entry
-    await esbuild.build({
-      entryPoints: [buildServerFile],
-      outfile: serverServerFile,
-      bundle: true,
-      treeShaking: true,
-      sourcemap: true,
-      minify: prod,
-      platform: 'node',
-      format: 'esm',
-      packages: 'external',
-      logLevel: 'silent',
-      alias: {
-        firebolt: buildLibFile,
-      },
-      define: {
-        'process.env.NODE_ENV': JSON.stringify(env),
-        FIREBOLT_NODE_ENV: JSON.stringify(env),
-      },
-      loader: {
-        '.js': 'jsx',
-      },
-      jsx: 'automatic',
-      jsxImportSource: '@firebolt/jsx',
-      keepNames: !prod,
-      plugins: [
-        // markdownLoader,
-        mdxPlugin,
-        registryPlugin({ registry: null }), // dont write to registry, we already have it from the client
-        virtualModule([
-          {
-            path: buildCoreFile,
-            contents: coreCode,
-          },
-        ]),
-      ],
-    })
-
+    if (!ctx.serverEntry || configChanged) {
+      // config changes require new mdxPlugin
+      ctx.serverEntry = await esbuild.context({
+        entryPoints: [buildServerFile],
+        outfile: serverServerFile,
+        bundle: true,
+        treeShaking: true,
+        sourcemap: true,
+        minify: prod,
+        platform: 'node',
+        format: 'esm',
+        packages: 'external',
+        logLevel: 'silent',
+        alias: {
+          firebolt: buildLibFile,
+        },
+        define: {
+          'process.env.NODE_ENV': JSON.stringify(env),
+          FIREBOLT_NODE_ENV: JSON.stringify(env),
+        },
+        loader: {
+          '.js': 'jsx',
+        },
+        jsx: 'automatic',
+        jsxImportSource: '@firebolt/jsx',
+        plugins: [
+          mdxPlugin,
+          registryPlugin({ registry: null }), // dont write to registry, we already have it from the client bundles
+        ],
+      })
+    }
+    // console.time('serverEntry')
+    await ctx.serverEntry.rebuild()
+    // console.timeEnd('serverEntry')
     const elapsed = (performance.now() - startAt).toFixed(0)
     log.info(`${firstBuild ? 'built' : 'rebuilt'} ${style.dim(`(${elapsed}ms)`)}\n`) // prettier-ignore
     firstBuild = false
+    configChanged = false
   }
 
   let server
@@ -516,9 +544,9 @@ export async function compile(opts) {
       const relFile = path.relative(appDir, file)
       log.change(`~/${relFile}`)
 
-      // if config file changed, we need to force the mdxPlugin to rebuild
+      // track config file changes
       if (relFile === 'firebolt.config.js') {
-        mdxPlugin = null
+        configChanged = true
       }
 
       run()
