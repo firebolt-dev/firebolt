@@ -1,10 +1,5 @@
-import './source-map-support'
 import './process'
-import express from 'express'
-import cors from 'cors'
-import compression from 'compression'
-import cookieParser from 'cookie-parser'
-import { renderToPipeableStream, renderToStaticMarkup } from 'react-dom/server'
+import { renderToPipeableStream } from 'react-dom/server'
 import React from 'react'
 import { isbot } from 'isbot'
 import { PassThrough } from 'stream'
@@ -28,7 +23,9 @@ React.useLayoutEffect = React.useEffect
 const match = matcher()
 
 // get config
-const config = getConfig()
+export const config = getConfig()
+
+// apply defaults
 defaultsDeep(config, {
   port: 3000,
   productionBrowserSourceMaps: false,
@@ -70,17 +67,8 @@ async function callRegistry(request, id, args) {
   return value
 }
 
-// start server
-const app = express()
-app.use(cors())
-app.use(compression())
-app.use(express.json())
-app.use(cookieParser())
-app.use(express.static('public'))
-app.use('/_firebolt', express.static('.firebolt/public'))
-
 // handle route fn calls (useData & useAction)
-app.post('/_firebolt_fn', async (req, res) => {
+export async function handleFunction(req, res) {
   const { id, args } = req.body
   const request = new Request(req)
   let value
@@ -117,10 +105,10 @@ app.post('/_firebolt_fn', async (req, res) => {
     data.expire = request._expire
     res.status(200).json(data)
   }
-})
+}
 
 // handle requests for pages and api
-app.use('*', async (req, res) => {
+export async function handleRequest(req, res) {
   const url = req.originalUrl
 
   // handle page requests
@@ -234,25 +222,26 @@ app.use('*', async (req, res) => {
         }
       },
       onError(error) {
-        console.log('onError', error)
-        if (error instanceof Request) {
-          console.log(
-            'TODO: request.redirect or request.error was thrown! handle it!'
-          )
-        }
-        if (process.send) {
-          // todo: instead of piping to bundler for pretty logs, use a shared module for logging
-          process.send({
-            type: 'error',
-            error: {
-              name: error.constructor.name,
-              message: error.message,
-              stack: error.stack,
-            },
-          })
-        } else {
-          console.error(error)
-        }
+        throw error
+        // console.log('onError', error)
+        // if (error instanceof Request) {
+        //   console.log(
+        //     'TODO: request.redirect or request.error was thrown! handle it!'
+        //   )
+        // }
+        // if (process.send) {
+        //   // todo: instead of piping to bundler for pretty logs, use a shared module for logging
+        //   process.send({
+        //     type: 'error',
+        //     error: {
+        //       name: error.constructor.name,
+        //       message: error.message,
+        //       stack: error.stack,
+        //     },
+        //   })
+        // } else {
+        //   console.error(error)
+        // }
       },
       onShellError(err) {
         console.log('onShellError', err)
@@ -260,24 +249,4 @@ app.use('*', async (req, res) => {
       },
     })
   }
-})
-
-function onConnected() {
-  if (!process.env.SILENT_STARTUP) {
-    console.log(`server running at http://localhost:${config.port}`)
-  }
-  if (process.send) {
-    process.send('ready') // notify any parent process
-  }
 }
-
-function onError(err) {
-  if (err.code === 'EADDRINUSE') {
-    console.log(`port '${config.port}' is already in use`)
-    process.exit()
-  } else {
-    console.error(`failed to start server: ${err.message}`)
-  }
-}
-
-app.listen(config.port, onConnected).on('error', onError)

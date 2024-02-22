@@ -1,13 +1,17 @@
-import fs, { outputFile } from 'fs-extra'
+import fs from 'fs-extra'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { fork } from 'child_process'
 import { performance } from 'perf_hooks'
 import chokidar from 'chokidar'
 import * as esbuild from 'esbuild'
 import { isEqual, debounce, defaultsDeep } from 'lodash-es'
 import mdx from '@mdx-js/esbuild'
 import { polyfillNode } from 'esbuild-plugin-polyfill-node'
+
+import express from 'express'
+import cors from 'cors'
+import compression from 'compression'
+import cookieParser from 'cookie-parser'
 
 import * as style from './utils/style'
 import * as log from './utils/log'
@@ -122,9 +126,9 @@ export async function compile(opts) {
         ],
       })
     }
-    console.time('configValidator')
+    // console.time('configValidator')
     await ctx.configValidator.rebuild()
-    console.timeEnd('configValidator')
+    // console.timeEnd('configValidator')
     const { getConfig } = await reimport(tmpConfigFile)
     config = getConfig()
 
@@ -205,11 +209,11 @@ export async function compile(opts) {
       return route.isMDX && !mdxCache[route.file]
     })
     if (routesNeedingMDXBuild.length) {
-      console.log(
-        'building mdx',
-        routesNeedingMDXBuild.map(r => r.prettyFileBase)
-      )
-      console.time('mdx')
+      // console.log(
+      //   'building mdx',
+      //   routesNeedingMDXBuild.map(r => r.prettyFileBase)
+      // )
+      // console.time('mdx')
       const result = await esbuild.build({
         entryPoints: routesNeedingMDXBuild.map(r => r.file),
         outdir: 'out',
@@ -246,10 +250,9 @@ export async function compile(opts) {
         // console.log(route.file)
         // console.log(out.path)
         mdxCache[route.file] = out.text
-        console.log(out.text)
         i++
       }
-      console.timeEnd('mdx')
+      // console.timeEnd('mdx')
     }
 
     // copy over extras
@@ -294,9 +297,9 @@ export async function compile(opts) {
         ],
       })
     }
-    console.time('pageInspector')
+    // console.time('pageInspector')
     await ctx.pageInspector.rebuild()
-    console.timeEnd('pageInspector')
+    // console.timeEnd('pageInspector')
     const inspection = await reimport(tmpInspectionFile)
     // console.log('inspection', inspection)
     for (const route of routes) {
@@ -427,9 +430,9 @@ export async function compile(opts) {
         ],
       })
     }
-    console.time('clientBundles')
+    // console.time('clientBundles')
     const bundleResult = await ctx.clientBundles.rebuild()
-    console.timeEnd('clientBundles')
+    // console.timeEnd('clientBundles')
     // reconcile hashed build files with their source
     const metafile = bundleResult.metafile
     for (const file in metafile.outputs) {
@@ -498,62 +501,63 @@ export async function compile(opts) {
         ],
       })
     }
-    console.time('serverEntry')
+    // console.time('serverEntry')
     await ctx.serverEntry.rebuild()
-    console.timeEnd('serverEntry')
+    // console.timeEnd('serverEntry')
     const elapsed = (performance.now() - startAt).toFixed(0)
     log.info(`${freshBuild ? 'built' : 'rebuilt'} ${style.dim(`(${elapsed}ms)`)}\n`) // prettier-ignore
     freshBuild = false
     freshConfig = false
   }
 
+  let appServer
   let server
-  let controller
+  let port
 
   async function serve() {
-    let SILENT_STARTUP
-    if (server) {
-      SILENT_STARTUP = config && config.port === server.port ? 'yes' : undefined
+    server = await reimport(serverServerFile)
+    if (appServer && server.config.port !== port) {
+      appServer.close()
+      appServer = null
     }
-    // destroy previous server if any
-    if (server) {
-      await new Promise(resolve => {
-        server.once('exit', resolve)
-        controller.abort()
+    if (!appServer) {
+      const app = express()
+      app.use(cors())
+      app.use(compression())
+      app.use(express.json())
+      app.use(cookieParser())
+      app.use(express.static('public'))
+      app.use('/_firebolt', express.static('.firebolt/public'))
+      app.post('/_firebolt_fn', async (req, res) => {
+        server.handleFunction(req, res)
       })
-      controller = null
-      server = null
-    }
-    // spawn server
-    controller = new AbortController()
-    server = fork(serverServerFile, {
-      signal: controller.signal,
-      env: { SILENT_STARTUP },
-    })
-    server.port = config?.port
-    server.on('error', err => {
-      // ignore abort signals
-      if (err.code === 'ABORT_ERR') return
-      // log other errors
-      console.log('server error')
-      console.error(err)
-    })
-    await new Promise(resolve => {
-      server.once('message', msg => {
-        if (msg === 'ready') resolve()
+      app.use('*', async (req, res) => {
+        try {
+          await server.handleRequest(req, res)
+        } catch (err) {
+          console.log('server.handleRequest catch')
+          if (err instanceof server.Request) {
+            logCodeError(parseServerError(err, appDir))
+          } else {
+            console.error(err)
+          }
+        }
       })
-    })
-    server.on('message', msg => {
-      if (msg.type === 'error') {
-        logCodeError(parseServerError(msg.error, appDir))
+      port = server.config.port
+      function onConnected() {
+        console.log(`server running at http://localhost:${port}\n`)
       }
-    })
+      function onError(err) {
+        if (err.code === 'EADDRINUSE') {
+          log.error(`port ${port} is already in use\n`)
+          process.exit()
+        } else {
+          log.error(`failed to start server: ${err.message}`)
+        }
+      }
+      appServer = app.listen(port, onConnected).on('error', onError)
+    }
   }
-
-  // ensure any running server is killed on exit
-  process.on('exit', () => {
-    controller?.abort()
-  })
 
   let runInProgress = false
   let runPending = false
