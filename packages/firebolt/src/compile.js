@@ -28,6 +28,7 @@ import {
 import { registryPlugin } from './utils/registryPlugin'
 import { zombieImportPlugin } from './utils/zombieImportPlugin'
 import { virtualModule } from './utils/virtualModule'
+import { Pending } from './utils/Pending'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -510,6 +511,8 @@ export async function compile(opts) {
     freshConfig = false
   }
 
+  let buildProgress = new Pending()
+
   let appServer
   let server
   let port
@@ -526,13 +529,18 @@ export async function compile(opts) {
       app.use(compression())
       app.use(express.json())
       app.use(cookieParser())
-      app.use((req, res, next) => {
+      app.use(async (req, res, next) => {
         res.setHeader('X-Powered-By', 'Firebolt')
+        if (!prod) {
+          // during development pause requests while builds are in progress
+          await buildProgress.wait()
+        }
         next()
       })
       app.use(express.static('public'))
       app.use('/_firebolt', express.static('.firebolt/public'))
       app.post('/_firebolt_fn', async (req, res) => {
+        // todo: try/catch
         server.handleFunction(req, res)
       })
       app.use('*', async (req, res) => {
@@ -578,6 +586,7 @@ export async function compile(opts) {
     // build
     if (opts.build) {
       try {
+        buildProgress.begin()
         await build()
       } catch (err) {
         if (err instanceof BundlerError) {
@@ -591,6 +600,8 @@ export async function compile(opts) {
         runInProgress = false
         runPending = false
         return
+      } finally {
+        buildProgress.end()
       }
     }
     // only serve if there isn't anothe run pending
