@@ -526,6 +526,10 @@ export async function compile(opts) {
       app.use(compression())
       app.use(express.json())
       app.use(cookieParser())
+      app.use((req, res, next) => {
+        res.setHeader('X-Powered-By', 'Firebolt')
+        next()
+      })
       app.use(express.static('public'))
       app.use('/_firebolt', express.static('.firebolt/public'))
       app.post('/_firebolt_fn', async (req, res) => {
