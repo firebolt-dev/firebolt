@@ -4,7 +4,6 @@ export class Request {
   constructor(req) {
     this.url = req.url
     this.cookies = new Cookies(req)
-    this._redirect = null
     this._expire = null
   }
 
@@ -15,40 +14,53 @@ export class Request {
     this._expire = unitToSeconds[unit](amount)
   }
 
-  redirect(url, type = 'push') {
-    this._redirect = { url, type }
-    throw this
+  redirect(url, type) {
+    throw new RequestRedirect(url, type)
   }
 
-  error(data) {
-    this._error = data
-    throw this
+  error(data, message) {
+    throw new RequestError(data, message)
   }
 
-  applyRedirectToExpressResponse(res) {
-    if (this._redirect) {
-      // during ssr if we need to redirect, we have to do it using a script
-      // because the response is already streaming :)
-      //
-      // NOTE: we write directly to the response and flush it so that we don't get a flash
-      // of the rendering before it redirects.
-      if (this._redirect.type === 'replace') {
-        res.write(`
-          <script>window.location.replace('${this._redirect.url}')</script>
+  applyRedirectToExpressResponse(redirect, res) {
+    // during ssr if we need to redirect, we have to do it using a script
+    // because the response is already streaming :)
+    //
+    // NOTE: we write directly to the response and flush it so that we don't get a flash
+    // of the rendering before it redirects.
+    if (redirect.type === 'replace') {
+      res.write(`
+          <script>window.location.replace('${redirect.url}')</script>
         `)
-        res.flush()
-        return true
-      }
-      if (this._redirect.type === 'push') {
-        // note: it appears that this does not push a new route to the history and instead replaces it.
-        // this is likely because the location changes BEFORE the html document has finished streaming.
-        res.write(`
-          <script>window.location.href = '${this._redirect.url}'</script>
-        `)
-        res.flush()
-        return true
-      }
+      res.flush()
     }
+    if (redirect.type === 'push') {
+      // note: it appears that this does not push a new route to the history and instead replaces it.
+      // this is likely because the location changes BEFORE the html document has finished streaming.
+      res.write(`
+          <script>window.location.href = '${redirect.url}'</script>
+        `)
+      res.flush()
+    }
+  }
+}
+
+export class RequestError extends Error {
+  constructor(data, message) {
+    super(message || 'There was an error with that request')
+    this.data = data || {}
+    this.name = this.constructor.name
+    Error.captureStackTrace(this, this.constructor)
+  }
+}
+
+export class RequestRedirect {
+  constructor(url, type) {
+    this.url = url
+    this.type = type || 'push'
+  }
+  getRedirect() {
+    return { url: this.url, type: this.type }
   }
 }
 

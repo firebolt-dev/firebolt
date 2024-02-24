@@ -10,7 +10,7 @@ import { matcher } from './matcher'
 import { getConfig } from './config.js'
 import * as core from './core.js'
 import manifest from './manifest.json'
-import { Request } from './request'
+import { Request, RequestError, RequestRedirect } from './request'
 import * as registry from './registry'
 import { cookieOptionsToExpress } from './cookies'
 import { createRuntime } from './runtime'
@@ -21,6 +21,8 @@ import { createRuntime } from './runtime'
 React.useLayoutEffect = React.useEffect
 
 const match = matcher()
+
+const prod = process.env.NODE_ENV === 'production'
 
 // get config
 export const config = getConfig()
@@ -55,8 +57,8 @@ function resolveRouteWithParams(url) {
   return []
 }
 
-// utility to call route functions (data and actions)
-async function callRegistry(request, id, args) {
+// utility to call loader/action functions
+async function callFunction(request, id, args) {
   await config.middleware(request)
   const fn = registry[id]
   if (!fn) throw new Error('Invalid function')
@@ -67,44 +69,35 @@ async function callRegistry(request, id, args) {
   return value
 }
 
-// handle route fn calls (useData & useAction)
+// handle loader/action function call requests from the client
 export async function handleFunction(req, res) {
   const { id, args } = req.body
   const request = new Request(req)
   let value
-  let err
+  let error
   try {
-    value = await callRegistry(request, id, args)
-  } catch (_err) {
-    err = _err
+    value = await callFunction(request, id, args)
+  } catch (err) {
+    error = err
   }
   const data = {}
-  // notify client to invalidate changed cookies
+  // get changed cookies to notify client UI
   data.cookies = request.cookies.getChangedKeys()
-  // apply changed cookies to the express response
+  // apply cookie changes to express response
   request.cookies.pushChangesToResponse(res)
-
-  // if err is a request then function called req.redirect() or req.error()
-  if (err instanceof Request) {
-    // handle any redirect
-    if (request._redirect) {
-      data.redirect = request._redirect
-      res.status(200).json(data)
-      return
-    }
-    // handle any error
-    if (request._error) {
-      console.log('TODO: handle req.error() from POST /_firebolt_fn')
-      return
-    }
-  } else if (err) {
-    console.log('TODO: handle fn err')
-    res.status(400).send(err.message)
-  } else {
-    data.value = value
-    data.expire = request._expire
-    res.status(200).json(data)
+  // if RequestRedirect error, redirect the client
+  if (error instanceof RequestRedirect) {
+    data.redirect = error.getRedirect()
+    return res.status(200).json(data)
   }
+  if (error) {
+    data.error = serializeFunctionError(error, prod)
+    return res.status(400).json(data)
+  }
+  // otherwise its the return value of the function
+  data.value = value
+  data.expire = request._expire
+  res.status(200).json(data)
 }
 
 // handle requests for pages and api
@@ -147,22 +140,29 @@ export async function handleRequest(req, res) {
         params,
         inserts,
         cookies,
-        async callRegistry(...args) {
+        async callFunction(...args) {
           const request = new Request(req)
           let value
+          let error
           try {
-            value = await callRegistry(request, ...args)
+            value = await callFunction(request, ...args)
           } catch (err) {
-            if (err === request) {
-              value = request
-            }
+            error = err
           }
           // write out any cookies first
           request.cookies.pushChangesToStream(inserts)
-          // write out any redirects
-          const didRedirect = request.applyRedirectToExpressResponse(res)
-          if (didRedirect) return
-          // todo: error if any
+          // if RequestRedirect error, write out the redirect and stop
+          if (error instanceof RequestRedirect) {
+            request.applyRedirectToExpressResponse(error, res)
+            return
+          }
+          // if RequestError or generic error, return the error
+          if (error) {
+            return {
+              error: serializeFunctionError(error, prod),
+            }
+          }
+          // otherwise return the value
           const data = {
             value,
             expire: request._expire,
@@ -180,7 +180,9 @@ export async function handleRequest(req, res) {
       let str = chunk.toString()
 
       // append any inserts (loader data, redirects etc)
-      str += inserts.read()
+      if (str.endsWith('</script>')) {
+        str += inserts.read()
+      }
 
       // console.log('---')
       // console.log(str)
@@ -222,31 +224,36 @@ export async function handleRequest(req, res) {
         }
       },
       onError(error) {
-        throw error
-        // console.log('onError', error)
-        // if (error instanceof Request) {
-        //   console.log(
-        //     'TODO: request.redirect or request.error was thrown! handle it!'
-        //   )
-        // }
-        // if (process.send) {
-        //   // todo: instead of piping to bundler for pretty logs, use a shared module for logging
-        //   process.send({
-        //     type: 'error',
-        //     error: {
-        //       name: error.constructor.name,
-        //       message: error.message,
-        //       stack: error.stack,
-        //     },
-        //   })
-        // } else {
-        //   console.error(error)
-        // }
+        console.error(error)
       },
       onShellError(err) {
-        console.log('onShellError', err)
-        // console.error(err)
+        console.error(err)
+        res.statusCode = 500
+        res.setHeader('content-type', 'text/html')
+        res.send('<p>Something went wrong</p>')
       },
     })
+  }
+}
+
+function serializeFunctionError(error, prod) {
+  if (error instanceof RequestError) {
+    return {
+      name: error.name,
+      message: error.message,
+      data: error.data,
+    }
+  }
+  if (prod) {
+    return {
+      name: 'Error',
+      message: 'An error occurred',
+      data: {},
+    }
+  }
+  return {
+    name: error.name,
+    message: error.message,
+    data: {},
   }
 }

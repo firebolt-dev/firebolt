@@ -1,0 +1,66 @@
+export { DocsPage as default } from '../components/DocsPage'
+export { components } from '../components/docs-components'
+
+# \<ErrorBoundary\>
+
+The `<ErrorBoundary>` component captures errors thrown inside [Loader](/docs/loaders) functions and allows you to handle them gracefully with a custom error component. It also works seamlessly during both server side rendering and when using loaders on the client.
+
+```jsx title='pages/trains_$id.js' lineNumbers
+import { ErrorBoundary, useLocation, useData } from 'firebolt'
+
+export default function Train() {
+  return (
+    <ErrorBoundary fallback={<TrainError />}>
+      <Suspense fallback={<div>Loading...</div>}>
+        <TrainContent />
+      </Suspense>
+    </ErrorBoundary>
+  )
+}
+
+function TrainContent() {
+  const { id } = useLocation().params
+  const data = useData(fetchTrain, id)
+  const train = data.read()
+  return (
+    <div>
+      <div>Name: {train.name}</div>
+      <div>Type: {train.type}</div>
+    </div>
+  )
+}
+
+function TrainError({ data }) {
+  return (
+    <div>
+      <div>Error fetching train: {data?.reason || 'unknown'}</div>
+    </div>
+  )
+}
+
+export async function fetchTrain(req, id) {
+  const train = await req.db('cars').where({ id }).first()
+  if (!train) req.error({ reason: 'not found!' })
+}
+```
+
+It's recommended to use the `req.error(data)` utility method on the [Request](/docs/ref/request) to provide context for operational errors.
+
+In development you'll receive full non-operational errors but in production this will be replaced with a generic request error for security reasons.
+
+## Props
+
+The component rendered
+
+You can use the `fallback` prop a number of different ways for convenience:
+
+```jsx
+// with a component
+<ErrorBoundary fallback={<MyError/>}/>
+
+// with jsx
+<ErrorBoundary fallback={<div>Error</div>} />
+
+// with a function
+<ErrorBoundary fallback={err => <div>{err.message}</div>} />
+```

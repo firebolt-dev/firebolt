@@ -24,7 +24,7 @@ export function createRuntime({ ssr, routes, stack = [] }) {
     getPageHeads,
     getDocHead,
     watchPageHeads,
-    callRegistry,
+    callFunction,
     applyRedirect,
     getLoader,
     setLoaderData,
@@ -102,24 +102,24 @@ export function createRuntime({ ssr, routes, stack = [] }) {
     return () => headWatchers.delete(callback)
   }
 
-  async function callRegistry(id, args) {
+  async function callFunction(id, args) {
     let result
-    if (ssr) {
-      console.log('TODO: this shouldnt happen yeah?')
-      result = await ssr.callRegistry(id, args)
-    } else {
-      const res = await fetch('/_firebolt_fn', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id,
-          args, // todo: rename fnArgs
-        }),
-      })
-      result = await res.json()
-    }
+    // if (ssr) {
+    //   console.log('TODO: this shouldnt happen yeah?')
+    //   result = await ssr.callFunction(id, args)
+    // } else {
+    const res = await fetch('/_firebolt_fn', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        id,
+        args, // todo: rename fnArgs
+      }),
+    })
+    result = await res.json()
+    // }
     return result
   }
 
@@ -142,7 +142,11 @@ export function createRuntime({ ssr, routes, stack = [] }) {
     let value
     let expiresAt
     const setData = data => {
-      if (data) {
+      if (data?.error) {
+        status = 'error'
+        value = data.error
+        expiresAt = null
+      } else if (data) {
         status = 'ready'
         value = data.value
         expiresAt = data.expire ? new Date().getTime() + data.expire * 1000 : null // prettier-ignore
@@ -162,14 +166,14 @@ export function createRuntime({ ssr, routes, stack = [] }) {
       async fetch() {
         let result
         if (ssr) {
-          result = await ssr.callRegistry(id, args)
+          result = await ssr.callFunction(id, args)
           ssr.inserts.write(`
             <script>
               globalThis.$firebolt.push('setLoaderData', '${key}', ${JSON.stringify(result)})
             </script>
           `)
         } else {
-          result = await callRegistry(id, args)
+          result = await callFunction(id, args)
         }
         invalidateCookies(result.cookies)
         return result
@@ -278,20 +282,22 @@ export function createRuntime({ ssr, routes, stack = [] }) {
     const action = function (...args) {
       let promise
       if (ssr) {
-        promise = ssr.callRegistry(id, args)
+        promise = ssr.callFunction(id, args)
       } else {
-        promise = callRegistry(id, args)
+        promise = callFunction(id, args)
       }
       return promise.then(data => {
         invalidateCookies(data.cookies)
+        if (data.error) {
+          throw data.error
+        }
         if (data.redirect) {
           // cancel action call stack and redirect
           return new Promise(() => {
             applyRedirect(data.redirect)
           })
-        } else {
-          return data.value
         }
+        return data.value
       })
     }
     actions[key] = action

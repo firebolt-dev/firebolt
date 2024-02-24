@@ -65,6 +65,7 @@ export function DocsPage({ title, description, children }) {
           <NavLink label='useAction' to='/docs/ref/useAction' />
           <NavLink label='useCache' to='/docs/ref/useCache' />
           <NavLink label='<Link>' to='/docs/ref/link' />
+          <NavLink label='<ErrorBoundary>' to='/docs/ref/error-boundary' />
           <NavLink label='Request' to='/docs/ref/request' />
           <NavLink label='css' to='/docs/ref/css' />
           <NavLink label='cls' to='/docs/ref/cls' />

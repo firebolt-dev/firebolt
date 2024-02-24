@@ -24,6 +24,22 @@ export async function getTickets(req) {
 }
 ```
 
+## .redirect(url, type)
+
+Throws a redirect that will navigate the user to another page. The `type` argument can be `push` (default) or `replace`.
+
+Can be used in both Loader and Action functions.
+
+```jsx
+req.redirect('/login', 'replace')
+```
+
+## .error(data)
+
+Throws an error that can be caught by an [\<ErrorBoundary\>](/docs/ref/error-boundary), decorating the error with an optional `data` prop that can be used to provide more context about operational errors.
+
+Can only be used in Loader function.
+
 ## Cookies (TODO: .setCookie, .getCookie etc)
 
 Both Loaders and Actions can read and update cookies as needed. Any changes to cookies here will automatically propagate back to the client and update any UI that is observing its value.
@@ -38,13 +54,3 @@ req.cookies.set('auth', auth)
 // remove a cookie
 req.cookies.set('auth', null)
 ```
-
-## Redirects
-
-At any point inside a Loader or Action you can cancel the request and redirect the user somewhere else.
-
-```jsx
-req.redirect('/login')
-```
-
-The `redirect()` function needs to throw the request so be sure not to catch it.
