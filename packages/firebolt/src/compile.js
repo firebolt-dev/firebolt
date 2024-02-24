@@ -511,7 +511,7 @@ export async function compile(opts) {
     freshConfig = false
   }
 
-  let buildProgress = new Pending()
+  let runProgress = new Pending()
 
   let appServer
   let server
@@ -533,7 +533,7 @@ export async function compile(opts) {
         res.setHeader('X-Powered-By', 'Firebolt')
         if (!prod) {
           // during development pause requests while builds are in progress
-          await buildProgress.wait()
+          await runProgress.wait()
         }
         next()
       })
@@ -582,11 +582,11 @@ export async function compile(opts) {
       runPending = true
       return
     }
+    runProgress.begin()
     runInProgress = true
     // build
     if (opts.build) {
       try {
-        buildProgress.begin()
         await build()
       } catch (err) {
         if (err instanceof BundlerError) {
@@ -599,9 +599,8 @@ export async function compile(opts) {
         }
         runInProgress = false
         runPending = false
+        runProgress.end()
         return
-      } finally {
-        buildProgress.end()
       }
     }
     // only serve if there isn't anothe run pending
@@ -612,8 +611,9 @@ export async function compile(opts) {
     // if another run was queued, lets run it again!
     if (runPending) {
       runPending = false
-      run()
+      await run()
     }
+    runProgress.end()
   }
 
   // execute our initial run
