@@ -465,7 +465,7 @@ export async function compile(opts) {
     const getRegistryRelPath = file => path.relative(buildDir, file)
     let registryCode = ''
     registry.forEach(item => {
-      registryCode += `export { ${item.fnName} as ${item.id} } from '${getRegistryRelPath(item.file)}'`
+      registryCode += `export { ${item.fnName} as ${item.id} } from '${getRegistryRelPath(item.file)}'\n`
     })
     await fs.outputFile(buildRegistryFile, registryCode)
 
