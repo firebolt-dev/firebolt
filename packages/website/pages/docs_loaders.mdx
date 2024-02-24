@@ -3,28 +3,19 @@ export { components } from '../components/docs-components'
 
 # Loaders
 
-Loaders let you fetch data securely from a database (or anywhere else) directly inside a page or component using the `useData` hook:
+Loaders let you fetch data securely from a database (or anywhere else) using the [useData](/docs/ref/useData) hook:
 
 ```jsx title='components/City.js' lineNumbers
-import { Suspense } from 'react'
 import { useData } from 'firebolt'
 
-export default function City({ id }) {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <CityContent id={id} />
-    </Suspense>
-  )
-}
-
-function CityContent({ id }) {
+export function City({ id }) {
   const data = useData(getCity, id)
   const city = data.read()
   return (
-    <main>
+    <div>
       <h1>{city.name}</h1>
       <p>{city.description}</p>
-    </main>
+    </div>
   )
 }
 
@@ -33,67 +24,36 @@ export async function getCity(req, id) {
 }
 ```
 
-Loaders work seamlessly from anywhere in your app and can be used during both server rendering or on the client.
+Loaders can be placed in any page or component and work seamlessly with server side rendering and on the client.
 
-The [Request](/docs/ref/request) object provides utilities to get/set cookies and perform redirects, and you can inject your own utilities such as your database from your [Config](/docs/ref/config) file.
+## Loader Functions
 
-Loader functions are completely removed from client bundles and will not be visible in any client bundles.
+Loader functions are provided a [Request](/docs/ref/request) object that provides access to cookies, setting data expiration and performing redirects.
 
-## Invalidation
+You can decorate Request objects with access to your database or anything else you might need, in your [firebolt.config.js](/docs/ref/config) file.
 
-At any time you can invalidate data and it will be refetched in the background. This won't trigger Suspense boundaries and your UI will automatically update with the new data.
+## Suspense & Error Boundaries
 
-```jsx
-const data = useData(getCity, '123')
-// later on...
-data.invalidate()
-```
+Calling `data.read()` throws a promise to Suspense boundaries for loading UI while data is being fetched.
 
-You can also update or invalidate any specific data across your entire app using the [useCache](/docs/ref/useCache) hook.
+If your Loader fails you can catch it with an `<ErrorBoundary>` to display an error message.
 
----
+```jsx title='pages/cities_$cityId.js' lineNumbers
+import { Suspense } from 'react'
+import { ErrorBoundary, useLocation } from 'firebolt'
 
-## TODO: move the following to refs docs
+import { City } from '../components/City'
 
-Loaders integrate perfectly with Suspense the way React intended. They work seamlessly via server streaming or on the client and you can load data anywhere in your hierarchy.
-
-## useData(fn, ...args)
-
-The first argument to the `useData` hook is the Loader function you want to call.
-
-Any additional arguments are passed to your Loader function and are also used to form a cache key for the data returned by that loader.
-These arguments can be used to signal your loader which data to load, but can also be used for tagging data that you might want to invalidate later.
-
-The `useData` hook returns a data resource:
-
-```jsx
-const data = useData(getTickets)
-const tickets = data.read()
-```
-
-In the example above, calling `data.read()` will throw a promise until the Loader responds with data. This triggers any Suspense boundaries and fallback/loading UI until the data is available.
-
-Data resources also have some utility methods for interacting with the cache:
-
-```jsx
-// invalidate data to be refetched in the background
-data.invalidate()
-
-// replace the data entirely
-data.set(newTickets)
-
-// edit the data
-data.edit(tickets => tickets.push(ticket))
-```
-
-## Loader
-
-The Loader function must be an async function exported from the current file OR an async function imported from somewhere else.
-
-When a Loader function is called, its first argument will be a `Request` object followed by any additional arguments you provided to the `useData` hook.
-
-```jsx
-export async function myLoader(req, someId, someOtherThing) {
-  // get and return some data...
+export function CityPage() {
+  const { cityId } = useLocation().params
+  return (
+    <ErrorBoundary fallback={<div>Error</div>}>
+      <Suspense fallback={<div>Loading...</div>}>
+        <City id={cityId} />
+      </Suspense>
+    </ErrorBoundary>
+  )
 }
 ```
+
+Loaders work with Suspense with the way React intended, and you can use them anywhere in your app hierarchy.

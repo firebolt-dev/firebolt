@@ -91,9 +91,7 @@ export default function Home() {
           }
         `}
       >
-        <h1 className='home-title'>
-          The React Framework for getting things done
-        </h1>
+        <h1 className='home-title'>The React Framework for Shipping</h1>
         <p className='home-tag'>
           Build anything for the web, easily, without any fuss.
         </p>
@@ -121,7 +119,7 @@ export default function Home() {
             <div className='home-feature-inner'>
               <h1>Micro Runtime</h1>
               <p>
-                Firebolt's ultra-compact 5KB runtime ensures your app has the
+                Firebolt's ultra-compact 10 KB runtime ensures your app has the
                 smallest overhead of any framework.
               </p>
             </div>

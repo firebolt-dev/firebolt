@@ -3,28 +3,22 @@ export { components } from '../components/docs-components'
 
 # Actions
 
-Actions allow you to interact with your database or other server side code directly inside your components using the `useAction` hook:
+Actions allow you to interact with your database or other server side code directly inside your components with the [useAction](/docs/ref/useAction) hook:
 
-```jsx title='components/NewsletterForm.js'
-import { useState } from 'react'
+```jsx title='components/Subscribe.js' lineNumbers
 import { useAction } from 'firebolt'
 
-export function NewsletterForm() {
-  const [email, setEmail] = useState('')
-  const [complete, setComplete] = useState(false)
-  const action = useAction(subscribe)
-  const submit = async () => {
-    setComplete(true)
-    await action(email)
+export function Subscribe() {
+  const exec = useAction(subscribe)
+  const submit = async form => {
+    const email = form.get('email')
+    await exec(email)
+    console.log('Subscribed!')
   }
   return (
     <form action={submit}>
-      <input
-        placeholder='Email address'
-        value={email}
-        onChange={e => setEmail(e.target.value)}
-      />
-      <button>Sign Up</button>
+      <input name='email' />
+      <button type='submit'>Subscribe</button>
     </form>
   )
 }
@@ -37,108 +31,8 @@ export async function subscribe(req, email) {
 }
 ```
 
-The [Request](/docs/ref/request) object provides utilities to get/set cookies and perform redirects, and you can inject your own utilities such as your database from your [Config](/docs/ref/config) file.
+## Action Functions
 
-Action functions are completely removed from client bundles and will not be visible in any client bundles.
+Action functions are provided a [Request](/docs/ref/request) object that provides access to cookies and performing redirects.
 
----
-
-# TODO: move to refs
-
-# Actions
-
-Actions let you interact with data securely from your database (or anything else) directly inside your components. Loader and Action functions are almost identical in behavior.
-
-```jsx title='components/TodoInput.js' lineNumbers
-import { useState } from 'react'
-import { useAction, useCache } from 'firebolt'
-
-export function TodoInput() {
-  const [text, setText] = useState('')
-  const action = useAction(createTodo)
-  const cache = useCache()
-  const create = async () => {
-    setText('')
-    const todo = await action(text)
-    cache.invalidate('listTodos')
-  }
-  return (
-    <form action={create}>
-      <input
-        type='text'
-        value={text}
-        onChange={e => setText(e.current.value)}
-      />
-      <button>Create</button>
-    </form>
-  )
-}
-
-export async function createTodo(req, text) {
-  const todo = {
-    id: req.uuid(),
-    text,
-  }
-  await req.db('todos').insert(todo)
-  return todo
-}
-```
-
-## useAction(fn)
-
-The first argument to the `useAction` hook is the Action function you want to call.
-
-The hook returns a single function that can be used to call your Action:
-
-```jsx
-const action = useAction(login)
-// then later on...
-const user = await action(email, password)
-```
-
-## Action
-
-The Action function must be an async function exported from the current file OR an async function imported from somewhere else.
-
-When a Loader function is called, its first argument will be a `Request` object, followed by any additional arguments you provided to the action.
-
-```jsx
-export async function login(req, email, password) {
-  const user = await req.db('users').where({ email }).first()
-  if (!user) req.error('Not authorized')
-  const valid = checkPassword(user.password, password)
-  if (!valid) req.error('Not authorized')
-  const auth = createAuthToken(user)
-  req.cookies.set('auth', auth)
-  return user
-}
-```
-
-## Request
-
-The Request object provides additional control over the request including redirects and cookie access.
-
-You can also decorate the Request object to add things like database access as seen earlier. This is done using [Middleware](/docs/middleware).
-
-### Cookies
-
-Actions can read and update cookies as needed. Firebolt has first class support for cookies with bi-directional synchronization that you can read more about on the [Cookies](/docs/cookies) page.
-
-```jsx
-// read a cookie
-const auth = req.cookies.get('auth')
-// update a cookie
-req.cookies.set('auth', auth)
-// remove a cookie
-req.cookies.set('auth', null)
-```
-
-### Redirects
-
-At any point inside an Action you can cancel the request and redirect the user somewhere else.
-
-```jsx
-req.redirect('/login')
-```
-
-Note that calling `redirect()` will throw the request, which will cancel the call stack in its tracks!
+You can decorate Request objects with access to your database or anything else you might need, in your [firebolt.config.js](/docs/ref/config) file.

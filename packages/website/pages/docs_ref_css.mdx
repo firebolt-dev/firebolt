@@ -3,7 +3,7 @@ export { components } from '../components/docs-components'
 
 # css
 
-The `css` tagged template literal, while not required, makes it easier to write and format CSS-in-JS:
+The `css` tagged template literal is a simple but powerful way to add styles in your Firebolt app:
 
 ```jsx lineNumbers
 import { css } from 'firebolt'
@@ -20,5 +20,23 @@ export function MyComponent() {
   )
 }
 ```
+
+## Local vs Global
+
+Adding styles to an element using the `css` prop creates local styles that are scoped to the element and its children.
+
+To insert global styles, use a regular `<style>` element with the `global` prop like this:
+
+```jsx
+<style
+  global={css`
+    :root {
+      background-color: blue;
+    }
+  `}
+/>
+```
+
+## Syntax Highlighting
 
 If you're using VSCode you can install the `vscode-styled-components` extension to get proper CSS syntax highlighting in your editor.

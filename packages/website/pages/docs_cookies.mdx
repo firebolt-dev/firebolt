@@ -3,30 +3,30 @@ export { components } from '../components/docs-components'
 
 # Cookies
 
-Firebolt runs on both the server and in the browser. Cookies are perfect for storing auth, themes and other user preferences because they are available in both places.
+Cookies are perfect for storing auth, themes and other user preferences because they are available on both the server and client.
 
-We make it easier to work with cookies from anywhere in your app, and even if you modify a cookie from the server any UI observing that cookie will instantly update itself.
+We made it easy to work with cookies anywhere in your app with bi-directional synchronization. When you modify a cookie on the server all UI that was observing that cookie will also be updated, instantly.
 
 ```jsx title='pages/index.js' lineNumbers
-import { useCookie } from 'firebolt'
+import { useCookie, useAction } from 'firebolt'
 
 export default function Home() {
-  const [theme, setTheme] = useCookie('theme')
-  const action = useAction(setThemeOnServer)
+  const [theme, setLocalTheme] = useCookie('theme')
+  const setServerTheme = useAction(updateTheme)
   return (
     <div>
       <p>Theme: {theme || 'system'}</p>
-      <div onClick={() => setTheme('light')}>Light</div>
-      <div onClick={() => setTheme('dark')}>Dark</div>
-      <div onClick={() => setTheme(null)}>System</div>
-      <div onClick={() => setThemeOnServer('light')}>Light (Server)</div>
-      <div onClick={() => setThemeOnServer('dark')}>Dark (Server)</div>
-      <div onClick={() => setThemeOnServer(null)}>System (Server)</div>
+      <div onClick={() => setLocalTheme('light')}>Light</div>
+      <div onClick={() => setLocalTheme('dark')}>Dark</div>
+      <div onClick={() => setLocalTheme(null)}>System</div>
+      <div onClick={() => setServerTheme('light')}>Light (Server)</div>
+      <div onClick={() => setServerTheme('dark')}>Dark (Server)</div>
+      <div onClick={() => setServerTheme(null)}>System (Server)</div>
     </div>
   )
 }
 
-export async function setThemeOnServer(req, theme) {
+export async function updateTheme(req, theme) {
   req.cookies.set('theme', theme)
 }
 ```
@@ -34,43 +34,3 @@ export async function setThemeOnServer(req, theme) {
 The example above demonstrates how it doesn't matter where you modify a cookie, the UI will always reflect the truth.
 
 To learn more about accessing cookies, check out the [useCookie](/docs/ref/useCookie) and [Request](/docs/ref/request) docs.
-
-## TODO: move to useCookie refs etc
-
-## useCookie(name)
-
-The `useCookie` hook works similar to React's `useState` hook:
-
-```jsx
-const [count, setCount] = useCookie('count', 0)
-```
-
-The second argument allows you set the default value if there is no cookie.
-
-If a cookie isn't set its value will be `null` and setting a cookie to `null` will remove it.
-
-## Options
-
-When updating a cookie, you can supply an additional options object for the cookie:
-
-```jsx
-setCount(count => count + 1, { expires: 30 })
-```
-
-And from a Request like so:
-
-```jsx
-req.cookies.set('auth', authToken, { expires: 30 })
-```
-
-Here are all of the options you can use:
-
-| Key        | Type          | Default | Note                           |
-| ---------- | ------------- | ------- | ------------------------------ |
-| `expires`  | `Numer\|Date` | `null`  | Numbers are treated as days    |
-| `path`     | `String`      | `/`     |                                |
-| `domain`   | `String`      | `null`  |                                |
-| `secure`   | `Boolean`     | `false` |                                |
-| `sameSite` | `Enum`        | `lax`   | Can also be `strict` or `none` |
-
-By default all cookies are session based, but you can change your app wide defaults in your [Config](/docs/config) file.

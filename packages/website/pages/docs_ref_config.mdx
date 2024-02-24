@@ -73,9 +73,11 @@ export default function config() {
 }
 ```
 
-## Cookie Default Options
+## Cookie Defaults
 
-Cookies default to using session storage, but you can change them globally here:
+When updating cookies in your app, if you don't provide any options they will expire after the current session by default.
+
+To change this you can configure your default cookie options here instead of having to specify options everywhere else in your app.
 
 ```jsx
 export default function config() {
