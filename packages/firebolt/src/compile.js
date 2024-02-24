@@ -74,6 +74,8 @@ export async function compile(opts) {
   }
   let clientEntryPoints = []
 
+  const registry = new Map() // id -> { file, fnName }
+
   log.intro()
 
   async function build() {
@@ -360,7 +362,8 @@ export async function compile(opts) {
       await fs.outputFile(route.shimFile, code)
     }
 
-    const registry = {} // [id]: { file, fnName }
+    // clear the registry for rebuilds, keeping the reference for registryPlugin.
+    registry.clear()
 
     // build client bundles (pages + chunks + bootstrap)
     const publicDir = path.join(buildDir, 'public')
@@ -460,14 +463,10 @@ export async function compile(opts) {
 
     // generate our registry file
     const getRegistryRelPath = file => path.relative(buildDir, file)
-    const registryCode = `
-      ${Object.keys(registry)
-        .map(
-          id =>
-            `export { ${registry[id].fnName} as ${id} } from '${getRegistryRelPath(registry[id].file)}'`
-        )
-        .join('\n')}      
-    `
+    let registryCode = ''
+    registry.forEach(item => {
+      registryCode += `export { ${item.fnName} as ${item.id} } from '${getRegistryRelPath(item.file)}'`
+    })
     await fs.outputFile(buildRegistryFile, registryCode)
 
     // build server entry

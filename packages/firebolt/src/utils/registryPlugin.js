@@ -135,7 +135,11 @@ async function transform({ modPath, imports, contents, hook, registry }) {
   // register id to its file and function name
   if (registry) {
     for (const item of fnInfo) {
-      registry[item.id] = { file: item.file, fnName: item.name }
+      registry.set(item.id, {
+        id: item.id,
+        file: item.file,
+        fnName: item.name,
+      })
     }
   }
 
