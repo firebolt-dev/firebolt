@@ -1,13 +1,13 @@
 export { DocsPage as default } from '../components/DocsPage'
-export { components } from '../components/DocsMarkdown'
+export { components } from '../components/docs-components'
 
 # Loaders
 
-Loaders let you fetch data securely from your database (or anywhere else) directly inside your components. You don't need to build an API or understand how React Server Components work.
+Loaders let you fetch data securely from a database (or anywhere else) directly inside a page or component using the `useData` hook:
 
 ```jsx title='components/City.js' lineNumbers
 import { Suspense } from 'react'
-import { useLocation, useData } from 'firebolt'
+import { useData } from 'firebolt'
 
 export default function City({ id }) {
   return (
@@ -21,7 +21,7 @@ function CityContent({ id }) {
   const data = useData(getCity, id)
   const city = data.read()
   return (
-    <main css='border: 2px solid blue'>
+    <main>
       <h1>{city.name}</h1>
       <p>{city.description}</p>
     </main>
@@ -29,9 +29,31 @@ function CityContent({ id }) {
 }
 
 export async function getCity(req, id) {
-  return await req.db('cities').where({ id }).first()
+  return req.db('cities').where({ id }).first()
 }
 ```
+
+Loaders work seamlessly from anywhere in your app and can be used during both server rendering or on the client.
+
+The [Request](/docs/ref/request) object provides utilities to get/set cookies and perform redirects, and you can inject your own utilities such as your database from your [Config](/docs/ref/config) file.
+
+Loader functions are completely removed from client bundles and will not be visible in any client bundles.
+
+## Invalidation
+
+At any time you can invalidate data and it will be refetched in the background. This won't trigger Suspense boundaries and your UI will automatically update with the new data.
+
+```jsx
+const data = useData(getCity, '123')
+// later on...
+data.invalidate()
+```
+
+You can also update or invalidate any specific data across your entire app using the [useCache](/docs/ref/useCache) hook.
+
+---
+
+## TODO: move the following to refs docs
 
 Loaders integrate perfectly with Suspense the way React intended. They work seamlessly via server streaming or on the client and you can load data anywhere in your hierarchy.
 
@@ -75,47 +97,3 @@ export async function myLoader(req, someId, someOtherThing) {
   // get and return some data...
 }
 ```
-
-## Request
-
-The Request object provides additional control over the request including redirects and cookie access.
-
-You can also decorate the Request object to add things like database access as seen earlier. This is done using [Middleware](/docs/middleware).
-
-### Expire
-
-By default loader data will be cached until the user leaves, but if you need to you can set it to expire after a certain amount of time.
-
-When data expires it becomes invalidated. If any component is observing that data it will be refetched in the background and automatically updated, it won't trigger any suspense fallback UI etc.
-If no components are observing the data then the next time the data becomes observed it will trigger the usual suspense flow with any fallback UI.
-
-```jsx
-export async function getTickets(req) {
-  const tickets = await req.db('tickets')
-  req.expire(60) // data will become invalidated in 60 seconds
-  return tickets
-}
-```
-
-### Cookies
-
-Loaders can read and update cookies as needed. Firebolt has first class support for cookies with bi-directional synchronization that you can read more about on the [Cookies](/docs/cookies) page.
-
-```jsx
-// read a cookie
-const auth = req.cookies.get('auth')
-// update a cookie
-req.cookies.set('auth', auth)
-// remove a cookie
-req.cookies.set('auth', null)
-```
-
-### Redirects
-
-At any point inside a Loader you can cancel the request and redirect the user somewhere else.
-
-```jsx
-req.redirect('/login')
-```
-
-Note that calling `redirect()` will throw the request, which will cancel the call stack in its tracks!

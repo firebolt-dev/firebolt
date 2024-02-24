@@ -1,49 +1,50 @@
 export { DocsPage as default } from '../components/DocsPage'
-export { components } from '../components/DocsMarkdown'
+export { components } from '../components/docs-components'
 
-# Getting Started
+# Introduction
 
-This guide will get you familiar with Firebolt and show you how to quickly and easily create any kind of website, blog or web app. Firebolt is built with simplicity in mind and its goal is to reduce the amount of complexity without also reducing functionality.
+Firebolt is a full featured React framework that will help you spend more time building your product and less time dealing with complexity.
+It does this by providing a minimal set of well thought out features that can be used together to easily create websites, docs, blogs or apps for the web.
 
-## Installation
+## It's just React
 
-First lets create a new project using the Firebolt CLI:
+Firebolt stays within the realm of React without introducing too many complex, framework specific rules and conventions.
+Most of your time will be spent creating regular React components and composing them together to form the hierarchy of your app.
 
-```bash
-npx create-firebolt@latest
-```
+Thanks to all of the new features in React 19, building web apps has become even more intuitive, and much like the official React docs, once you have a basic understanding of Firebolt you'll rarely need to come back to these docs again.
 
-You'll be prompted for a project name and the CLI will create a project for you in a directory with the same name.
+## Server Side Streaming
 
-## Structure
+Firebolt takes full advantage of React server side streaming to ensure your app loads faster than ever before. Users will see the HTML for a page instantly, before any JavaScript runs.
 
-A brand new Firebolt project looks like this:
+When you need to load dynamic data you can reap all of the benefits of Suspense using [Loaders](/docs/loaders) anywhere you need. Parallel streaming provides the absolute fastest way to get dynamic content in front of your users.
 
-```
-my-app/
-├─ components/
-│  └─ Document.js
-├─ pages/
-│  └─ index.js
-├─ public/
-├─ firebolt.config.js
-└─ package.json
-```
+In addition to this, server side streaming makes it easy to maintain good SEO and support for social sharing with OpenGraph and Twitter meta tags.
 
-The `components` directory is where you create your React components. The only required file in here is `Document.js` which is used to generate the `<html>` shell of your app.
+## Data Access
 
-The `pages` directory is where you'll put all of your pages. There's nothing special about these files other than the filename format which you'll soon see, they are just regular old React components too.
+Firebolt introduces a new (simple) way to interact with databases and other sources of data directly inside any page or component with [Loaders](/docs/loaders) and [Actions](/docs/actions).
+These features work seamlessly on both the server and client and take full advantage of Suspense.
 
-The `public` folder is where you can put all of your public assets such as a robots file and favicons etc.
+You can create entire apps without writing a single API endpoint. For apps that still need to provide a public API to their users, we have [API Routes](/docs/api-routes).
 
-The `firebolt.config.js` file lets you configure the way Firebolt runs. This includes adding middleware, changing ports, sourcemaps and MDX options.
+## CSS-in-JS
 
-## Development
+Firebolt includes first-class support for CSS-in-JS that works out of the box with Server Side Rendering and Parallel Streaming.
+While other frameworks include flaky support with complex workarounds, we offer best in class styling from the moment you create your project.
 
-Run the following to start your app in development mode
+## Cookies
 
-```bash
-npm run dev
-```
+For code that runs on both the server and in the browser, cookies are the perfect fit. They're so useful that we decided to bake bi-directional synchronization of cookies into the framework. This means that when you update a cookie on the server, any UI observing that cookie will automatically update too.
 
-Open your app in the browser and then edit some code in `pages/index.js` to see your changes.
+## Markdown
+
+If you're building documentation or a blog, it's much easier to write that content using markdown. Because of this, Firebolt boasts first class support for MDX pages with wrappers and custom elements.
+
+## Summary
+
+Firebolt is a "component first" framework which means that most (if not all) of your time will be spent creating and composing components that directly provide value to your users.
+
+Each component can generate all of the HTML, Styles and Data that it needs with little to no external dependencies.
+
+Building Firebolt apps is simple, fun and productive!

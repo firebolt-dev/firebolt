@@ -1,0 +1,61 @@
+export { DocsPage as default } from '../components/DocsPage'
+export { components } from '../components/docs-components'
+
+# Quick Start
+
+This guide will get you familiar with Firebolt and show you how to quickly and easily create any kind of site for the web. Firebolt is built with simplicity in mind and its goal is to reduce the amount of complexity without also reducing functionality.
+
+## Installation
+
+First lets create a new project using the Firebolt CLI:
+
+```bash
+npm create firebolt@latest
+```
+
+You'll be asked to enter a project name and the CLI will create a project for you in a directory with the same name.
+
+## Structure
+
+A brand new Firebolt project looks like this:
+
+```
+my-app/
+├─ components/
+│  └─ Document.js
+├─ pages/
+│  └─ index.js
+├─ public/
+├─ firebolt.config.js
+└─ package.json
+```
+
+### Components
+
+The `components` directory is where you'll put all of your React components.
+
+The only required component is the `components/Document.js` file which will be used to generate the `<html>` shell of your app.
+
+### Pages
+
+The `pages` directory is where you put all of your pages. Pages work exactly the same as Components, the only difference is the filename format used for routing.
+
+Pages don't have any magical exports for loading metadata or initial props, instead you'll use [Loaders](/docs/loaders) with Suspense as it was intended to be used.
+
+### Public
+
+The `public` folder is for all of your public assets such as a robots file, favicons, images, etc.
+
+### Config
+
+The `firebolt.config.js` file lets you configure the way Firebolt runs, including adding middleware, changing ports, toggling production sourcemaps and configuring MDX plugins.
+
+## Development
+
+Inside your project folder you can start the app in development mode:
+
+```bash
+npm run dev
+```
+
+Open your app in the browser to view it, and make any changes to files in your project to trigger a rebuild.

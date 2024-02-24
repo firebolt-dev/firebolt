@@ -1,5 +1,49 @@
 export { DocsPage as default } from '../components/DocsPage'
-export { components } from '../components/DocsMarkdown'
+export { components } from '../components/docs-components'
+
+# Actions
+
+Actions allow you to interact with your database or other server side code directly inside your components using the `useAction` hook:
+
+```jsx title='components/NewsletterForm.js'
+import { useState } from 'react'
+import { useAction } from 'firebolt'
+
+export function NewsletterForm() {
+  const [email, setEmail] = useState('')
+  const [complete, setComplete] = useState(false)
+  const action = useAction(subscribe)
+  const submit = async () => {
+    setComplete(true)
+    await action(email)
+  }
+  return (
+    <form action={submit}>
+      <input
+        placeholder='Email address'
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+      />
+      <button>Sign Up</button>
+    </form>
+  )
+}
+
+export async function subscribe(req, email) {
+  await req.db('subscribers').insert({
+    id: req.uuid(),
+    email,
+  })
+}
+```
+
+The [Request](/docs/ref/request) object provides utilities to get/set cookies and perform redirects, and you can inject your own utilities such as your database from your [Config](/docs/ref/config) file.
+
+Action functions are completely removed from client bundles and will not be visible in any client bundles.
+
+---
+
+# TODO: move to refs
 
 # Actions
 

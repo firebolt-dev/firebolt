@@ -153,6 +153,10 @@ function Main() {
 
         // general
 
+        p {
+          line-height: 1.5;
+        }
+
         pre {
           margin: 0;
         }

@@ -1,0 +1,90 @@
+export { DocsPage as default } from '../components/DocsPage'
+export { components } from '../components/docs-components'
+
+# firebolt.config.js
+
+The Firebolt config file allows you to change the way your app is configured.
+
+```jsx
+export default function config() {
+  return {
+    // your config here
+  }
+}
+```
+
+## Port
+
+Set the port that your app will be served from:
+
+```jsx
+export default function config() {
+  return {
+    port: process.env.PORT || 3000,
+  }
+}
+```
+
+If no port is set, Firebolt will pick an available port starting from `3000`
+
+## Source Maps
+
+Production builds don't include source maps in client bundles by default, but you can enable them with this setting if needed:
+
+```jsx
+export default function config() {
+  return {
+    productionBrowserSourceMaps: true,
+  }
+}
+```
+
+## Middleware
+
+Use middleware to decorate the [Request](/docs/ref/request) object that is passed to all [Loaders](/docs/loaders) and [Actions](/docs/actions):
+
+```jsx
+import db from './db'
+
+export default function config() {
+  return {
+    middleware(req) {
+      req.db = db
+    },
+  }
+}
+```
+
+## MDX Plugins
+
+By default MDX is not configured to use any plugins but you can configure them here to add additional behavior:
+
+```jsx
+import remarkGFM from 'remark-gfm'
+import rehypeShiki from '@shikijs/rehype'
+
+export default function config() {
+  return {
+    mdx: {
+      remarkPlugins: [remarkGFM],
+      rehypePlugins: [rehypeShiki],
+    },
+  }
+}
+```
+
+## Cookie Default Options
+
+Cookies default to using session storage, but you can change them globally here:
+
+```jsx
+export default function config() {
+  return {
+    cookie: {
+      expires: 30, // expire in 30 days
+    },
+  }
+}
+```
+
+See [useCookie](/docs/ref/useCookie) for all available options.

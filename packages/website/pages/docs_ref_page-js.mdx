@@ -1,15 +1,17 @@
 export { DocsPage as default } from '../components/DocsPage'
 export { components } from '../components/docs-components'
 
-# Pages
+# [page].js
 
-Add new pages to your app by creating a `.js` or `.mdx` file in the `pages` directory.
+Any `.js` file added to the `pages` directory is treated as a route in your app.
 
-```jsx title='pages/about.js' lineNumbers
-export default function About() {
-  return <h1>About Me</h1>
+```jsx title='pages/index.js' lineNumbers
+export default function Home() {
+  return <h1>Home Page</h1>
 }
 ```
+
+The default export is used as the component when people visit the page.
 
 ## Route Matching
 
@@ -32,4 +34,13 @@ Adding a `+` suffix to a dynamic route segment will match one or more parameters
 
 ## Route Params
 
-You can retrieve params for dynamic route segments anywhere in your app with the [useLocation](/docs/useLocation) hook
+You can retrieve params for dynamic routes anywhere in your app with the [useLocation](/docs/useLocation) hook:
+
+```jsx title='components/Post.js' lineNumbers
+import { useLocation } from 'firebolt'
+
+export function Post() {
+  const { postId } = useLocation().params
+  // ...
+}
+```

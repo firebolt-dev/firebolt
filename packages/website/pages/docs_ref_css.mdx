@@ -1,0 +1,24 @@
+export { DocsPage as default } from '../components/DocsPage'
+export { components } from '../components/docs-components'
+
+# css
+
+The `css` tagged template literal, while not required, makes it easier to write and format CSS-in-JS:
+
+```jsx lineNumbers
+import { css } from 'firebolt'
+
+export function MyComponent() {
+  return (
+    <div
+      css={css`
+        color: red;
+      `}
+    >
+      Firebolt
+    </div>
+  )
+}
+```
+
+If you're using VSCode you can install the `vscode-styled-components` extension to get proper CSS syntax highlighting in your editor.

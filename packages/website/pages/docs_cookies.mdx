@@ -1,13 +1,11 @@
 export { DocsPage as default } from '../components/DocsPage'
-export { components } from '../components/DocsMarkdown'
+export { components } from '../components/docs-components'
 
 # Cookies
 
-Firebolt runs on both the server and the browser, which makes cookies a big deal due to how they act as a storage mechanism available in both places at once.
+Firebolt runs on both the server and in the browser. Cookies are perfect for storing auth, themes and other user preferences because they are available in both places.
 
-Cookies are ideal for storing user data such as auth tokens, theme settings and other preferences.
-
-We've made cookies bi-directionally synchronized throughout the framework, meaning if you update a cookie on the server, you'll see any UI relying on that cookie update instantly.
+We make it easier to work with cookies from anywhere in your app, and even if you modify a cookie from the server any UI observing that cookie will instantly update itself.
 
 ```jsx title='pages/index.js' lineNumbers
 import { useCookie } from 'firebolt'
@@ -16,15 +14,15 @@ export default function Home() {
   const [theme, setTheme] = useCookie('theme')
   const action = useAction(setThemeOnServer)
   return (
-    <main>
-      <h1>Theme: {theme || 'system'}</h1>
-      <button onClick={() => setTheme('light')}>Light</button>
-      <button onClick={() => setTheme('dark')}>Dark</button>
-      <button onClick={() => setTheme(null)}>System</button>
-      <button onClick={() => setThemeOnServer('light')}>Light (Server)</button>
-      <button onClick={() => setThemeOnServer('dark')}>Dark (Server)</button>
-      <button onClick={() => setThemeOnServer(null)}>System (Server)</button>
-    </main>
+    <div>
+      <p>Theme: {theme || 'system'}</p>
+      <div onClick={() => setTheme('light')}>Light</div>
+      <div onClick={() => setTheme('dark')}>Dark</div>
+      <div onClick={() => setTheme(null)}>System</div>
+      <div onClick={() => setThemeOnServer('light')}>Light (Server)</div>
+      <div onClick={() => setThemeOnServer('dark')}>Dark (Server)</div>
+      <div onClick={() => setThemeOnServer(null)}>System (Server)</div>
+    </div>
   )
 }
 
@@ -33,7 +31,11 @@ export async function setThemeOnServer(req, theme) {
 }
 ```
 
-In this example, you can set cookies locally or remotely and the UI will update as if by magic!
+The example above demonstrates how it doesn't matter where you modify a cookie, the UI will always reflect the truth.
+
+To learn more about accessing cookies, check out the [useCookie](/docs/ref/useCookie) and [Request](/docs/ref/request) docs.
+
+## TODO: move to useCookie refs etc
 
 ## useCookie(name)
 

@@ -1,0 +1,48 @@
+export { DocsPage as default } from '../components/DocsPage'
+export { components } from '../components/docs-components'
+
+# useCookie
+
+The `useCookie` hook provides the value of a cookie and a setter to update it, much like Reacts `useState` hook.
+
+```jsx
+const [value, setValue] = useCookie('theme')
+```
+
+You can then update the cookie like this:
+
+```jsx
+setValue('dark')
+```
+
+Or using atomic updates:
+
+```jsx
+setValue(value => value + 1)
+```
+
+## Synchronization
+
+When observing a cookie, if you were to update it on the server from a [Request](/docs/ref/request) object, the UI on the client will also update to reflect those changes.
+
+## Options
+
+When setting a cookie value you can also provide an options object as the second argument:
+
+```jsx
+setValue(authToken, { expires: 30 })
+```
+
+These are the available options:
+
+| Key        | Type          | Default | Note                           |
+| ---------- | ------------- | ------- | ------------------------------ |
+| `expires`  | `Numer\|Date` | `null`  | Numbers are treated as days    |
+| `path`     | `String`      | `/`     |                                |
+| `domain`   | `String`      | `null`  |                                |
+| `secure`   | `Boolean`     | `false` |                                |
+| `sameSite` | `Enum`        | `lax`   | Can also be `strict` or `none` |
+
+## Global Defaults
+
+By default cookies will use session storage but you can change the defaults for all cookies in your [firebolt.config.js](/docs/ref/config) file.

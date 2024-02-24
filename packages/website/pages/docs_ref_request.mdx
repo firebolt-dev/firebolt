@@ -1,0 +1,50 @@
+export { DocsPage as default } from '../components/DocsPage'
+export { components } from '../components/docs-components'
+
+# Request
+
+Both [Loader](/docs/ref/useData) and [Action](/docs/ref/useAction) functions receive a `Request` object as their first argument.
+
+The Request object provides utilities such as cookie management and redirects, but more importantly you can decorate it with access to a database or anything else you might need. See [firebolt.config.js](/docs/ref/config) to learn more.
+
+## .expire(seconds)
+
+Can only be used in a Loader Function.
+
+By default data fetched from a Loader will be cached until the user leaves or refreshes. For data that changes often you can set it to expire after a certain amount of time.
+
+Once data expires it becomes invalidated. Any component observing that data will have it re-fetched in the background and automatically updated. No Suspense boundaries will be triggered.
+If no components are observing the data then the next time the data is read will trigger the usual Suspense flow with loading UI etc.
+
+```jsx
+export async function getTickets(req) {
+  const tickets = await req.db('tickets')
+  req.expire(60) // data will become invalidated after 60 seconds
+  return tickets
+}
+```
+
+## Cookies
+
+Both Loaders and Actions can read and update cookies as needed. Any changes to cookies here will automatically propagate back to the client and update any UI that is observing its value.
+
+```jsx
+// read a cookie
+const auth = req.cookies.get('auth')
+
+// update a cookie
+req.cookies.set('auth', auth)
+
+// remove a cookie
+req.cookies.set('auth', null)
+```
+
+## Redirects
+
+At any point inside a Loader or Action you can cancel the request and redirect the user somewhere else.
+
+```jsx
+req.redirect('/login')
+```
+
+The `redirect()` function needs to throw the request so be sure not to catch it.

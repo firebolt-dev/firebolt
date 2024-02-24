@@ -21,7 +21,7 @@ export function Header() {
         padding: 0 20px;
         .header-inner {
           width: 100%;
-          max-width: 1275px;
+          max-width: 1100px;
           margin: 0 auto;
           height: 70px;
           display: flex;

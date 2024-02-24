@@ -1,0 +1,34 @@
+export { DocsPage as default } from '../components/DocsPage'
+export { components } from '../components/docs-components'
+
+# useCache
+
+The `useCache` hook lets you interact with data cached by a [Loader](/docs/loaders).
+
+Any component observing data that becomes invalidated will be refetched in the background and automatically updated. No suspense boundaries will be triggered.
+
+When no components are observing that data then the next time the data is read it will trigger the usual Suspense flow with fallback UI etc.
+
+## .invalidate(str)
+
+Invalidates all loaders that use `str` as one of their arguments.
+
+If you used a Loader like this somewhere in your app:
+
+```jsx
+const data = useData(getCitiesWithTags, 'tech-hub', 'night-life')
+```
+
+You can invalidate its data by calling
+
+```jsx
+cache.invalidate('tech-hub')
+```
+
+## .invalidate(predicateFn)
+
+Invalidates loaders where the predicateFn returns true, for example:
+
+```jsx
+cache.invalidate(args => args.includes('night-life'))
+```

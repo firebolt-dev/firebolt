@@ -17,11 +17,11 @@ export function DocsPage({ title, description, children }) {
           .docs-nav {
             width: 240px;
           }
-          /* .docs-nav-title {
+          .docs-section {
             font-size: 18px;
             font-weight: 700;
-            margin: 0 0 12px;
-          } */
+            margin: 32px 0 12px;
+          }
           .docs-nav-link {
             margin-left: -12px;
             display: flex;
@@ -42,18 +42,36 @@ export function DocsPage({ title, description, children }) {
         `}
       >
         <div className='docs-nav'>
-          <NavLink label='Getting Started' to='/docs' />
+          <NavLink label='Introduction' to='/docs' />
+          <NavLink label='Quick Start' to='/docs/quick-start' />
           <NavLink label='Document' to='/docs/document' />
           <NavLink label='Pages' to='/docs/pages' />
           <NavLink label='Styles' to='/docs/styles' />
           <NavLink label='Metadata' to='/docs/metadata' />
           <NavLink label='Loaders' to='/docs/loaders' />
           <NavLink label='Actions' to='/docs/actions' />
-          <NavLink label='Cache' to='/docs/cache' />
           <NavLink label='Cookies' to='/docs/cookies' />
-          <NavLink label='MDX' to='/docs/mdx' />
-          <NavLink label='API Routes' to='/docs/api-routes' />
           <NavLink label='Deployment' to='/docs/deployment' />
+
+          <div className='docs-section'>Reference</div>
+          <NavLink label='Document.js' to='/docs/ref/document' />
+          <NavLink label='firebolt.config.js' to='/docs/ref/config' />
+          <NavLink label='[page].js' to='/docs/ref/page-js' />
+          <NavLink label='[page].mdx' to='/docs/ref/page-mdx' />
+          <NavLink label='[api].js' to='/docs/ref/api-js' />
+          <NavLink label='useLocation' to='/docs/ref/useLocation' />
+          <NavLink label='useCookie' to='/docs/ref/useCookie' />
+          <NavLink label='useData' to='/docs/ref/useData' />
+          <NavLink label='useAction' to='/docs/ref/useAction' />
+          <NavLink label='useCache' to='/docs/ref/useCache' />
+          <NavLink label='<Link>' to='/docs/ref/link' />
+          <NavLink label='Request' to='/docs/ref/request' />
+          <NavLink label='css' to='/docs/ref/css' />
+          <NavLink label='cls' to='/docs/ref/cls' />
+
+          <div className='docs-section'>Guides</div>
+          <NavLink label='Theme toggles' to='/docs/guides/theme-toggles' />
+          <NavLink label='Deploy to fly.io' to='/docs/guides/deploy-to-fly' />
         </div>
         <div className='docs-content'>{children}</div>
       </div>

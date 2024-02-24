@@ -1,6 +1,18 @@
 export { DocsPage as default } from '../components/DocsPage'
-export { components } from '../components/DocsMarkdown'
+export { components } from '../components/docs-components'
 
 # Deployment
 
-TODO
+When you're ready to deploy your app to production you'll want to build it:
+
+```bash
+npm run build
+```
+
+This will create an optimized build of your app that can be started with:
+
+```bash
+npm run start
+```
+
+Check out our [Deploy to fly.io](/docs/guides/deploy-to-fly) guide for an example on how to Dockerize a Firebolt app and quickly deploy it to a production environment.

@@ -46,7 +46,6 @@ export const components = {
       <p
         css={css`
           margin: 0 0 16px;
-          line-height: 1.6;
         `}
         {...props}
       />
@@ -172,24 +171,27 @@ export const components = {
       <code
         className={`${props.className || ''}`}
         css={css`
-          font-size: 14px;
           font-family: 'Roboto Mono', monospace;
           font-weight: 400;
           // inline code
           :not(pre) & {
+            display: inline-block;
             background: var(--inline-code-bg);
-            padding: 2px 5px;
+            padding: 3px 6px;
             border-radius: 6px;
-            line-height: 1;
+            line-height: 1.2;
             white-space: nowrap;
+            font-size: 0.9em;
           }
           // block code
           pre & {
+            display: inherit;
             background: none;
             padding: 0;
             border-radius: 0;
             line-height: 1.6;
             white-space: inherit;
+            font-size: inherit;
           }
         `}
       >

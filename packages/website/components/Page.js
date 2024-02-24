@@ -34,7 +34,7 @@ export function Page({ title, children }) {
         <div
           css={css`
             width: 100%;
-            max-width: 1275px;
+            max-width: 1100px;
             margin: 0 auto;
           `}
         >

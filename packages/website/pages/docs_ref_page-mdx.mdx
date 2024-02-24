@@ -1,0 +1,85 @@
+export { DocsPage as default } from '../components/DocsPage'
+export { components } from '../components/docs-components'
+
+# [page].mdx
+
+Any `.mdx` file added to the `pages` directory is treated as an MDX route in your app.
+
+```mdx title='pages/docs_intro.mdx' lineNumbers
+# Intro
+
+This is an intro page written using markdown.
+```
+
+## Wrappers
+
+If your `.mdx` file has a default export, it will be used as a wrapper component. This is useful for shared layouts.
+
+```jsx title='components/DocsPage.js' lineNumbers
+export function DocsPage({ children }) {
+  return (
+    <div
+      css={css`
+        display: flex;
+        nav {
+          width: 400px;
+        }
+        main {
+          flex: 1;
+        }
+      `}
+    >
+      <nav>{/* links etc */}</nav>
+      <main>{children}</main>
+    </div>
+  )
+}
+```
+
+```mdx title='pages/docs_intro.mdx' lineNumbers
+export { DocsPage as default } from '../components/DocsPage'
+
+# Intro
+
+This page is wrapped with the `DocsPage` component.
+```
+
+## Components
+
+By default MDX will use default elements such as `<h1>` and `<p>` but you can override these with a `components` export.
+
+```jsx title='components/docs-components.js' lineNumbers
+export const components = {
+  h1(props) {
+    return <h1 {...props} css='color:blue' />
+  },
+}
+```
+
+```mdx title='pages/docs_intro.mdx' lineNumbers
+export { components } from '../components/docs-components.js'
+
+# Intro
+
+The title of this page is blue!
+```
+
+This is useful for many things including applying syntax highlighting to code blocks or converting `<a>` tags to use `<Link>` instead.
+
+## MDX Plugins
+
+You can enhance MDX even more with plugins for Syntax Highlighting and Github Flavored Markdown etc using remark/rehype plugins in your [Config](/docs/ref/config) file.
+
+```jsx title='firebolt.config.js' lineNumbers
+import remarkGFM from 'remark-gfm'
+import rehypeShiki from '@shikijs/rehype'
+
+export default function config() {
+  return {
+    mdx: {
+      remarkPlugins: [remarkGFM],
+      rehypePlugins: [rehypeShiki],
+    },
+  }
+}
+```

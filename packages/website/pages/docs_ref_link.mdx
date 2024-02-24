@@ -1,0 +1,24 @@
+export { DocsPage as default } from '../components/DocsPage'
+export { components } from '../components/docs-components'
+
+# \<Link\>
+
+The `<Link>` component is a utility that extends the `<a>` element to provide page pre-fetching and navigation.
+
+## Props
+
+### href
+
+The path or URL to navigate to. Required.
+
+### replace
+
+Whether to replace the current route with this one instead of adding a new history item. Defaults to `false`.
+
+### scroll
+
+Whether to scroll to the top of the page when navigating. Defaults to `true`
+
+### prefetch
+
+Whether to prefetch the bundle for this page before the user clicks. Defaults to `true`.

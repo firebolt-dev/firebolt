@@ -1,0 +1,70 @@
+export { DocsPage as default } from '../components/DocsPage'
+export { components } from '../components/docs-components'
+
+# useData
+
+The `useData` hook allows you to fetch data from a Loader Function which is simply any function that you write alongside your component. Loader Functions have access to server-only resources such as databases that you provide and their code is never exposed to the browser.
+
+```jsx title='components/Profile.js' lineNumbers
+import { useData } from 'firebolt'
+
+export function Profile({ userId }) {
+  const data = useData(getUser, userId)
+  const user = data.read()
+  return (
+    <div>
+      <div>Name: {user.name}</div>
+    </div>
+  )
+}
+
+export async function getUser(req, id) {
+  return await req.db('users').where({ id }).first()
+}
+```
+
+The component above loads a users data using the `getUser` function and then displays their name.
+
+## useData(loaderFn, ...args)
+
+The first argument must be your Loader Function.
+
+Any additional arguments will be passed to the loader function. These arguments are also used to construct a cache key for the data that the function returns and allows you to invalidate or update data in the cache manually.
+
+The `useData` hook returns a data loader instance specific to the data being loaded.
+
+## Loader Function
+
+The loader function must be an async function exported from the same file OR an imported async function.
+
+The first argument provided is a [Request](/docs/ref/request) object that provides utilities to access cookies, set a data expiration or redirect users. You can also decorate the Request object with things such as access to your database, from your [firebolt.config.js](/docs/ref/config) file.
+
+Any additional arguments from the `useData` function will be passed as additional arguments to your loader function.
+
+## data.read()
+
+Fetchs data using the Loader Function and the provided arguments. Firebolt seamlessly handles calling your Loader Function during server-side rendering or on the client behind the scenes.
+
+When `data.read()` is called in the example above, if there is no data in the cache it will throw a promise triggering any Suspense boundaries you have set up to display loading UI until the data is fetched.
+
+Once the promise resolves the component will re-render and `data.read()` will return the actual data and the users name will be displayed.
+
+If the loader function fails, the promise will reject and the error will be thrown for an `<ErrorBoundary>` to catch and display custom error messages etc.
+
+## data.invalidate()
+
+After loading data you may want to refresh it. When data is invalidated it will be refetched in the background and then automatically update your UI. No Suspense boundaries are triggered during a background refetch.
+
+## data.set(newData)
+
+This method allows you to manually update the data stored in the cache and re-render any components observing that data with the `set` method.
+
+## data.edit(editFn)
+
+This method, for convenience allows you to make a partial update to your data and automatically handles immutability behind the scenes.
+
+```jsx
+data.edit(user => {
+  user.name = 'Bob'
+})
+```

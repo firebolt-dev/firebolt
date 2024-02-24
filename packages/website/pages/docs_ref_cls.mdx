@@ -1,0 +1,39 @@
+export { DocsPage as default } from '../components/DocsPage'
+export { components } from '../components/docs-components'
+
+# cls
+
+The `cls` function is a utility for managing dynamic classes in your components.
+
+```jsx lineNumbers
+import { css } from 'firebolt'
+
+export function Button({ label, active }) {
+  return (
+    <div className={cls('button', { active })}>
+      <span>{label}</span>
+    </div>
+  )
+}
+```
+
+## cls(...args)
+
+Each argument can either be a `String` or an `Object` to be evaluated. Anything else is skipped.
+
+A `String` argument will simply insert the value as a class.
+
+An `Object` argument will insert the keys as classes only if their value is truthy.
+
+Here are some examples:
+
+```jsx
+cls('button')
+// className='button'
+
+cls('button', { active: true })
+// className='button active'
+
+cls({ hover: true, active: false })
+// className='hover'
+```

@@ -1,0 +1,50 @@
+export { DocsPage as default } from '../components/DocsPage'
+export { components } from '../components/docs-components'
+
+# useAction
+
+The `useAction` hook allows you to fetch data from an Action Function which is simply any function that you write alongside your component. Action Functions have access to server-only resources such as databases that you provide and their code is never exposed to the browser.
+
+```jsx title='components/LikeButton.js' lineNumbers
+import { useState } from 'react'
+import { useAction } from 'firebolt'
+
+export function LikeButton({ postId }) {
+  const [liked, setLiked] = useState(false)
+  const exec = useAction(markLiked)
+  const like = async () => {
+    await exec(postId)
+    setLiked(true)
+  }
+  return (
+    <div>
+      {!liked && <div onClick={like}>Like</div>}
+      {liked && <div>You liked this post</div>}
+    </div>
+  )
+}
+
+export async function markLiked(req, postId) {
+  await req.db('likes').insert({ postId })
+}
+```
+
+The component above renders a `Like` button that when clicked, inserts data into the database.
+
+## useAction(actionFn)
+
+The first argument must be your Action Function.
+
+Returns an action execution function.
+
+## Action Function
+
+The action function must be an async function exported from the same file OR an imported async function.
+
+The first argument provided is a [Request](/docs/ref/request) object that provides utilities to access cookies and redirect users. You can also decorate the Request object with things such as access to your database, from your [firebolt.config.js](/docs/ref/config) file.
+
+## exec(...args)
+
+Calls your Action Function with the provided arguments. Firebolt seamlessly handles calling your Action Function on the server behind the scenes.
+
+Returns a promise that resolves with the return value of the Action Function.

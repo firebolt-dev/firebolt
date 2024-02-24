@@ -1,0 +1,47 @@
+export { DocsPage as default } from '../components/DocsPage'
+export { components } from '../components/docs-components'
+
+# useLocation
+
+The `useLocation` hook provides details about the current route and methods to redirect users to another location.
+
+## .url
+
+The base URL including any hash and query paramters, eg `/blog/123?foo=bar#trains`.
+
+## .pathname
+
+The path of the current URL, eg `/blog/123`
+
+## .hash
+
+The hash of the current URL, eg `#trains`
+
+## .params
+
+And object that includes both query parameters and dynamic route segment values.
+
+Given the page `pages/blog_$postId.js` and the url `/blog/123?foo=bar` then the params object would look like this:
+
+```js
+{
+  postId: '123',
+  foo: 'bar'
+}
+```
+
+## .push(href)
+
+Performs a client-side navigation, adding the new route.
+
+## .replace(href)
+
+Performs a client-side navigation, replacing the current route with the new route.
+
+## .back()
+
+Navigate back to the previous route in history.
+
+## .forward()
+
+Navigate forward to the next route in history.
