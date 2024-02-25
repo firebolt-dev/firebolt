@@ -3,8 +3,13 @@ import { cookieOptionsToExpress } from './cookies'
 export class Request {
   constructor(req) {
     this.url = req.url
-    this.cookies = new Cookies(req)
     this._expire = null
+    this._cookieData = req.cookies
+    this._cookieChanges = []
+  }
+
+  error(data, message) {
+    throw new RequestError(data, message)
   }
 
   expire(amount, unit = 'seconds') {
@@ -16,10 +21,6 @@ export class Request {
 
   redirect(url, type) {
     throw new RequestRedirect(url, type)
-  }
-
-  error(data, message) {
-    throw new RequestError(data, message)
   }
 
   applyRedirectToExpressResponse(redirect, res) {
@@ -43,6 +44,94 @@ export class Request {
       res.flush()
     }
   }
+
+  setCookie(key, value, options = defaultCookieOptions) {
+    // console.log('setCookie', { key, value, options })
+    if (value === null || value === undefined || value === '') {
+      this._cookieData[key] = null
+      this._cookieChanges.push({
+        type: 'remove',
+        key,
+      })
+    } else {
+      let data
+      try {
+        data = JSON.stringify(value)
+      } catch (err) {
+        return console.error(
+          `could not serialize cookie ${key} with value:`,
+          value
+        )
+      }
+      this._cookieData[key] = data
+      this._cookieChanges.push({
+        type: 'set',
+        key,
+        data,
+        options,
+      })
+    }
+  }
+
+  getCookie(key) {
+    let data = this._cookieData[key]
+    if (data === null || data === undefined || data === '') {
+      return null
+    }
+    let value
+    try {
+      value = JSON.parse(data)
+    } catch (err) {
+      console.error(`could not deserialize cookie ${key} with value:`, data)
+      return null
+    }
+    // console.log('getCookie', { key, value })
+    return value
+  }
+
+  getCookieChangedKeys() {
+    const keys = []
+    for (const change of this._cookieChanges) {
+      if (!keys.includes(change.key)) {
+        keys.push(change.key)
+      }
+    }
+    return keys
+  }
+
+  pushCookieChangesToResponse(res) {
+    for (const change of this._cookieChanges) {
+      if (change.type === 'set') {
+        let { key, data, options } = change
+        options = cookieOptionsToExpress(options)
+        res.cookie(key, data, options)
+      }
+      if (change.type === 'remove') {
+        let { key } = change
+        res.clearCookie(key)
+      }
+    }
+    this._cookieChanges.length = 0
+  }
+
+  pushCookieChangesToStream(inserts) {
+    for (const change of this._cookieChanges) {
+      if (change.type === 'set') {
+        let { key, data, options } = change
+        options = JSON.stringify(options)
+        inserts.write(`
+          <script>globalThis.$firebolt.push('setCookie', '${key}', ${data}, ${options})</script>
+        `)
+      }
+      if (change.type === 'remove') {
+        let { key } = change
+        inserts.write(`
+          <script>globalThis.$firebolt.push('setCookie', '${key}', null)</script>
+        `)
+      }
+    }
+    this._cookieChanges.length = 0
+  }
 }
 
 export class RequestError extends Error {
@@ -61,101 +150,6 @@ export class RequestRedirect {
   }
   getRedirect() {
     return { url: this.url, type: this.type }
-  }
-}
-
-class Cookies {
-  constructor(req) {
-    this._data = req.cookies
-    this._changes = []
-  }
-
-  set(key, value, options = defaultCookieOptions) {
-    // console.log('setCookie', { key, value, options })
-    if (value === null || value === undefined || value === '') {
-      this._data[key] = null
-      this._changes.push({
-        type: 'remove',
-        key,
-      })
-    } else {
-      let data
-      try {
-        data = JSON.stringify(value)
-      } catch (err) {
-        return console.error(
-          `could not serialize cookie ${key} with value:`,
-          value
-        )
-      }
-      this._data[key] = data
-      this._changes.push({
-        type: 'set',
-        key,
-        data,
-        options,
-      })
-    }
-  }
-
-  get(key) {
-    let data = this._data[key]
-    if (data === null || data === undefined || data === '') {
-      return null
-    }
-    let value
-    try {
-      value = JSON.parse(data)
-    } catch (err) {
-      console.error(`could not deserialize cookie ${key} with value:`, data)
-      return null
-    }
-    // console.log('getCookie', { key, value })
-    return value
-  }
-
-  getChangedKeys() {
-    const keys = []
-    for (const change of this._changes) {
-      if (!keys.includes(change.key)) {
-        keys.push(change.key)
-      }
-    }
-    return keys
-  }
-
-  pushChangesToResponse(res) {
-    for (const change of this._changes) {
-      if (change.type === 'set') {
-        let { key, data, options } = change
-        options = cookieOptionsToExpress(options)
-        res.cookie(key, data, options)
-      }
-      if (change.type === 'remove') {
-        let { key } = change
-        res.clearCookie(key)
-      }
-    }
-    this._changes.length = 0
-  }
-
-  pushChangesToStream(inserts) {
-    for (const change of this._changes) {
-      if (change.type === 'set') {
-        let { key, data, options } = change
-        options = JSON.stringify(options)
-        inserts.write(`
-          <script>globalThis.$firebolt.push('setCookie', '${key}', ${data}, ${options})</script>
-        `)
-      }
-      if (change.type === 'remove') {
-        let { key } = change
-        inserts.write(`
-          <script>globalThis.$firebolt.push('setCookie', '${key}', null)</script>
-        `)
-      }
-    }
-    this._changes.length = 0
   }
 }
 

@@ -77,9 +77,9 @@ export async function handleFunction(req, res) {
   }
   const data = {}
   // get changed cookies to notify client UI
-  data.cookies = request.cookies.getChangedKeys()
+  data.cookies = request.getCookieChangedKeys()
   // apply cookie changes to express response
-  request.cookies.pushChangesToResponse(res)
+  request.pushCookieChangesToResponse(res)
   // if RequestRedirect error, redirect the client
   if (error instanceof RequestRedirect) {
     data.redirect = error.getRedirect()
@@ -145,7 +145,7 @@ export async function handleRequest(req, res) {
             error = err
           }
           // write out any cookies first
-          request.cookies.pushChangesToStream(inserts)
+          request.pushCookieChangesToStream(inserts)
           // if RequestRedirect error, write out the redirect and stop
           if (error instanceof RequestRedirect) {
             request.applyRedirectToExpressResponse(error, res)

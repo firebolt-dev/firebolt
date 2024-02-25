@@ -40,17 +40,28 @@ Throws an error that can be caught by an [\<ErrorBoundary\>](/docs/ref/error-bou
 
 Can only be used in Loader function.
 
-## Cookies (TODO: .setCookie, .getCookie etc)
+## .getCookie(key)
 
-Both Loaders and Actions can read and update cookies as needed. Any changes to cookies here will automatically propagate back to the client and update any UI that is observing its value.
+Gets the value of a cookie
 
 ```jsx
-// read a cookie
-const auth = req.cookies.get('auth')
-
-// update a cookie
-req.cookies.set('auth', auth)
-
-// remove a cookie
-req.cookies.set('auth', null)
+req.getCookie('auth')
 ```
+
+## .setCookie(key, value, options)
+
+Sets the value of a cookie.
+
+Any changes to cookies made on the server will automatically update any UI on the client observing its value.
+
+```jsx
+req.setCookie('auth', auth)
+```
+
+Setting a cookie to `null` removes it.
+
+```jsx
+req.setCookie('auth', null) // remove cookie
+```
+
+See the [useCookie](/docs/ref/useCookie) reference for more info about cookies.

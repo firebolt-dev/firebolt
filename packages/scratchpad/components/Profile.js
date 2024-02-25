@@ -27,7 +27,7 @@ function Content() {
 
 export async function getUser(req) {
   await new Promise(resolve => setTimeout(resolve, 1000))
-  // const user = req.cookies.get('user')
+  // const user = req.getCookie('user')
   const user = { name: 'Jim' + Math.random() }
   return user
 }

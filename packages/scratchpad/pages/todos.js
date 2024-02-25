@@ -43,8 +43,8 @@ export function Todos() {
 export async function list(req) {
   // await new Promise(resolve => setTimeout(resolve, 1000))
   // req.redirect('/about')
-  // console.log('get foo cookie', req.cookies.get('foo'))
-  // console.log('get foo2 cookie', req.cookies.get('foo2'))
+  // console.log('get foo cookie', req.getCookie('foo'))
+  // console.log('get foo2 cookie', req.getCookie('foo2'))
   return await req.db('todos')
 }
 
@@ -55,7 +55,7 @@ export async function create(req, text) {
   // if (chance < 0.5) {
   //   req.redirect('/about')
   // }
-  req.cookies.set('foo', 'barrrrr')
-  req.cookies.set('foo2', { blah: 123 })
+  req.setCookie('foo', 'barrrrr')
+  req.setCookie('foo2', { blah: 123 })
   await req.db('todos').insert({ id: req.uuid(), text })
 }

@@ -27,7 +27,7 @@ export default function Home() {
 }
 
 export async function updateTheme(req, theme) {
-  req.cookies.set('theme', theme)
+  req.setCookie('theme', theme)
 }
 ```
 
