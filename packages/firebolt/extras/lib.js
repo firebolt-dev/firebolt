@@ -14,18 +14,28 @@ export { css } from '@firebolt/css'
 
 import { Document } from '../components/Document.js'
 
-export function Link({ to, replace, onClick, children, ...rest }) {
+export function Link({
+  to,
+  replace,
+  scroll = true,
+  prefetch = true,
+  onClick,
+  children,
+  ...rest
+}) {
   const runtime = useRuntime()
   const elem = isValidElement(children) ? (
     children
   ) : (
     <a href={to} children={children} {...rest} />
   )
+
   const handleClick = useEvent(e => {
     // ignore modifier clicks
     if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.button !== 0) {
       return
     }
+    if (e.defaultPrevented) return
     onClick?.(e)
     if (e.defaultPrevented) return
     e.preventDefault()
@@ -34,12 +44,17 @@ export function Link({ to, replace, onClick, children, ...rest }) {
     } else {
       history.pushState(null, '', to)
     }
+    if (scroll) {
+      window.scrollTo(0, 0)
+    }
   })
+
   useEffect(() => {
     if (!to) return
-    // prefetch routes
+    if (!prefetch) return
     runtime.loadRouteByUrl(to)
-  }, [])
+  }, [prefetch])
+
   // return children
   return cloneElement(elem, { href: to, onClick: handleClick })
 }
