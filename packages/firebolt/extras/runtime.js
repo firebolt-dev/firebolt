@@ -7,7 +7,12 @@ const match = matcher()
 
 const tempBase = 'https://example.com'
 
-export function createRuntime({ ssr, routes, stack = [] }) {
+export function createRuntime({
+  ssr,
+  routes,
+  defaultCookieOptions,
+  stack = [],
+}) {
   const methods = {
     ssr,
     routes,
@@ -365,6 +370,7 @@ export function createRuntime({ ssr, routes, stack = [] }) {
   }
 
   function setCookie(key, data, options) {
+    options = options || defaultCookieOptions
     // console.log('setCookie', { key, data, options })
     if (data === null || data === undefined || data === '') {
       if (ssr) {

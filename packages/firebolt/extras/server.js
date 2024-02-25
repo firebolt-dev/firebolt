@@ -67,7 +67,7 @@ async function callFunction(request, id, args) {
 // handle loader/action function call requests from the client
 export async function handleFunction(req, res) {
   const { id, args } = req.body
-  const request = new Request(req)
+  const request = new Request(req, config.cookie)
   let value
   let error
   try {
@@ -120,7 +120,7 @@ export async function handleRequest(req, res) {
         return req.cookies[key]
       },
       set(key, value, options) {
-        // console.log('s.cookies.set', key, value)
+        // console.log('s.cookies.set', key, value, options)
         res.cookie(key, value, cookieOptionsToExpress(options))
       },
       remove(key) {
@@ -136,7 +136,7 @@ export async function handleRequest(req, res) {
         inserts,
         cookies,
         async callFunction(...args) {
-          const request = new Request(req)
+          const request = new Request(req, config.cookie)
           let value
           let error
           try {
@@ -196,6 +196,7 @@ export async function handleRequest(req, res) {
       globalThis.$firebolt = {
         ssr: null,
         routes: ${JSON.stringify(routesForClient)},
+        defaultCookieOptions: ${JSON.stringify(config.cookie)},
         stack: [],
         push(action, ...args) {
           this.stack.push({ action, args })

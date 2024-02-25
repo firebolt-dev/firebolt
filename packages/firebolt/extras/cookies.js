@@ -25,8 +25,9 @@
  */
 
 export function cookieOptionsToExpress(opts) {
+  if (!opts) return opts
   // convert firebolt cookie options to express cookie options
-  let expires = opts.expire
+  let expires = opts.expires
   if (typeof expires === 'number') {
     const date = new Date()
     date.setDate(date.getDate() + expires) // add days

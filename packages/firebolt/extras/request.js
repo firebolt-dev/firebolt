@@ -1,11 +1,12 @@
 import { cookieOptionsToExpress } from './cookies'
 
 export class Request {
-  constructor(req) {
+  constructor(req, defaultCookieOptions) {
     this.url = req.url
     this._expire = null
     this._cookieData = req.cookies
     this._cookieChanges = []
+    this._defaultCookieOptions = defaultCookieOptions
   }
 
   error(data, message) {
@@ -45,7 +46,7 @@ export class Request {
     }
   }
 
-  setCookie(key, value, options = defaultCookieOptions) {
+  setCookie(key, value, options) {
     // console.log('setCookie', { key, value, options })
     if (value === null || value === undefined || value === '') {
       this._cookieData[key] = null
@@ -68,7 +69,7 @@ export class Request {
         type: 'set',
         key,
         data,
-        options,
+        options: options || this._defaultCookieOptions,
       })
     }
   }
