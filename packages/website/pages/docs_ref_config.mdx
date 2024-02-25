@@ -15,17 +15,15 @@ export default function config() {
 
 ## Port
 
-Set the port that your app will be served from:
+By default your app will attempt to use the `PORT` environment variable, otherwise it will use the port in your config file which defaults to `3000`.
 
 ```jsx
 export default function config() {
   return {
-    port: process.env.PORT || 3000,
+    port: 4000,
   }
 }
 ```
-
-If no port is set, Firebolt will pick an available port starting from `3000`
 
 ## Source Maps
 

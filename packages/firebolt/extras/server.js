@@ -3,11 +3,10 @@ import { renderToPipeableStream } from 'react-dom/server'
 import React from 'react'
 import { isbot } from 'isbot'
 import { PassThrough } from 'stream'
-import { defaultsDeep } from 'lodash-es'
 import { Root } from 'firebolt'
 
 import { matcher } from './matcher'
-import { getConfig } from './config.js'
+import { config } from './config.js'
 import * as core from './core.js'
 import manifest from './manifest.json'
 import { Request, RequestError, RequestRedirect } from './request'
@@ -24,14 +23,7 @@ const match = matcher()
 
 const prod = process.env.NODE_ENV === 'production'
 
-// get config
-export const config = getConfig()
-
-// apply defaults
-defaultsDeep(config, {
-  port: 3000,
-  productionBrowserSourceMaps: false,
-})
+export { config }
 
 // hydrate manifest
 const bootstrapFile = manifest.bootstrapFile

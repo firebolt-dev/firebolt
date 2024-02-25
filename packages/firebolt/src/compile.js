@@ -63,7 +63,6 @@ export async function compile(opts) {
 
   let freshBuild = true
   let freshConfig = true
-  let config
   let mdxPlugin
   const mdxCache = {} // pageFile -> js
   const ctx = {
@@ -83,23 +82,15 @@ export async function compile(opts) {
     const startAt = performance.now()
     log.info(`${freshBuild ? 'building...' : 'rebuilding...'}`)
 
-    // ensure empty build directory
+    // ensure empty build directory + copy over extras
     if (freshBuild) {
       await fs.emptyDir(buildDir)
+      await fs.copy(extrasDir, buildDir)
     }
 
     // ensure app has config file
     if (!(await fs.exists(appConfigFile))) {
       throw new BundlerError(`missing ${style.mark('firebolt.config.js')} file`)
-    }
-
-    // create config entry
-    // todo: couldn't this be an `extras` file?
-    if (freshBuild) {
-      const configCode = `
-        export { default as getConfig } from '../firebolt.config.js'
-      `
-      await fs.writeFile(buildConfigFile, configCode)
     }
 
     // temporarily build, import and validate config
@@ -132,13 +123,8 @@ export async function compile(opts) {
     // console.time('configValidator')
     await ctx.configValidator.rebuild()
     // console.timeEnd('configValidator')
-    const { getConfig } = await reimport(tmpConfigFile)
-    config = getConfig()
 
-    defaultsDeep(config, {
-      port: 3000,
-      productionBrowserSourceMaps: false,
-    })
+    const config = (await reimport(tmpConfigFile)).config
 
     // create mdx plugin
     // we try to re-use the same mdx plugin across builds for performance
@@ -148,8 +134,8 @@ export async function compile(opts) {
         jsx: false,
         jsxRuntime: 'automatic',
         jsxImportSource: '@firebolt/jsx',
-        remarkPlugins: config.mdx?.remarkPlugins || [],
-        rehypePlugins: config.mdx?.rehypePlugins || [],
+        remarkPlugins: config.mdx.remarkPlugins,
+        rehypePlugins: config.mdx.rehypePlugins,
       })
     }
 
@@ -256,11 +242,6 @@ export async function compile(opts) {
         i++
       }
       // console.timeEnd('mdx')
-    }
-
-    // copy over extras
-    if (freshBuild) {
-      await fs.copy(extrasDir, buildDir)
     }
 
     // build and inspect pages
