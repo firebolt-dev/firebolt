@@ -5,25 +5,18 @@ import { matcher } from './matcher.js'
 
 const match = matcher()
 
-export function createRuntime({ ssr, routes, stack = [] }) {
-  let docHead
-  let pageHeads = []
-  const headWatchers = new Set()
+const tempBase = 'https://example.com'
 
+export function createRuntime({ ssr, routes, stack = [] }) {
   const methods = {
     ssr,
     routes,
     push,
     registerPage,
+    resolveRouteAndParams,
+    resolveLocation,
     loadRoute,
     loadRouteByUrl,
-    resolveRoute,
-    resolveRouteWithParams,
-    insertDocHead,
-    insertPageHead,
-    getPageHeads,
-    getDocHead,
-    watchPageHeads,
     callFunction,
     applyRedirect,
     getLoader,
@@ -45,61 +38,61 @@ export function createRuntime({ ssr, routes, stack = [] }) {
     route.Page = Page
   }
 
-  async function loadRoute(route) {
-    if (!route) return
-    if (route.Page) return
-    if (route.loader) return await route.loader
-    route.loader = import(route.file)
-    await route.loader
-  }
-
-  function loadRouteByUrl(url) {
-    const route = resolveRoute(url)
-    return loadRoute(route)
-  }
-
-  function resolveRoute(url) {
-    return routes.find(route => match(route.pattern, url)[0])
-  }
-
-  function resolveRouteWithParams(url) {
-    if (!url) return []
+  function resolveRouteAndParams(url) {
+    if (!url) {
+      return [null, {}]
+    }
     for (const route of routes) {
       const [hit, params] = match(route.pattern, url)
       if (hit) return [route, params]
     }
-    return []
+    return [null, {}]
   }
 
-  // ssr
-  function insertDocHead(children) {
-    docHead = children
-  }
-
-  function getDocHead() {
-    return docHead
-  }
-
-  function insertPageHead(children) {
-    pageHeads = [...pageHeads, children]
-    for (const callback of headWatchers) {
-      callback(pageHeads)
-    }
-    return () => {
-      pageHeads = pageHeads.filter(t => t !== children)
-      for (const callback of headWatchers) {
-        callback(pageHeads)
+  function resolveLocation(url) {
+    const info = new URL(url, tempBase)
+    const pathname = info.pathname
+    const hash = info.hash
+    const [route, params] = resolveRouteAndParams(pathname)
+    info.searchParams.forEach((value, key) => {
+      if (!params.hasOwnProperty(key)) {
+        params[key] = value
       }
+    })
+    const location = {
+      url,
+      pathname,
+      hash,
+      params,
+      route,
+      push(href) {
+        history.pushState(null, '', href)
+      },
+      replace(href) {
+        history.replaceState(null, '', href)
+      },
+      back() {
+        history.back()
+      },
+      forward() {
+        history.forward()
+      },
     }
+    return location
   }
 
-  function getPageHeads() {
-    return pageHeads
+  async function loadRoute(route) {
+    if (!route) return
+    if (route.Page) return
+    if (!route.loader) {
+      route.loader = import(route.file)
+    }
+    return await route.loader
   }
 
-  function watchPageHeads(callback) {
-    headWatchers.add(callback)
-    return () => headWatchers.delete(callback)
+  function loadRouteByUrl(url) {
+    const [route] = resolveRouteAndParams(url)
+    return loadRoute(route)
   }
 
   async function callFunction(id, args) {

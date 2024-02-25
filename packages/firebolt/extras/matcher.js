@@ -21,14 +21,6 @@ export function matcher(makeRegexpFn = pathToRegexp) {
       return params
     }, {})
 
-    // attach query params
-    const queryParams = new URLSearchParams(query)
-    for (const [key, value] of queryParams) {
-      if (!params.hasOwnProperty(key)) {
-        params[key] = value
-      }
-    }
-
     return [true, params]
   }
 }

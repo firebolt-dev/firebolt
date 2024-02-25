@@ -35,7 +35,7 @@ The `useData` hook returns a data loader instance specific to the data being loa
 
 ## Loader Function
 
-The loader function must be an async function exported from the same file OR an imported async function.
+The loader function must be exported from the same file OR imported from somewhere else.
 
 The first argument provided is a [Request](/docs/ref/request) object that provides utilities to access cookies, set a data expiration or redirect users. You can also decorate the Request object with things such as access to your database, from your [firebolt.config.js](/docs/ref/config) file.
 

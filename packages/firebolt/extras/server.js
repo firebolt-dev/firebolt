@@ -49,12 +49,15 @@ const routesForClient = core.routes.map(route => {
 })
 
 // utility to find a route from a url
-function resolveRouteWithParams(url) {
+function resolveRouteAndParams(url) {
+  if (!url) {
+    return [null, {}]
+  }
   for (const route of core.routes) {
     const [hit, params] = match(route.pattern, url)
     if (hit) return [route, params]
   }
-  return []
+  return [null, {}]
 }
 
 // utility to call loader/action functions
@@ -105,7 +108,7 @@ export async function handleRequest(req, res) {
   const url = req.originalUrl
 
   // handle page requests
-  const [route, params] = resolveRouteWithParams(url)
+  const [route, params] = resolveRouteAndParams(url)
   if (route) {
     const inserts = {
       value: '',

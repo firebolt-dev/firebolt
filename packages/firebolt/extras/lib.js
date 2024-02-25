@@ -100,39 +100,29 @@ export function useLocation() {
 
 const historyEvents = ['popstate', 'pushState', 'replaceState', 'hashchange']
 
-function useRouteWithParams(url) {
-  const runtime = useRuntime()
-  return useMemo(() => runtime.resolveRouteWithParams(url), [url])
+function getBrowserUrl() {
+  const location = globalThis.location
+  return location.pathname + location.search + location.hash
 }
 
 export function Router() {
   const runtime = useRuntime()
-  // const [browserUrl, setBrowserUrl] = useState(runtime.ssr?.url || globalThis.location.pathname + globalThis.location.search) // prettier-ignore
-  const [prevUrl, setPrevUrl] = useState(null)
-  const [currUrl, setCurrUrl] = useState(() => runtime.ssr?.url || globalThis.location.pathname + globalThis.location.search) // prettier-ignore
-  const [currRoute, currParams] = useRouteWithParams(currUrl)
-  const [prevRoute, prevParams] = useRouteWithParams(prevUrl)
+  const [previousLocation, setPreviousLocation] = useState(null)
+  const [currentLocation, setCurrentLocation] = useState(() => runtime.resolveLocation(runtime.ssr?.url || getBrowserUrl())) // prettier-ignore
 
   useEffect(() => {
     function onChange(e) {
-      const browserUrl = globalThis.location.pathname + globalThis.location.search // prettier-ignore
-      if (browserUrl === currUrl) return
+      const browserUrl = getBrowserUrl() // prettier-ignore
+      if (browserUrl === currentLocation.url) return
       let cancelled
       const exec = async () => {
-        const url = browserUrl
-        // console.log('browserUrl changed:', url)
-        const route = runtime.resolveRoute(url)
-        // console.log('route', route)
-        if (!route.Page) {
-          // console.log('missing Page, loading it')
-          await runtime.loadRoute(route)
+        const location = runtime.resolveLocation(browserUrl)
+        if (!location.route.Page) {
+          await runtime.loadRoute(location.route)
         }
-        if (cancelled) {
-          // console.log('cancelled')
-          return
-        }
-        setPrevUrl(currUrl)
-        setCurrUrl(url)
+        if (cancelled) return
+        setPreviousLocation(currentLocation)
+        setCurrentLocation(location)
       }
       exec()
       return () => {
@@ -148,49 +138,24 @@ export function Router() {
         removeEventListener(event, onChange)
       }
     }
-  }, [currUrl])
+  }, [currentLocation.url])
 
   // we work some magic here because if the new route doesn't have its own
   // suspense, we want to continue showing the previous route until its ready
   let fallback
-  if (prevUrl) {
-    fallback = (
-      <Route
-        key={prevUrl}
-        url={prevUrl}
-        route={prevRoute}
-        params={prevParams}
-      />
-    )
+  if (previousLocation) {
+    fallback = <Route key={previousLocation.url} location={previousLocation} />
   }
 
   return (
     <Suspense fallback={fallback}>
-      <Route
-        key={currUrl}
-        url={currUrl}
-        route={currRoute}
-        params={currParams}
-      />
+      <Route key={currentLocation.url} location={currentLocation} />
     </Suspense>
   )
 }
 
-function Route({ url, route, params }) {
-  const { Page } = route
-  const location = useMemo(() => {
-    return {
-      routeId: route.id,
-      url,
-      params,
-      push(href) {
-        history.pushState(null, '', href)
-      },
-      replace(href) {
-        history.replaceState(null, '', href)
-      },
-    }
-  }, [])
+function Route({ location }) {
+  const { Page } = location.route
   return (
     <LocationProvider value={location}>
       <Page />
