@@ -18,4 +18,6 @@ if (!config.mdx) config.mdx = {}
 if (!config.mdx.remarkPlugins) config.mdx.remarkPlugins = []
 if (!config.mdx.rehypePlugins) config.mdx.rehypePlugins = []
 
+if (!config.publicEnvPrefix) config.publicEnvPrefix = 'PUBLIC_'
+
 export { config }

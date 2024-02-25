@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import fs from 'fs-extra'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -108,7 +109,7 @@ export async function compile(opts) {
         logLevel: 'silent',
         define: {
           'process.env.NODE_ENV': JSON.stringify(env),
-          FIREBOLT_NODE_ENV: JSON.stringify(env),
+          // FIREBOLT_NODE_ENV: JSON.stringify(env),
         },
         loader: {
           '.js': 'jsx',
@@ -125,6 +126,13 @@ export async function compile(opts) {
     // console.timeEnd('configValidator')
 
     const config = (await reimport(tmpConfigFile)).config
+
+    const publicDefineEnvs = {}
+    for (const key in process.env) {
+      if (key.startsWith(config.publicEnvPrefix)) {
+        publicDefineEnvs[`process.env.${key}`] = `"${process.env[key]}"`
+      }
+    }
 
     // create mdx plugin
     // we try to re-use the same mdx plugin across builds for performance
@@ -222,7 +230,8 @@ export async function compile(opts) {
         // },
         define: {
           'process.env.NODE_ENV': JSON.stringify(env),
-          FIREBOLT_NODE_ENV: JSON.stringify(env),
+          ...publicDefineEnvs,
+          // FIREBOLT_NODE_ENV: JSON.stringify(env),
         },
         // loader: {
         //   '.js': 'jsx',
@@ -268,7 +277,8 @@ export async function compile(opts) {
         },
         define: {
           'process.env.NODE_ENV': JSON.stringify(env),
-          FIREBOLT_NODE_ENV: JSON.stringify(env),
+          ...publicDefineEnvs,
+          // FIREBOLT_NODE_ENV: JSON.stringify(env),
         },
         loader: {
           '.js': 'jsx',
@@ -382,7 +392,8 @@ export async function compile(opts) {
         },
         define: {
           'process.env.NODE_ENV': JSON.stringify(env),
-          FIREBOLT_NODE_ENV: JSON.stringify(env),
+          ...publicDefineEnvs,
+          // FIREBOLT_NODE_ENV: JSON.stringify(env),
         },
         loader: {
           '.js': 'jsx',
@@ -469,7 +480,8 @@ export async function compile(opts) {
         },
         define: {
           'process.env.NODE_ENV': JSON.stringify(env),
-          FIREBOLT_NODE_ENV: JSON.stringify(env),
+          ...publicDefineEnvs,
+          // FIREBOLT_NODE_ENV: JSON.stringify(env),
         },
         loader: {
           '.js': 'jsx',

@@ -69,6 +69,7 @@ export function DocsPage({ title, description, children }) {
           <NavLink label='Request' to='/docs/ref/request' />
           <NavLink label='css' to='/docs/ref/css' />
           <NavLink label='cls' to='/docs/ref/cls' />
+          <NavLink label='.env' to='/docs/ref/env' />
 
           <div className='docs-section'>Guides</div>
           <NavLink label='Theme toggles' to='/docs/guides/theme-toggles' />

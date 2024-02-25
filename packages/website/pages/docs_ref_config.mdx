@@ -88,3 +88,17 @@ export default function config() {
 ```
 
 See [useCookie](/docs/ref/useCookie) for all available options.
+
+## Public Env Prefix
+
+By default any environment variables with the `PUBLIC_` prefix will be available on the client, but you can use a different prefix if needed:
+
+```jsx
+export default function config() {
+  return {
+    publicEnvPrefix: 'ANOTHER_PREFIX_',
+  }
+}
+```
+
+Learn more about environment variables on the [.env](/docs/ref/env) page.

@@ -1,0 +1,16 @@
+export { DocsPage as default } from '../components/DocsPage'
+export { components } from '../components/docs-components'
+
+# .env
+
+Firebolt has built-in support for environment variables including using a `.env` and `.env.local` files.
+
+## Private Variables
+
+All code that runs on the server such as through Server Side Rendering or [Loader](/docs/loaders) and [Action](/docs/actions) functions have full access to all environment variables through the `process.env` global, eg `process.env.DB_URI`.
+
+## Public Variables
+
+To use environment variables on the client, eg inside pages and components, environment variables must be prefixed with `PUBLIC_`, eg `process.env.PUBLIC_DSN`.
+
+You can also change this prefix in your [firebolt.config.js](/docs/ref/config) file.
