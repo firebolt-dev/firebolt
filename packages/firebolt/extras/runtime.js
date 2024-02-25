@@ -369,7 +369,11 @@ export function createRuntime({
     return data
   }
 
-  function setCookie(key, data, options) {
+  function setCookie(key, data, options, defaultValue) {
+    if (typeof data === 'function') {
+      const prevData = getCookie(key)
+      data = data(prevData || defaultValue)
+    }
     options = options || defaultCookieOptions
     // console.log('setCookie', { key, data, options })
     if (data === null || data === undefined || data === '') {

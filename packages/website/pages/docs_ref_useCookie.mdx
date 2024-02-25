@@ -6,8 +6,10 @@ export { components } from '../components/docs-components'
 The `useCookie` hook provides the value of a cookie and a setter to update it, much like Reacts `useState` hook.
 
 ```jsx
-const [value, setValue] = useCookie('theme')
+const [value, setValue] = useCookie('theme', 'system')
 ```
+
+The 1st argument is the cookie `key` and the 2nd argument is an optional default value.
 
 You can then update the cookie like this:
 
@@ -15,7 +17,7 @@ You can then update the cookie like this:
 setValue('dark')
 ```
 
-Or using atomic updates:
+Or atomically with:
 
 ```jsx
 setValue(value => value + 1)
