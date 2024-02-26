@@ -208,7 +208,7 @@ export function useCache() {
 export function useCookie(key, defaultValue = null) {
   const runtime = useRuntime()
   const [value, setValue] = useState(() => {
-    return runtime.getCookie(key) || defaultValue
+    return runtime.getCookie(key) ?? defaultValue
   })
   const update = useMemo(() => {
     return (value, options) => {
@@ -218,7 +218,7 @@ export function useCookie(key, defaultValue = null) {
   useEffect(() => {
     return runtime.watchCookie(key, setValue)
   }, [])
-  return [value, update]
+  return [value ?? defaultValue, update]
 }
 
 export class ErrorBoundary extends React.Component {
