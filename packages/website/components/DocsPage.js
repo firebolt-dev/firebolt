@@ -1,6 +1,7 @@
-import { Link, useLocation, css, cls } from 'firebolt'
+import { MDXProvider, Link, useLocation, css, cls } from 'firebolt'
 
 import { Page } from './Page'
+import { components } from './docs-components'
 
 export function DocsPage({ title, description, children }) {
   return (
@@ -19,6 +20,8 @@ export function DocsPage({ title, description, children }) {
             height: calc(100vh - 102px);
             width: 270px;
             overflow-y: auto;
+            margin: 0 0 24px;
+            padding: 0 32px 24px 0;
             margin-bottom: 24px;
             padding-bottom: 24px;
           }
@@ -42,8 +45,7 @@ export function DocsPage({ title, description, children }) {
           }
           .docs-content {
             flex: 1;
-            padding-left: 64px;
-            padding-bottom: 100px;
+            padding: 0 0 100px 32px;
           }
         `}
       >
@@ -82,7 +84,9 @@ export function DocsPage({ title, description, children }) {
           <NavLink label='Theme toggles' to='/docs/guides/theme-toggles' />
           <NavLink label='Deploy to fly.io' to='/docs/guides/deploy-to-fly' />
         </div>
-        <div className='docs-content'>{children}</div>
+        <div className='docs-content'>
+          <MDXProvider components={components}>{children}</MDXProvider>
+        </div>
       </div>
     </Page>
   )
@@ -91,7 +95,7 @@ export function DocsPage({ title, description, children }) {
 function NavLink({ label, to }) {
   const location = useLocation()
   return (
-    <Link to={to} scroll={false}>
+    <Link to={to}>
       <a
         className={cls('docs-nav-link', {
           active: location.pathname === to,
