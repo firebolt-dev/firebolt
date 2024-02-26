@@ -138,7 +138,7 @@ export async function handleRequest(req, res) {
     },
   }
 
-  const runtime = createRuntime({
+  const options = {
     ssr: {
       url,
       params,
@@ -175,7 +175,9 @@ export async function handleRequest(req, res) {
       },
     },
     routes: core.routes,
-  })
+  }
+
+  const runtime = createRuntime([['init', options]])
 
   const isBot = isbot(req.get('user-agent') || '')
 
@@ -202,15 +204,15 @@ export async function handleRequest(req, res) {
     bootstrapScriptContent: isBot
       ? undefined
       : `
-      globalThis.$firebolt = {
+      globalThis.$firebolt = function (...args) {
+        globalThis.$firebolt.stack.push(args)
+      }
+      globalThis.$firebolt.stack = []
+      globalThis.$firebolt('init', {
         ssr: null,
         routes: ${JSON.stringify(routesForClient)},
         defaultCookieOptions: ${JSON.stringify(config.cookie)},
-        stack: [],
-        push(action, ...args) {
-          this.stack.push({ action, args })
-        }
-      }
+      })
     `,
     bootstrapModules: isBot ? [] : [route.file, bootstrapFile],
     onShellReady() {

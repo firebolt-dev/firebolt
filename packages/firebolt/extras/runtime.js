@@ -7,16 +7,16 @@ const match = matcher()
 
 const tempBase = 'https://example.com'
 
-export function createRuntime({
-  ssr,
-  routes,
-  defaultCookieOptions,
-  stack = [],
-}) {
-  const methods = {
+export function createRuntime(stack) {
+  let ssr
+  let routes
+  let defaultCookieOptions
+  let notFoundRoute
+
+  const runtime = {
     ssr,
-    routes,
-    push,
+    call,
+    init,
     registerPage,
     resolveRouteAndParams,
     resolveLocation,
@@ -34,10 +34,15 @@ export function createRuntime({
     watchCookie,
   }
 
-  const notFoundRoute = routes.find(r => r.pattern === '/not-found')
+  function call(action, ...args) {
+    runtime[action](...args)
+  }
 
-  function push(action, ...args) {
-    methods[action](...args)
+  function init(opts) {
+    ssr = runtime.ssr = opts.ssr
+    routes = opts.routes
+    defaultCookieOptions = opts.defaultCookieOptions
+    notFoundRoute = routes.find(r => r.pattern === '/not-found')
   }
 
   function registerPage(routeId, content) {
@@ -170,7 +175,7 @@ export function createRuntime({
           result = await ssr.callFunction(id, args)
           ssr.inserts.write(`
             <script>
-              globalThis.$firebolt.push('setLoaderData', '${key}', ${JSON.stringify(result)})
+              globalThis.$firebolt('setLoaderData', '${key}', ${JSON.stringify(result)})
             </script>
           `)
         } else {
@@ -432,9 +437,9 @@ export function createRuntime({
     }
   }
 
-  for (const item of stack) {
-    push(item.action, ...item.args)
+  for (const args of stack) {
+    call(...args)
   }
 
-  return methods
+  return runtime
 }

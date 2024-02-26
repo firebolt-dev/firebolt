@@ -121,13 +121,13 @@ export class Request {
         let { key, data, options } = change
         options = JSON.stringify(options)
         inserts.write(`
-          <script>globalThis.$firebolt.push('setCookie', '${key}', ${data}, ${options})</script>
+          <script>globalThis.$firebolt('setCookie', '${key}', ${data}, ${options})</script>
         `)
       }
       if (change.type === 'remove') {
         let { key } = change
         inserts.write(`
-          <script>globalThis.$firebolt.push('setCookie', '${key}', null)</script>
+          <script>globalThis.$firebolt('setCookie', '${key}', null)</script>
         `)
       }
     }

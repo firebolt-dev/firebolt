@@ -373,7 +373,7 @@ export async function compile(opts) {
         import * as ${route.id} from '${route.relShimToRouteFile}'
         ${route.parents.map(parent => `import * as ${parent.id} from '${parent.relShimToRouteFile}'`).join('\n')}
         const content = ${generateNestedContent(route)}
-        globalThis.$firebolt.push('registerPage', '${route.id}', content)
+        globalThis.$firebolt('registerPage', '${route.id}', content)
       `
       await fs.outputFile(route.shimFile, code)
     }

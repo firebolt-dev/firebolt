@@ -3,9 +3,11 @@ import { Root } from 'firebolt'
 
 import { createRuntime } from './runtime.js'
 
-globalThis.$firebolt = createRuntime(globalThis.$firebolt)
+const runtime = createRuntime(globalThis.$firebolt.stack)
 
-hydrateRoot(document, <Root runtime={globalThis.$firebolt} />, {
+globalThis.$firebolt = (...args) => runtime.call(...args)
+
+hydrateRoot(document, <Root runtime={runtime} />, {
   // onRecoverableError(err) {
   //   console.log(document.documentElement.outerHTML)
   // },
