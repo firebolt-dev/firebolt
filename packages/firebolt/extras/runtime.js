@@ -34,6 +34,8 @@ export function createRuntime({
     watchCookie,
   }
 
+  const notFoundRoute = routes.find(r => r.pattern === '/not-found')
+
   function push(action, ...args) {
     methods[action](...args)
   }
@@ -58,7 +60,8 @@ export function createRuntime({
     const info = new URL(url, tempBase)
     const pathname = info.pathname
     const hash = info.hash
-    const [route, params] = resolveRouteAndParams(pathname)
+    let [route, params] = resolveRouteAndParams(pathname)
+    if (!route) route = notFoundRoute
     info.searchParams.forEach((value, key) => {
       if (!params.hasOwnProperty(key)) {
         params[key] = value

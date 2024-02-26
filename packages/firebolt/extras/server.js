@@ -40,6 +40,8 @@ const routesForClient = core.routes.map(route => {
   }
 })
 
+const notFoundRoute = core.routes.find(r => (r.pattern = '/not-found'))
+
 // utility to find a route from a url
 function resolveRouteAndParams(url) {
   if (!url) {
@@ -97,102 +99,109 @@ export async function handleFunction(req, res) {
 
 // handle requests for pages and api
 export async function handleRequest(req, res) {
-  const url = req.originalUrl
+  let url = req.originalUrl
 
   // handle page requests
-  const [route, params] = resolveRouteAndParams(url)
-  if (route) {
-    const inserts = {
-      value: '',
-      read() {
-        const str = this.value
-        this.value = ''
-        return str
+  let [route, params] = resolveRouteAndParams(url)
+
+  let notFound
+  if (!route) {
+    notFound = true
+    route = notFoundRoute
+    url = '/not-found'
+  }
+
+  const inserts = {
+    value: '',
+    read() {
+      const str = this.value
+      this.value = ''
+      return str
+    },
+    write(str) {
+      this.value += str
+    },
+  }
+
+  const cookies = {
+    get(key) {
+      // console.log('s.cookies.get', key, req.cookies[key])
+      return req.cookies[key]
+    },
+    set(key, value, options) {
+      // console.log('s.cookies.set', key, value, options)
+      res.cookie(key, value, cookieOptionsToExpress(options))
+    },
+    remove(key) {
+      // console.log('scookies.remove', key)
+      res.clearCookie(key)
+    },
+  }
+
+  const runtime = createRuntime({
+    ssr: {
+      url,
+      params,
+      inserts,
+      cookies,
+      async callFunction(...args) {
+        const request = new Request(req, config.cookie)
+        let value
+        let error
+        try {
+          value = await callFunction(request, ...args)
+        } catch (err) {
+          error = err
+        }
+        // write out any cookies first
+        request.pushCookieChangesToStream(inserts)
+        // if RequestRedirect error, write out the redirect and stop
+        if (error instanceof RequestRedirect) {
+          request.applyRedirectToExpressResponse(error, res)
+          return
+        }
+        // if RequestError or generic error, return the error
+        if (error) {
+          return {
+            error: serializeFunctionError(error, prod),
+          }
+        }
+        // otherwise return the value
+        const data = {
+          value,
+          expire: request._expire,
+        }
+        return data
       },
-      write(str) {
-        this.value += str
-      },
+    },
+    routes: core.routes,
+  })
+
+  const isBot = isbot(req.get('user-agent') || '')
+
+  const stream = new PassThrough()
+  stream.on('data', chunk => {
+    let str = chunk.toString()
+
+    // append any inserts (loader data, redirects etc)
+    if (str.endsWith('</script>')) {
+      str += inserts.read()
     }
 
-    const cookies = {
-      get(key) {
-        // console.log('s.cookies.get', key, req.cookies[key])
-        return req.cookies[key]
-      },
-      set(key, value, options) {
-        // console.log('s.cookies.set', key, value, options)
-        res.cookie(key, value, cookieOptionsToExpress(options))
-      },
-      remove(key) {
-        // console.log('scookies.remove', key)
-        res.clearCookie(key)
-      },
-    }
+    // console.log('---')
+    // console.log(str)
+    res.write(str)
+    res.flush()
+  })
+  stream.on('end', () => {
+    res.end()
+  })
 
-    const runtime = createRuntime({
-      ssr: {
-        url,
-        params,
-        inserts,
-        cookies,
-        async callFunction(...args) {
-          const request = new Request(req, config.cookie)
-          let value
-          let error
-          try {
-            value = await callFunction(request, ...args)
-          } catch (err) {
-            error = err
-          }
-          // write out any cookies first
-          request.pushCookieChangesToStream(inserts)
-          // if RequestRedirect error, write out the redirect and stop
-          if (error instanceof RequestRedirect) {
-            request.applyRedirectToExpressResponse(error, res)
-            return
-          }
-          // if RequestError or generic error, return the error
-          if (error) {
-            return {
-              error: serializeFunctionError(error, prod),
-            }
-          }
-          // otherwise return the value
-          const data = {
-            value,
-            expire: request._expire,
-          }
-          return data
-        },
-      },
-      routes: core.routes,
-    })
-
-    const isBot = isbot(req.get('user-agent') || '')
-
-    const stream = new PassThrough()
-    stream.on('data', chunk => {
-      let str = chunk.toString()
-
-      // append any inserts (loader data, redirects etc)
-      if (str.endsWith('</script>')) {
-        str += inserts.read()
-      }
-
-      // console.log('---')
-      // console.log(str)
-      res.write(str)
-      res.flush()
-    })
-    stream.on('end', () => {
-      res.end()
-    })
-
-    let didError = false
-    const { pipe, abort } = renderToPipeableStream(<Root runtime={runtime} />, {
-      bootstrapScriptContent: isBot
-        ? undefined
-        : `
+  let didError = false
+  const { pipe, abort } = renderToPipeableStream(<Root runtime={runtime} />, {
+    bootstrapScriptContent: isBot
+      ? undefined
+      : `
       globalThis.$firebolt = {
         ssr: null,
         routes: ${JSON.stringify(routesForClient)},
@@ -203,33 +212,32 @@ export async function handleRequest(req, res) {
         }
       }
     `,
-      bootstrapModules: isBot ? [] : [route.file, bootstrapFile],
-      onShellReady() {
-        if (!isBot) {
-          res.statusCode = didError ? 500 : 200
-          res.setHeader('Content-Type', 'text/html')
-          pipe(stream)
-        }
-      },
-      onAllReady() {
-        if (isBot) {
-          res.statusCode = didError ? 500 : 200
-          res.setHeader('Content-Type', 'text/html')
-          // pipe(res)
-          pipe(stream)
-        }
-      },
-      onError(error) {
-        console.error(error)
-      },
-      onShellError(err) {
-        console.error(err)
-        res.statusCode = 500
-        res.setHeader('content-type', 'text/html')
-        res.send('<p>Something went wrong</p>')
-      },
-    })
-  }
+    bootstrapModules: isBot ? [] : [route.file, bootstrapFile],
+    onShellReady() {
+      if (!isBot) {
+        res.statusCode = notFound ? 404 : didError ? 500 : 200
+        res.setHeader('Content-Type', 'text/html')
+        pipe(stream)
+      }
+    },
+    onAllReady() {
+      if (isBot) {
+        res.statusCode = notFound ? 404 : didError ? 500 : 200
+        res.setHeader('Content-Type', 'text/html')
+        // pipe(res)
+        pipe(stream)
+      }
+    },
+    onError(error) {
+      console.error(error)
+    },
+    onShellError(err) {
+      console.error(err)
+      res.statusCode = 500
+      res.setHeader('content-type', 'text/html')
+      res.send('<p>Something went wrong</p>')
+    },
+  })
 }
 
 function serializeFunctionError(error, prod) {
