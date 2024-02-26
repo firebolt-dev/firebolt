@@ -1,31 +1,11 @@
+import { useRef, useState } from 'react'
 import { Link, css, cls } from 'firebolt'
 import { Check, Copy, File, Link as LinkIcon } from 'lucide-react'
-import { useRef, useState } from 'react'
+
+import { Metadata } from './Metadata'
 
 export const components = {
-  Metadata({ title, description }) {
-    if (title) {
-      title += ' | Firebolt'
-    }
-    return (
-      <>
-        {title && (
-          <>
-            <title>{title}</title>
-            <meta name='og:title' content={title} />
-            <meta name='twitter:title' content={title} />
-          </>
-        )}
-        {description && (
-          <>
-            <meta name='description' content={description} />
-            <meta name='og:description' content={description} />
-            <meta name='twitter:description' content={description} />
-          </>
-        )}
-      </>
-    )
-  },
+  Metadata,
   h1(props) {
     return (
       <h1
