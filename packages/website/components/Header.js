@@ -19,6 +19,7 @@ export function Header() {
         background-color: var(--header-bg);
         backdrop-filter: blur(8px);
         padding: 0 20px;
+        z-index: 100;
         .header-inner {
           width: 100%;
           max-width: 1100px;

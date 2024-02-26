@@ -143,7 +143,6 @@ export function Router() {
       return () => {
         cancelled = true
       }
-      // setBrowserUrl(globalThis.location.pathname + globalThis.location.search)
     }
     for (const event of historyEvents) {
       addEventListener(event, onChange)
@@ -159,12 +158,12 @@ export function Router() {
   // suspense, we want to continue showing the previous route until its ready
   let fallback
   if (previousLocation) {
-    fallback = <Route key={previousLocation.url} location={previousLocation} />
+    fallback = <Route location={previousLocation} />
   }
 
   return (
     <Suspense fallback={fallback}>
-      <Route key={currentLocation.url} location={currentLocation} />
+      <Route location={currentLocation} />
     </Suspense>
   )
 }

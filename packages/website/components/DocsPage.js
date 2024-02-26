@@ -3,7 +3,6 @@ import { Link, useLocation, css, cls } from 'firebolt'
 import { Page } from './Page'
 
 export function DocsPage({ title, description, children }) {
-  const location = useLocation()
   return (
     <Page title={title} description={description}>
       <div
@@ -15,20 +14,27 @@ export function DocsPage({ title, description, children }) {
           display: flex;
           align-items: flex-start;
           .docs-nav {
-            width: 240px;
+            position: sticky;
+            top: 102px;
+            height: calc(100vh - 102px);
+            width: 270px;
+            overflow-y: auto;
+            margin-bottom: 24px;
+            padding-bottom: 24px;
           }
           .docs-section {
             font-size: 18px;
             font-weight: 700;
             margin: 32px 0 12px;
+            padding-left: 12px;
           }
           .docs-nav-link {
-            margin-left: -12px;
             display: flex;
             align-items: center;
             padding: 0 12px;
             height: 40px;
             border-radius: 8px;
+            color: var(--text-color-dim);
             &.active {
               background: var(--primary-color);
               color: white;
@@ -42,6 +48,7 @@ export function DocsPage({ title, description, children }) {
         `}
       >
         <div className='docs-nav'>
+          <div className='docs-section'>Getting Started</div>
           <NavLink label='Introduction' to='/docs' />
           <NavLink label='Quick Start' to='/docs/quick-start' />
           <NavLink label='Document' to='/docs/document' />
@@ -84,10 +91,10 @@ export function DocsPage({ title, description, children }) {
 function NavLink({ label, to }) {
   const location = useLocation()
   return (
-    <Link to={to}>
+    <Link to={to} scroll={false}>
       <a
         className={cls('docs-nav-link', {
-          active: location.url === to,
+          active: location.pathname === to,
         })}
       >
         <span>{label}</span>

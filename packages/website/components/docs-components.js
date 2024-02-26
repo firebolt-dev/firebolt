@@ -1,5 +1,5 @@
 import { Link, css, cls } from 'firebolt'
-import { Check, Copy, File } from 'lucide-react'
+import { Check, Copy, File, Link as LinkIcon } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 export const components = {
@@ -16,29 +16,39 @@ export const components = {
     )
   },
   h2(props) {
+    const id = stringToId(props.children)
     return (
       <h2
+        {...props}
+        id={id}
         css={css`
           font-size: 24px;
           font-weight: 700;
           margin-top: 32px;
           margin-bottom: 16px;
+          scroll-margin-top: 102px;
         `}
-        {...props}
-      />
+      >
+        <Anchor id={id}>{props.children}</Anchor>
+      </h2>
     )
   },
   h3(props) {
+    const id = stringToId(props.children)
     return (
       <h3
+        {...props}
+        id={id}
         css={css`
           font-size: 18px;
           font-weight: 700;
           margin-top: 32px;
           margin-bottom: 16px;
+          scroll-margin-top: 102px;
         `}
-        {...props}
-      />
+      >
+        <Anchor id={id}>{props.children}</Anchor>
+      </h3>
     )
   },
   p(props) {
@@ -228,4 +238,40 @@ export const components = {
       </div>
     )
   },
+}
+
+function stringToId(str) {
+  // converts a string into an ID that can be used for anchors
+  str = str.toLowerCase()
+  str = str
+    .replace(/[^a-z0-9 -]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+  return str
+}
+
+function Anchor({ id, children }) {
+  return (
+    <a
+      href={`#${id}`}
+      css={css`
+        > svg {
+          display: none;
+          margin-left: 0.1em;
+          margin-top: -0.1em;
+          vertical-align: middle;
+          line-height: 1;
+        }
+        &:hover {
+          color: var(--primary-color);
+          > svg {
+            display: inline-block;
+          }
+        }
+      `}
+    >
+      {children}
+      <LinkIcon size='.8em' />
+    </a>
+  )
 }

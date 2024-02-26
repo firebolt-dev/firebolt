@@ -80,9 +80,8 @@ const lightVariables = `
   :root {
     --primary-color: rgb(255 65 88);
     --bg-color: white;
-    --text-color: black;
-    --text-color-dim: rgba(0, 0, 0, 0.64);
-    --text-color-dim2: rgba(0, 0, 0, 0.32);
+    --text-color: rgb(23, 23, 23);
+    --text-color-dim: rgb(102, 102, 102);
     --line-color: rgba(0, 0, 0, 0.1);
     --icon-color: black;
     --icon-color-dim: rgba(0, 0, 0, 0.3);
@@ -106,9 +105,8 @@ const darkVariables = `
   :root {
     --primary-color: rgb(255 65 88);
     --bg-color: rgb(18, 18, 18);
-    --text-color: white;
-    --text-color-dim: rgba(255, 255, 255, 0.64);
-    --text-color-dim2: rgba(255, 255, 255, 0.32);
+    --text-color: rgba(237, 237, 237);
+    --text-color-dim: rgb(161, 161, 161);
     --line-color: rgba(255, 255, 255, 0.1);
     --icon-color: white;
     --icon-color-dim: rgba(255, 255, 255, 0.3);
