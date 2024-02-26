@@ -6,7 +6,7 @@ if (process.env.PORT) config.port = process.env.PORT
 if (!config.port) config.port = 3000
 
 if (
-  config.productionBrowserSourceMaps !== true ||
+  config.productionBrowserSourceMaps !== true &&
   config.productionBrowserSourceMaps !== false
 ) {
   config.productionBrowserSourceMaps = false

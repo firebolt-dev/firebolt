@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url'
 import { performance } from 'perf_hooks'
 import chokidar from 'chokidar'
 import * as esbuild from 'esbuild'
-import { isEqual, debounce, defaultsDeep } from 'lodash-es'
+import { isEqual, debounce } from 'lodash-es'
 import mdx from '@mdx-js/esbuild'
 import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 
