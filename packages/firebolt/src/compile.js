@@ -19,6 +19,7 @@ import * as log from './utils/log'
 import { reimport } from './utils/reimport'
 import { getFilePaths } from './utils/getFilePaths'
 import { fileToRoutePattern } from './utils/fileToRoutePattern'
+import { rawToPattern } from './utils/rawToPattern'
 import {
   BundlerError,
   isEsbuildError,
@@ -159,29 +160,52 @@ export async function compile(opts) {
     // generate route details
     let ids = 0
     const routes = []
-    for (const pageFile of pageFiles) {
+    // first pass (raw pattern)
+    for (const file of pageFiles) {
       const id = `route${++ids}`
-      const file = pageFile
-      const isMDX = pageFile.endsWith('.mdx')
-      const prettyFileBase = path.relative(appDir, pageFile)
-      const pageFileBase = path.relative(appPagesDir, pageFile)
-      let shimFile = path.join(buildPageShimsDir, pageFileBase.replace('/', '.')) // prettier-ignore
-      if (isMDX) shimFile = shimFile.replace('.mdx', '.js')
-      let shimFileName = path.relative(path.dirname(shimFile), shimFile) // prettier-ignore
-      const pattern = fileToRoutePattern('/' + pageFileBase)
-      const relBuildToPageFile = path.relative(buildDir, pageFile)
-      const relShimToPageFile = path.relative(path.dirname(shimFile), pageFile) // prettier-ignore
+      const fileBase = path.relative(appPagesDir, file)
+      const fileBaseNoExt = fileBase.split('.').slice(0, -1).join('.')
+      const rawPattern = fileBaseNoExt.replace(/_/g, '/')
       routes.push({
         id,
         file,
-        prettyFileBase,
-        pattern,
-        shimFile,
-        shimFileName,
-        relBuildToPageFile,
-        relShimToPageFile,
-        isMDX,
+        rawPattern,
       })
+    }
+    // second pass (type)
+    for (const route of routes) {
+      const isPage =
+        route.rawPattern.endsWith('/index') ||
+        !routes.find(r => r.rawPattern.startsWith(route.rawPattern + '/'))
+      route.type = isPage ? 'page' : 'layout'
+      route.isPage = isPage
+      route.isLayout = !isPage
+    }
+    // third pass (pages)
+    for (const route of routes) {
+      route.isMDX = route.file.endsWith('.mdx')
+      route.appFileBase = path.relative(appDir, route.file)
+      route.pagesFileBase = path.relative(appPagesDir, route.file)
+      route.shimFile = path.join(buildPageShimsDir, route.pagesFileBase.replace('/', '_')) // prettier-ignore
+      if (route.isMDX) route.shimFile = route.shimFile.replace('.mdx', '.js')
+      route.shimFileName = path.relative(path.dirname(route.shimFile), route.shimFile) // prettier-ignore
+      route.relBuildToRouteFile = path.relative(buildDir, route.file)
+      route.relShimToRouteFile = path.relative(path.dirname(route.shimFile), route.file) // prettier-ignore
+      route.parents = []
+      route.pattern = ''
+      if (route.type === 'page') {
+        route.pattern = rawToPattern('/' + route.rawPattern)
+        const segments = route.rawPattern.split('/')
+        if (route.type === 'page' && segments.length > 1) {
+          for (let i = 0; i < segments.length; i++) {
+            const subRawPattern = [...segments].slice(0, i).join('/')
+            const layout = routes.find(
+              r => r.type === 'layout' && r.rawPattern === subRawPattern
+            )
+            if (layout) route.parents.push(layout)
+          }
+        }
+      }
     }
 
     // sort routes so that explicit routes have priority over dynamic routes
@@ -208,7 +232,7 @@ export async function compile(opts) {
     if (routesNeedingMDXBuild.length) {
       // console.log(
       //   'building mdx',
-      //   routesNeedingMDXBuild.map(r => r.prettyFileBase)
+      //   routesNeedingMDXBuild.map(r => r.appFileBase)
       // )
       // console.time('mdx')
       const result = await esbuild.build({
@@ -255,7 +279,7 @@ export async function compile(opts) {
 
     // build and inspect pages
     const inspectionCode = `
-      ${routes.map(route => `export * as ${route.id} from '${route.relBuildToPageFile}'`).join('\n')}
+      ${routes.map(route => `export * as ${route.id} from '${route.relBuildToRouteFile}'`).join('\n')}
     `
     await fs.outputFile(buildInspectionFile, inspectionCode)
     if (!ctx.pageInspector) {
@@ -299,7 +323,7 @@ export async function compile(opts) {
     for (const route of routes) {
       if (!inspection[route.id].default) {
         throw new BundlerError(
-          `missing default page export for ${style.mark(route.prettyFileBase)}`
+          `missing default page export for ${style.mark(route.appFileBase)}`
         )
       }
       if (route.isMDX && inspection[route.id].components) {
@@ -307,23 +331,38 @@ export async function compile(opts) {
       }
     }
 
+    const generateNestedContent = route => {
+      let open = ''
+      let close = ''
+      for (const parent of route.parents) {
+        open += `<${parent.id}.default>`
+        close = `</${parent.id}.default>` + close
+      }
+      if (route.hasMDXComponents) {
+        return `${open}<${route.id}.default components={${route.id}.components}/>${close}`
+      } else {
+        return `${open}<${route.id}.default/>${close}`
+      }
+    }
+
     // create core
     const coreCode = `
-      ${routes.map(route => `import * as ${route.id} from '${route.relBuildToPageFile}'`).join('\n')}
+      ${routes.map(route => `import * as ${route.id} from '${route.relBuildToRouteFile}'`).join('\n')}
       export const routes = [
         ${routes
+          .filter(route => route.isPage)
           .map(route => {
             return `
             {
               module: ${route.id},
               id: '${route.id}',
-              prettyFileBase: '${route.prettyFileBase}',
+              appFileBase: '${route.appFileBase}',
               pattern: '${route.pattern}',
               shimFile: '${route.shimFile}',
               shimFileName: '${route.shimFileName}',
-              relBuildToPageFile: '${route.relBuildToPageFile}',
-              relShimToPageFile: '${route.relShimToPageFile}',
-              Page: ${route.hasMDXComponents ? `function MDXPage() { return <${route.id}.default components={${route.id}.components} /> }` : `${route.id}.default`},
+              relBuildToRouteFile: '${route.relBuildToRouteFile}',
+              relShimToRouteFile: '${route.relShimToRouteFile}',
+              content: ${generateNestedContent(route)}
             },
           `
           })
@@ -335,21 +374,12 @@ export async function compile(opts) {
     // generate page shims for client (tree shaking)
     // TODO: can't we just import * and always use a wrapper for simplicity?
     for (const route of routes) {
-      let code
-      if (route.hasMDXComponents) {
-        code = `
-          import Page, { components } from '${route.relShimToPageFile}'
-          function MDXPage() {
-            return <Page components={components} />
-          }
-          globalThis.$firebolt.push('registerPage', '${route.id}', MDXPage)
-        `
-      } else {
-        code = `
-          import Page from '${route.relShimToPageFile}'
-          globalThis.$firebolt.push('registerPage', '${route.id}', Page)
-        `
-      }
+      const code = `
+        import * as ${route.id} from '${route.relShimToRouteFile}'
+        ${route.parents.map(parent => `import * as ${parent.id} from '${parent.relShimToRouteFile}'`).join('\n')}
+        const content = ${generateNestedContent(route)}
+        globalThis.$firebolt.push('registerPage', '${route.id}', content)
+      `
       await fs.outputFile(route.shimFile, code)
     }
 

@@ -38,9 +38,9 @@ export function createRuntime({
     methods[action](...args)
   }
 
-  function registerPage(routeId, Page) {
+  function registerPage(routeId, content) {
     const route = routes.find(route => route.id === routeId)
-    route.Page = Page
+    route.content = content
   }
 
   function resolveRouteAndParams(url) {
@@ -88,7 +88,7 @@ export function createRuntime({
 
   async function loadRoute(route) {
     if (!route) return
-    if (route.Page) return
+    if (route.content) return
     if (!route.loader) {
       route.loader = import(route.file)
     }

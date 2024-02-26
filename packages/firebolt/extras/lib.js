@@ -132,7 +132,7 @@ export function Router() {
       let cancelled
       const exec = async () => {
         const location = runtime.resolveLocation(browserUrl)
-        if (!location.route.Page) {
+        if (!location.route.content) {
           await runtime.loadRoute(location.route)
         }
         if (cancelled) return
@@ -169,10 +169,9 @@ export function Router() {
 }
 
 function Route({ location }) {
-  const { Page } = location.route
   return (
     <LocationProvider value={location}>
-      <Page />
+      {location.route.content}
     </LocationProvider>
   )
 }
