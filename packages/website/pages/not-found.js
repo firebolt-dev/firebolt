@@ -1,3 +1,10 @@
+import { Metadata } from '../components/Metadata'
+
 export default function NotFound() {
-  return <div>Not Found</div>
+  return (
+    <>
+      <Metadata title='Not Found' />
+      <div>Not Found</div>
+    </>
+  )
 }
