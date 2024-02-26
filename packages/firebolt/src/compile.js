@@ -46,7 +46,7 @@ export async function compile(opts) {
 
   const buildDir = path.join(appDir, '.firebolt')
   const buildPageShimsDir = path.join(appDir, '.firebolt/page-shims')
-  const buildCoreFile = path.join(appDir, '.firebolt/core.js')
+  const buildRoutesFile = path.join(appDir, '.firebolt/routes.js')
   const buildConfigFile = path.join(appDir, '.firebolt/config.js')
   const buildManifestFile = path.join(appDir, '.firebolt/manifest.json')
   const buildLibFile = path.join(appDir, '.firebolt/lib.js')
@@ -339,11 +339,11 @@ export async function compile(opts) {
       }
     }
 
-    // create core
-    const coreCode = `
+    // create routes file
+    const routesCode = `
       import { MDXWrapper } from 'firebolt'
       ${routes.map(route => `import * as ${route.id} from '${route.relBuildToRouteFile}'`).join('\n')}
-      export const routes = [
+      const routes = [
         ${routes
           .filter(route => route.isPage)
           .map(route => {
@@ -363,8 +363,9 @@ export async function compile(opts) {
           })
           .join('\n')}
       ]
+      export default routes
     `
-    await fs.outputFile(buildCoreFile, coreCode)
+    await fs.outputFile(buildRoutesFile, routesCode)
 
     // generate page shims for client (tree shaking)
     for (const route of routes) {

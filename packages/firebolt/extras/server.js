@@ -7,7 +7,7 @@ import { Root } from 'firebolt'
 
 import { matcher } from './matcher'
 import { config } from './config.js'
-import * as core from './core.js'
+import routes from './routes.js'
 import manifest from './manifest.json'
 import { Request, RequestError, RequestRedirect } from './request'
 import * as registry from './registry'
@@ -27,12 +27,13 @@ export { config }
 
 // hydrate manifest
 const bootstrapFile = manifest.bootstrapFile
-for (const route of core.routes) {
+// TODO: why can't these just be in routes.js?
+for (const route of routes) {
   route.file = manifest.pageFiles[route.id]
 }
 
 // build route definitions to be used by the client
-const routesForClient = core.routes.map(route => {
+const routesForClient = routes.map(route => {
   return {
     id: route.id,
     pattern: route.pattern,
@@ -40,14 +41,14 @@ const routesForClient = core.routes.map(route => {
   }
 })
 
-const notFoundRoute = core.routes.find(r => (r.pattern = '/not-found'))
+const notFoundRoute = routes.find(r => (r.pattern = '/not-found'))
 
 // utility to find a route from a url
 function resolveRouteAndParams(url) {
   if (!url) {
     return [null, {}]
   }
-  for (const route of core.routes) {
+  for (const route of routes) {
     const [hit, params] = match(route.pattern, url)
     if (hit) return [route, params]
   }
@@ -174,7 +175,7 @@ export async function handleRequest(req, res) {
         return data
       },
     },
-    routes: core.routes,
+    routes,
   }
 
   const runtime = createRuntime([['init', options]])
