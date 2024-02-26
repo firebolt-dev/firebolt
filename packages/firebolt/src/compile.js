@@ -18,8 +18,7 @@ import * as style from './utils/style'
 import * as log from './utils/log'
 import { reimport } from './utils/reimport'
 import { getFilePaths } from './utils/getFilePaths'
-import { fileToRoutePattern } from './utils/fileToRoutePattern'
-import { rawToPattern } from './utils/rawToPattern'
+import { createRoutePattern } from './utils/createRoutePattern'
 import {
   BundlerError,
   isEsbuildError,
@@ -160,29 +159,25 @@ export async function compile(opts) {
     // generate route details
     let ids = 0
     const routes = []
-    // first pass (raw pattern)
+    // first pass (pre-generate base pattern)
     for (const file of pageFiles) {
       const id = `route${++ids}`
       const fileBase = path.relative(appPagesDir, file)
       const fileBaseNoExt = fileBase.split('.').slice(0, -1).join('.')
-      const rawPattern = fileBaseNoExt.replace(/_/g, '/')
+      const basePattern = fileBaseNoExt.replace(/_/g, '/')
       routes.push({
         id,
         file,
-        rawPattern,
+        basePattern,
       })
     }
-    // second pass (type)
+    // second pass (generate rest of fields)
     for (const route of routes) {
       const isPage =
-        route.rawPattern.endsWith('/index') ||
-        !routes.find(r => r.rawPattern.startsWith(route.rawPattern + '/'))
-      route.type = isPage ? 'page' : 'layout'
+        route.basePattern.endsWith('/index') ||
+        !routes.find(r => r.basePattern.startsWith(route.basePattern + '/'))
       route.isPage = isPage
       route.isLayout = !isPage
-    }
-    // third pass (pages)
-    for (const route of routes) {
       route.isMDX = route.file.endsWith('.mdx')
       route.appFileBase = path.relative(appDir, route.file)
       route.pagesFileBase = path.relative(appPagesDir, route.file)
@@ -191,18 +186,17 @@ export async function compile(opts) {
       route.shimFileName = path.relative(path.dirname(route.shimFile), route.shimFile) // prettier-ignore
       route.relBuildToRouteFile = path.relative(buildDir, route.file)
       route.relShimToRouteFile = path.relative(path.dirname(route.shimFile), route.file) // prettier-ignore
+      route.pattern = createRoutePattern(route.basePattern)
       route.parents = []
-      route.pattern = ''
-      if (route.type === 'page') {
-        route.pattern = rawToPattern('/' + route.rawPattern)
-        const segments = route.rawPattern.split('/')
-        if (route.type === 'page' && segments.length > 1) {
-          for (let i = 0; i < segments.length; i++) {
-            const subRawPattern = [...segments].slice(0, i).join('/')
-            const layout = routes.find(
-              r => r.type === 'layout' && r.rawPattern === subRawPattern
-            )
-            if (layout) route.parents.push(layout)
+      if (route.isPage) {
+        const segments = route.basePattern.split('/')
+        for (let i = 0; i < segments.length; i++) {
+          const subBasePattern = [...segments].slice(0, i).join('/')
+          const layout = routes.find(r => {
+            return r.isLayout && r.basePattern === subBasePattern
+          })
+          if (layout) {
+            route.parents.push(layout)
           }
         }
       }
@@ -338,8 +332,8 @@ export async function compile(opts) {
         open += `<${parent.id}.default>`
         close = `</${parent.id}.default>` + close
       }
-      if (route.hasMDXComponents) {
-        return `${open}<${route.id}.default components={${route.id}.components}/>${close}`
+      if (route.isMDX) {
+        return `${open}<MDXWrapper component={${route.id}.default} />${close}`
       } else {
         return `${open}<${route.id}.default/>${close}`
       }
@@ -347,6 +341,7 @@ export async function compile(opts) {
 
     // create core
     const coreCode = `
+      import { MDXWrapper } from 'firebolt'
       ${routes.map(route => `import * as ${route.id} from '${route.relBuildToRouteFile}'`).join('\n')}
       export const routes = [
         ${routes
@@ -372,9 +367,9 @@ export async function compile(opts) {
     await fs.outputFile(buildCoreFile, coreCode)
 
     // generate page shims for client (tree shaking)
-    // TODO: can't we just import * and always use a wrapper for simplicity?
     for (const route of routes) {
       const code = `
+        import { MDXWrapper } from 'firebolt'
         import * as ${route.id} from '${route.relShimToRouteFile}'
         ${route.parents.map(parent => `import * as ${parent.id} from '${parent.relShimToRouteFile}'`).join('\n')}
         const content = ${generateNestedContent(route)}
@@ -625,7 +620,7 @@ export async function compile(opts) {
         return
       }
     }
-    // only serve if there isn't anothe run pending
+    // only serve if there isn't another run pending
     if (opts.serve && !runPending) {
       await serve()
     }

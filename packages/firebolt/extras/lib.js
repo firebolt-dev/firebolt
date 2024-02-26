@@ -269,3 +269,20 @@ export function cls(...args) {
   }
   return str
 }
+
+const MDXContext = createContext()
+
+export function MDXProvider({ components, children }) {
+  return (
+    <MDXContext.Provider value={components}>{children}</MDXContext.Provider>
+  )
+}
+
+export function useMDXComponents() {
+  return useContext(MDXContext)
+}
+
+export function MDXWrapper({ component: Component }) {
+  const components = useMDXComponents()
+  return <Component components={components} />
+}

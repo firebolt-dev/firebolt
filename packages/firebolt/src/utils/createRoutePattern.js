@@ -2,20 +2,17 @@
 // see: https://github.com/molefrog/wouter/blob/main/matcher.js
 // see: https://www.npmjs.com/package/path-to-regexp
 
-export function fileToRoutePattern(filePath) {
-  // remove extension
-  filePath = filePath.split('.')
-  filePath.pop()
-  filePath = filePath.join('')
-  // split by _ and trim empties
-  filePath = filePath.split('_').filter(seg => !!seg)
-  // conversion
-  const pattern = filePath
+export function createRoutePattern(basePattern) {
+  const segments = basePattern.split('/')
+  const pattern = segments
     .map(segment => {
-      // /index -> /
-      if (segment.endsWith('/index')) {
-        segment = segment.replace('/index', '')
-        return segment
+      // ''
+      if (segment === '') {
+        return ''
+      }
+      // index
+      if (segment === 'index') {
+        return ''
       }
       // dynamic
       if (segment.startsWith('$')) {
@@ -33,6 +30,7 @@ export function fileToRoutePattern(filePath) {
       }
       return segment
     })
+    .filter(v => !!v)
     .join('/')
-  return pattern
+  return '/' + pattern
 }
