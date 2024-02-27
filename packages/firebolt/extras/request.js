@@ -1,55 +1,56 @@
 import { cookieOptionsToExpress } from './cookies'
 
-export class Request {
-  constructor(req, defaultCookieOptions) {
-    this.url = req.url
-    this._expire = null
-    this._cookieData = req.cookies
-    this._cookieChanges = []
+export class FireboltRequest extends FetchRequest {
+  constructor({ ctx, xReq, defaultCookieOptions, params }) {
+    const url = `${xReq.protocol}://${xReq.get('host')}${xReq.originalUrl}`
+
+    const options = {
+      method: xReq.method,
+      headers: xReq.headers,
+      body: ['POST', 'PUT', 'PATCH'].includes(xReq.method)
+        ? xReq.body
+        : undefined,
+    }
+
+    if (options.body && typeof options.body === 'object') {
+      options.body = JSON.stringify(options.body)
+      options.headers['Content-Type'] = 'application/json'
+    }
+
+    super(url, options)
+
+    this._ctx = ctx
+    this._xReq = xReq
     this._defaultCookieOptions = defaultCookieOptions
+    this._cookieChanges = []
+
+    this.params = params
   }
 
   error(data, message) {
-    throw new RequestError(data, message)
+    if (this._ctx === 'api') {
+      return console.error('API Routes do not support req.error()')
+    }
+    this._errorInfo = { name: 'RequestError', data, message }
+    throw this
+  }
+
+  redirect(url, type = 'push') {
+    if (this._ctx === 'api') {
+      return console.error('API Routes do not support req.redirect()')
+    }
+    this._redirectInfo = { url, type }
+    throw this
   }
 
   expire(amount, unit = 'seconds') {
-    if (!unitToSeconds[unit]) {
-      throw new Error(`Invalid expire unit: ${unit}`)
-    }
+    // todo: warn if not loader
     this._expire = unitToSeconds[unit](amount)
   }
 
-  redirect(url, type) {
-    throw new RequestRedirect(url, type)
-  }
-
-  applyRedirectToExpressResponse(redirect, res) {
-    // during ssr if we need to redirect, we have to do it using a script
-    // because the response is already streaming :)
-    //
-    // NOTE: we write directly to the response and flush it so that we don't get a flash
-    // of the rendering before it redirects.
-    if (redirect.type === 'replace') {
-      res.write(`
-          <script>window.location.replace('${redirect.url}')</script>
-        `)
-      res.flush()
-    }
-    if (redirect.type === 'push') {
-      // note: it appears that this does not push a new route to the history and instead replaces it.
-      // this is likely because the location changes BEFORE the html document has finished streaming.
-      res.write(`
-          <script>window.location.href = '${redirect.url}'</script>
-        `)
-      res.flush()
-    }
-  }
-
   setCookie(key, value, options) {
-    // console.log('setCookie', { key, value, options })
     if (value === null || value === undefined || value === '') {
-      this._cookieData[key] = null
+      this._xReq.cookies[key] = null
       this._cookieChanges.push({
         type: 'remove',
         key,
@@ -64,7 +65,7 @@ export class Request {
           value
         )
       }
-      this._cookieData[key] = data
+      this._xReq.cookies[key] = data
       this._cookieChanges.push({
         type: 'set',
         key,
@@ -75,7 +76,7 @@ export class Request {
   }
 
   getCookie(key) {
-    let data = this._cookieData[key]
+    let data = this._xReq.cookies[key]
     if (data === null || data === undefined || data === '') {
       return null
     }
@@ -86,11 +87,37 @@ export class Request {
       console.error(`could not deserialize cookie ${key} with value:`, data)
       return null
     }
-    // console.log('getCookie', { key, value })
     return value
   }
 
-  getCookieChangedKeys() {
+  _applyRedirectToExpressResponse(res) {
+    if (!this._redirectInfo) return
+    /**
+     * during ssr if we need to redirect, we have to do it using a script
+     * because the response is already streaming :)
+     *
+     * NOTE: we write directly to the response and flush it so that we don't get a flash
+     * of the rendering before it redirects.
+     */
+    if (this._redirectInfo.type === 'replace') {
+      res.write(`
+            <script>window.location.replace('${this._redirectInfo.url}')</script>
+          `)
+      res.flush()
+    }
+    if (this._redirectInfo.type === 'push') {
+      /**
+       * NOTE: it appears that this does not push a new route to the history and instead replaces it.
+       * this is likely because the location changes BEFORE the html document has finished streaming.
+       */
+      res.write(`
+            <script>window.location.href = '${this._redirectInfo.url}'</script>
+          `)
+      res.flush()
+    }
+  }
+
+  _getChangedCookies() {
     const keys = []
     for (const change of this._cookieChanges) {
       if (!keys.includes(change.key)) {
@@ -100,7 +127,7 @@ export class Request {
     return keys
   }
 
-  pushCookieChangesToResponse(res) {
+  _pushCookieChangesToExpressResponse(res) {
     for (const change of this._cookieChanges) {
       if (change.type === 'set') {
         let { key, data, options } = change
@@ -115,7 +142,7 @@ export class Request {
     this._cookieChanges.length = 0
   }
 
-  pushCookieChangesToStream(inserts) {
+  _pushCookieChangesToStream(inserts) {
     for (const change of this._cookieChanges) {
       if (change.type === 'set') {
         let { key, data, options } = change
@@ -135,27 +162,19 @@ export class Request {
   }
 }
 
-export class RequestError extends Error {
-  constructor(data, message) {
-    super(message || 'There was an error with that request')
-    this.data = data || {}
-    this.name = this.constructor.name
-    Error.captureStackTrace(this, this.constructor)
+export class FireboltResponse extends FetchResponse {
+  constructor(body, options) {
+    super(body, options)
+    this.foo = true
   }
-}
 
-export class RequestRedirect {
-  constructor(url, type) {
-    this.url = url
-    this.type = type || 'push'
+  applyToExpressResponse(res) {
+    this.headers.forEach((value, name) => {
+      res.setHeader(name, value)
+    })
+    res.status(this.status)
+    this.body.pipe(res)
   }
-  getRedirect() {
-    return { url: this.url, type: this.type }
-  }
-}
-
-const defaultCookieOptions = {
-  // ...
 }
 
 const unitToSeconds = {

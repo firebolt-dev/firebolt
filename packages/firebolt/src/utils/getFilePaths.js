@@ -18,7 +18,8 @@ export async function getFilePaths(baseDir, exts) {
     }
   }
 
-  await traverse(baseDir)
+  const exists = await fs.exists(baseDir)
+  if (exists) await traverse(baseDir)
   return filePaths
 }
 

@@ -1,4 +1,5 @@
 import 'dotenv/config'
+
 import fs from 'fs-extra'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -14,6 +15,7 @@ import cors from 'cors'
 import compression from 'compression'
 import cookieParser from 'cookie-parser'
 
+import './utils/fetch'
 import * as style from './utils/style'
 import * as log from './utils/log'
 import { reimport } from './utils/reimport'
@@ -50,6 +52,7 @@ export async function compile(opts) {
   const buildConfigFile = path.join(appDir, '.firebolt/config.js')
   const buildManifestFile = path.join(appDir, '.firebolt/manifest.json')
   const buildLibFile = path.join(appDir, '.firebolt/lib.js')
+  const buildApiFile = path.join(appDir, '.firebolt/api.js')
   const buildBoostrapFile = path.join(appDir, '.firebolt/bootstrap.js')
   const buildRegistryFile = path.join(appDir, '.firebolt/registry.js')
   const buildServerFile = path.join(appDir, '.firebolt/server.js')
@@ -153,15 +156,54 @@ export async function compile(opts) {
       bootstrapFile: null,
     }
 
+    // get a list of api files
+    const apiFiles = await getFilePaths(appApiDir, ['js'])
+
+    // generate api route details
+    let apiIds = 0
+    const api = []
+    for (const file of apiFiles) {
+      const id = `api${++apiIds}`
+      const fileBase = path.relative(appApiDir, file)
+      const fileBaseNoExt = fileBase.split('.').slice(0, -1).join('.')
+      const basePattern = fileBaseNoExt.replace(/_/g, '/')
+      const pattern = createRoutePattern(basePattern)
+      const relBuildToRouteFile = path.relative(buildDir, file)
+      api.push({
+        id,
+        file,
+        pattern,
+        relBuildToRouteFile,
+      })
+    }
+
+    // generate api routes file
+    const apiCode = `
+      ${api.map(route => `import * as ${route.id} from '${route.relBuildToRouteFile}'\n`)}
+      const api = [
+        ${api.map(
+          route => `
+          {
+            id: '${route.id}',
+            pattern: '${route.pattern}',
+            module: ${route.id}
+          },
+        `
+        )}
+      ]
+      export default api
+    `
+    await fs.outputFile(buildApiFile, apiCode)
+
     // get a list of page files
     const pageFiles = await getFilePaths(appPagesDir, ['js', 'mdx'])
 
     // generate route details
-    let ids = 0
+    let pageIds = 0
     const routes = []
     // first pass (pre-generate base pattern)
     for (const file of pageFiles) {
-      const id = `route${++ids}`
+      const id = `route${++pageIds}`
       const fileBase = path.relative(appPagesDir, file)
       const fileBaseNoExt = fileBase.split('.').slice(0, -1).join('.')
       const basePattern = fileBaseNoExt.replace(/_/g, '/')
@@ -561,16 +603,24 @@ export async function compile(opts) {
         // todo: try/catch
         server.handleFunction(req, res)
       })
+      app.use('/api/*', async (req, res) => {
+        try {
+          await server.handleApi(req, res)
+        } catch (err) {
+          console.error(err)
+        }
+      })
       app.use('*', async (req, res) => {
         try {
-          await server.handleRequest(req, res)
+          await server.handlePage(req, res)
         } catch (err) {
-          console.log('server.handleRequest catch')
-          if (err instanceof server.Request) {
-            logCodeError(parseServerError(err, appDir))
-          } else {
-            console.error(err)
-          }
+          console.error(err)
+          // console.log('server.handleRequest catch')
+          // if (err instanceof server.Request) {
+          //   logCodeError(parseServerError(err, appDir))
+          // } else {
+          //   console.error(err)
+          // }
         }
       })
       port = server.config.port

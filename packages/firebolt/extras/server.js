@@ -8,11 +8,12 @@ import { Root } from 'firebolt'
 import { matcher } from './matcher'
 import { config } from './config.js'
 import routes from './routes.js'
+import api from './api.js'
 import manifest from './manifest.json'
-import { Request, RequestError, RequestRedirect } from './request'
 import * as registry from './registry'
 import { cookieOptionsToExpress } from './cookies'
 import { createRuntime } from './runtime'
+import { FireboltRequest, FireboltResponse } from './request'
 
 // suppress React warning about useLayoutEffect on server, this is nonsense because useEffect
 // is similar and doesn't warn and is allowed in SSR
@@ -24,6 +25,9 @@ const match = matcher()
 const prod = process.env.NODE_ENV === 'production'
 
 export { config }
+
+// provide Request global for api routes
+globalThis.Response = FireboltResponse
 
 // hydrate manifest
 const bootstrapFile = manifest.bootstrapFile
@@ -43,6 +47,18 @@ const routesForClient = routes.map(route => {
 
 const notFoundRoute = routes.find(r => r.pattern === '/not-found')
 
+const defaultCookieOptions = config.cookie
+
+// utility to find an api route from a url
+function resolveApiAndParams(url) {
+  url = url.slice(4) // remove /api prefix
+  for (const route of api) {
+    const [hit, params] = match(route.pattern, url)
+    if (hit) return [route, params]
+  }
+  return [null, {}]
+}
+
 // utility to find a route from a url
 function resolveRouteAndParams(url) {
   if (!url) {
@@ -56,11 +72,11 @@ function resolveRouteAndParams(url) {
 }
 
 // utility to call loader/action functions
-async function callFunction(request, id, args) {
-  await config.decorate(request)
+async function callFunction(req, id, args) {
+  await config.decorate(req)
   const fn = registry[id]
   if (!fn) throw new Error('Invalid function')
-  let value = fn(request, ...args)
+  let value = fn(req, ...args)
   if (value instanceof Promise) {
     value = await value
   }
@@ -70,36 +86,78 @@ async function callFunction(request, id, args) {
 // handle loader/action function call requests from the client
 export async function handleFunction(req, res) {
   const { id, args } = req.body
-  const request = new Request(req, config.cookie)
+  const fireboltRequest = new FireboltRequest({
+    ctx: 'fn',
+    xReq: req,
+    params: {},
+    defaultCookieOptions,
+  })
   let value
   let error
   try {
-    value = await callFunction(request, id, args)
+    value = await callFunction(fireboltRequest, id, args)
   } catch (err) {
     error = err
   }
   const data = {}
   // get changed cookies to notify client UI
-  data.cookies = request.getCookieChangedKeys()
+  data.cookies = fireboltRequest._getChangedCookies()
   // apply cookie changes to express response
-  request.pushCookieChangesToResponse(res)
-  // if RequestRedirect error, redirect the client
-  if (error instanceof RequestRedirect) {
-    data.redirect = error.getRedirect()
+  fireboltRequest._pushCookieChangesToExpressResponse(res)
+  // handle redirect if any
+  if (error === fireboltRequest && error._redirectInfo) {
+    data.redirect = error._redirectInfo
     return res.status(200).json(data)
   }
   if (error) {
     data.error = serializeFunctionError(error, prod)
     return res.status(400).json(data)
   }
-  // otherwise its the return value of the function
+  // otherwise respond with the return value
   data.value = value
-  data.expire = request._expire
+  data.expire = fireboltRequest._expire
   res.status(200).json(data)
 }
 
-// handle requests for pages and api
-export async function handleRequest(req, res) {
+export async function handleApi(req, res) {
+  const url = req.originalUrl
+  const method = req.method.toLowerCase()
+
+  const [route, params] = resolveApiAndParams(url)
+
+  if (!route || !route.module[method]) {
+    return res.status(404).end()
+  }
+
+  const fireboltRequest = new FireboltRequest({
+    ctx: 'api',
+    xReq: req,
+    params,
+    defaultCookieOptions,
+  })
+  let result
+  try {
+    result = route.module[method](fireboltRequest)
+    if (result instanceof Promise) {
+      result = await result
+    }
+  } catch (err) {
+    console.error('Received error from API Route:')
+    console.error(err)
+    return res.status(500).end()
+  }
+  // apply any cookie changes
+  fireboltRequest._pushCookieChangesToExpressResponse(res)
+  // if result is a FireboltResponse, pipe it through
+  if (result instanceof FireboltResponse) {
+    return result.applyToExpressResponse(res)
+  }
+  // otherwise assume json
+  return res.json(result)
+}
+
+// handle requests for pages
+export async function handlePage(req, res) {
   let url = req.originalUrl
 
   // handle page requests
@@ -146,22 +204,26 @@ export async function handleRequest(req, res) {
       inserts,
       cookies,
       async callFunction(...args) {
-        const request = new Request(req, config.cookie)
+        const fireboltRequest = new FireboltRequest({
+          ctx: 'page',
+          xReq: req,
+          params,
+          defaultCookieOptions,
+        })
         let value
         let error
         try {
-          value = await callFunction(request, ...args)
+          value = await callFunction(fireboltRequest, ...args)
         } catch (err) {
           error = err
         }
         // write out any cookies first
-        request.pushCookieChangesToStream(inserts)
-        // if RequestRedirect error, write out the redirect and stop
-        if (error instanceof RequestRedirect) {
-          request.applyRedirectToExpressResponse(error, res)
-          return
+        fireboltRequest._pushCookieChangesToStream(inserts)
+        // if FireboltRequest error, write out the redirect and stop
+        if (error instanceof FireboltRequest && error._redirectInfo) {
+          return fireboltRequest._applyRedirectToExpressResponse(res)
         }
-        // if RequestError or generic error, return the error
+        // if FireboltRequest error or generic, return the error
         if (error) {
           return {
             error: serializeFunctionError(error, prod),
@@ -244,11 +306,11 @@ export async function handleRequest(req, res) {
 }
 
 function serializeFunctionError(error, prod) {
-  if (error instanceof RequestError) {
+  if (error instanceof FireboltRequest) {
     return {
-      name: error.name,
-      message: error.message,
-      data: error.data,
+      name: error._errorInfo.name,
+      message: error._errorInfo.message,
+      data: error._errorInfo.data,
     }
   }
   if (prod) {
