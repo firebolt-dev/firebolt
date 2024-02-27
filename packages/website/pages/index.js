@@ -91,9 +91,10 @@ export default function Home() {
           }
         `}
       >
-        <h1 className='home-title'>The React Framework for Shipping</h1>
+        <h1 className='home-title'>The Simple React Framework</h1>
         <p className='home-tag'>
-          Build anything for the web, easily, without any fuss.
+          Everything you need to rapidly build full-stack apps for the web, with
+          ease.
         </p>
         <Link to='/docs'>
           <a className='home-cta'>
@@ -129,7 +130,7 @@ export default function Home() {
               <h1>Parallel Streaming</h1>
               <p>
                 Full Server-side rendering and parallel streaming means your
-                pages load fast and your SEO score skyrockets.
+                pages load fast and your SEO skyrockets!
               </p>
             </div>
           </div>
@@ -137,8 +138,8 @@ export default function Home() {
             <div className='home-feature-inner'>
               <h1>Actions & Loaders</h1>
               <p>
-                Interact with your database directly inside any component.
-                Forget about building API's entirely.
+                Interact with your database directly inside your components.
+                Forget about building APIs.
               </p>
             </div>
           </div>
@@ -146,7 +147,7 @@ export default function Home() {
             <div className='home-feature-inner'>
               <h1>CSS-in-JS</h1>
               <p>
-                Ready to use, first class support for CSS-in-JS that works
+                Ready to go, first class support for CSS-in-JS that works
                 flawlessly with SSR and Streaming.
               </p>
             </div>

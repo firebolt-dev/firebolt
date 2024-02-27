@@ -5,7 +5,8 @@
 
 # Quick Start
 
-This guide will get you familiar with Firebolt and show you how to quickly and easily create any kind of site for the web. Firebolt is built with simplicity in mind and its goal is to reduce the amount of complexity without also reducing functionality.
+This guide will get you familiar with Firebolt and show you how to quickly and easily create any kind of app for the web.
+Firebolt is built with simplicity in mind and its goal is to reduce complexity without also reducing functionality.
 
 ## Installation
 
@@ -32,25 +33,21 @@ my-app/
 └─ package.json
 ```
 
-### Components
+### components/\*
 
 The `components` directory is where you'll put all of your React components.
 
-The only required component is the `components/Document.js` file which will be used to generate the `<html>` shell of your app.
+### pages/\*
 
-### Pages
+The `pages` directory is where you put all of your pages. Pages are exactly the same as components, except they have a special filename for routing. There are no magical exports for metadata or server side props.
 
-The `pages` directory is where you put all of your pages. Pages work exactly the same as Components, the only difference is the filename format used for routing.
+### public/\*
 
-Pages don't have any magical exports for loading metadata or initial props, instead you'll use [Loaders](/docs/loaders) with Suspense as it was intended to be used.
+The `public` folder is for all of your public assets, such as a robots file, favicons, images, etc.
 
-### Public
+### firebolt.config.js
 
-The `public` folder is for all of your public assets such as a robots file, favicons, images, etc.
-
-### Config
-
-The `firebolt.config.js` file lets you configure the way Firebolt runs, including adding middleware, changing ports, toggling production sourcemaps and configuring MDX plugins.
+The config file lets you configure the way Firebolt runs, such as ports, sourcemaps and MDX plugins.
 
 ## Development
 

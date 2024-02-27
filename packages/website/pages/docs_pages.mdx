@@ -13,13 +13,15 @@ export default function About() {
 }
 ```
 
-To learn more about adding MDX pages check out the [[page].mdx](/docs/ref/page-mdx) reference.
+Pages are just regular components with a special filename used for route matching.
 
-## Route Matching
+Pages can also be written with markdown which you can learn more about in the [[page].mdx](/docs/ref/page-mdx) reference.
+
+## Matching
 
 The filename you give a page determines how its route is matched:
 
-| Page                          | Example URL                | Params                              |
+| File                          | Example URL                | Params                              |
 | ----------------------------- | -------------------------- | ----------------------------------- |
 | `pages/index.js`              | `/`                        | `{}`                                |
 | `pages/dashboard_settings.js` | `/dashboard/settings`      | `{}`                                |
@@ -34,6 +36,18 @@ The `$` symbol is used to create dynamic route segments and its value(s) will be
 
 Adding a `+` suffix to a dynamic route segment will match one or more parameters, while the `-` symbol will match zero or more.
 
-## Route Params
+## Params
 
-You can retrieve params for dynamic route segments anywhere in your app with the [useLocation](/docs/useLocation) hook
+You can retrieve params for dynamic route segments anywhere in your app with the [useLocation](/docs/ref/useLocation) hook
+
+## Layouts
+
+To share common UI across multiple pages you can nest them to create layouts.
+
+| File                   | Type   | URL           |
+| ---------------------- | ------ | ------------- |
+| `pages/docs.js`        | Layout | none          |
+| `pages/docs_index.mdx` | Page   | `/docs`       |
+| `pages/docs_intro.mdx` | Page   | `/docs/intro` |
+
+This example shows you how to create a shared layout for all of the MDX docs pages. The `pages/docs.js` component ensures that it uses the `children` prop to show child content.
