@@ -57,7 +57,7 @@ function resolveRouteAndParams(url) {
 
 // utility to call loader/action functions
 async function callFunction(request, id, args) {
-  await config.middleware(request)
+  await config.decorate(request)
   const fn = registry[id]
   if (!fn) throw new Error('Invalid function')
   let value = fn(request, ...args)

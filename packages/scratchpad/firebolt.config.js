@@ -5,7 +5,7 @@ import { db } from './db.js'
 export default function config() {
   return {
     productionBrowserSourceMaps: true,
-    async middleware(req) {
+    async decorate(req) {
       req.uuid = nanoid
       req.db = db
     },
