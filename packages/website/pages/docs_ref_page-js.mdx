@@ -15,7 +15,7 @@ export default function Home() {
 
 The default export is used as the component when people visit the page.
 
-## Route Matching
+## Matching
 
 The filename you give a page determines how its route is matched:
 
@@ -34,15 +34,29 @@ The `$` symbol is used to create dynamic route segments and its value(s) will be
 
 Adding a `+` suffix to a dynamic route segment will match one or more parameters, while the `-` symbol will match zero or more.
 
-## Route Params
+## Params
 
-You can retrieve params for dynamic routes anywhere in your app with the [useLocation](/docs/useLocation) hook:
+You can retrieve params from dynamic routes anywhere in your app with the [useLocation](/docs/useLocation) hook:
 
-```jsx title='components/Post.js' lineNumbers
+```jsx title='pages/posts_$id.js' lineNumbers
 import { useLocation } from 'firebolt'
 
 export function Post() {
-  const { postId } = useLocation().params
+  const { id } = useLocation().params
   // ...
 }
 ```
+
+## Layouts
+
+To share common UI across multiple pages you can nest them to create layouts.
+
+| File                   | Type   | URL           |
+| ---------------------- | ------ | ------------- |
+| `pages/docs.js`        | Layout | none          |
+| `pages/docs_index.mdx` | Page   | `/docs`       |
+| `pages/docs_intro.mdx` | Page   | `/docs/intro` |
+
+This example shows you how to create a shared layout for all of the MDX docs pages. The `pages/docs.js` component ensures that it uses the `children` prop to show child content.
+
+Files transition from a page to a layout when there is both an index and non-index file. For example the two files `pages/docs.js` and `pages/docs_index.js` would resolve to the same URL so, the former will be used as a layout.

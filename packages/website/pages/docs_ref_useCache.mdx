@@ -11,9 +11,9 @@ Any component observing data that becomes invalidated will be refetched in the b
 
 When no components are observing that data then the next time the data is read it will trigger the usual Suspense flow with fallback UI etc.
 
-## .invalidate(str)
+## .invalidate(...args)
 
-Invalidates all loaders that use `str` as one of their arguments.
+Invalidates all loaders that use all `args` in their [useLoader](/docs/ref/useLoader) arguments.
 
 If you used a Loader like this somewhere in your app:
 

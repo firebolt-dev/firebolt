@@ -29,13 +29,13 @@ export function Content() {
 }
 
 export async function toggle(req) {
-  const on = req.getCookie('on')
-  req.setCookie('on', !on)
+  const on = req.cookies.get('on')
+  req.cookies.set('on', !on)
   console.log('on set to', !on)
 }
 
 export async function getBoop(req) {
   const date = new Date().getTime()
-  req.setCookie('lastFetched', date)
+  req.cookies.set('lastFetched', date)
   return Math.random()
 }

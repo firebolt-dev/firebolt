@@ -5,9 +5,9 @@
 
 # firebolt.config.js
 
-The Firebolt config file allows you to change the way your app is configured.
+The Firebolt config file allows you to configure how your app runs.
 
-```jsx
+```jsx title='firebolt.config.js' lineNumbers
 export default function config() {
   return {
     // your config here
@@ -19,7 +19,7 @@ export default function config() {
 
 By default your app will attempt to use the `PORT` environment variable, otherwise it will use the port in your config file which defaults to `3000`.
 
-```jsx
+```jsx title='firebolt.config.js' lineNumbers
 export default function config() {
   return {
     port: 4000,
@@ -31,7 +31,7 @@ export default function config() {
 
 Production builds don't include source maps in client bundles by default, but you can enable them with this setting if needed:
 
-```jsx
+```jsx title='firebolt.config.js' lineNumbers
 export default function config() {
   return {
     productionBrowserSourceMaps: true,
@@ -39,16 +39,16 @@ export default function config() {
 }
 ```
 
-## Middleware
+## Decorate
 
-Use middleware to decorate the [Request](/docs/ref/request) object that is passed to all [Loaders](/docs/loaders) and [Actions](/docs/actions):
+You can decorate the [Request](/docs/ref/request) object that is passed to all [Loader](/docs/loaders) and [Action](/docs/actions) functions:
 
-```jsx
+```jsx title='firebolt.config.js' lineNumbers
 import db from './db'
 
 export default function config() {
   return {
-    middleware(req) {
+    decorate(req) {
       req.db = db
     },
   }
@@ -59,7 +59,7 @@ export default function config() {
 
 By default MDX is not configured to use any plugins but you can configure them here to add additional behavior:
 
-```jsx
+```jsx title='firebolt.config.js' lineNumbers
 import remarkGFM from 'remark-gfm'
 import rehypeShiki from '@shikijs/rehype'
 
@@ -75,11 +75,11 @@ export default function config() {
 
 ## Cookie Defaults
 
-When updating cookies in your app, if you don't provide any options they will expire after the current session by default.
+By default, if you don't provide options when setting cookies they will expire after the current session.
 
-To change this you can configure your default cookie options here instead of having to specify options everywhere else in your app.
+It can be useful to set your global cookie defaults so that you don't have to provide options everywhere in your app.
 
-```jsx
+```jsx title='firebolt.config.js' lineNumbers
 export default function config() {
   return {
     cookie: {
@@ -93,9 +93,9 @@ See [useCookie](/docs/ref/useCookie) for all available options.
 
 ## Public Env Prefix
 
-By default any environment variables with the `PUBLIC_` prefix will be available on the client, but you can use a different prefix if needed:
+By default any environment variables with the `PUBLIC_` prefix will be available on the client. You can change this prefix if needed.
 
-```jsx
+```jsx title='firebolt.config.js' lineNumbers
 export default function config() {
   return {
     publicEnvPrefix: 'ANOTHER_PREFIX_',

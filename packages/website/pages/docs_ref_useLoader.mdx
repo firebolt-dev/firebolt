@@ -10,8 +10,8 @@ The `useLoader` hook allows you to fetch data from a Loader Function which is si
 ```jsx title='components/Profile.js' lineNumbers
 import { useLoader } from 'firebolt'
 
-export function Profile({ userId }) {
-  const loader = useLoader(getUser, userId)
+export function Profile({ id }) {
+  const loader = useLoader(getUser, id)
   const user = loader.read()
   return (
     <div>
@@ -31,21 +31,21 @@ The component above loads a users data using the `getUser` function and then dis
 
 The first argument must be your Loader Function.
 
-Any additional arguments will be passed to the loader function. These arguments are also used to construct a cache key for the data that the function returns and allows you to invalidate or update data in the cache manually.
+Any additional arguments will be passed to the loader function. These arguments are also used to construct a cache key for the data that the function returns and allows you to invalidate or update data in the [cache](/docs/ref/useCache) manually.
 
-The `useLoader` hook returns a data loader instance specific to the data being loaded.
+The `useLoader` hook returns a loader instance specific to the data being loaded. Loaders are de-duplicated so if your app tries to fetch the same thing in multiple parts of your app it will only be fetched once.
 
 ## Loader Function
 
 The loader function must be exported from the same file OR imported from somewhere else.
 
-The first argument provided is a [Request](/docs/ref/request) object that provides utilities to access cookies, set a data expiration or redirect users. You can also decorate the Request object with things such as access to your database, from your [firebolt.config.js](/docs/ref/config) file.
+The first argument provided is a [Request](/docs/ref/request) object.
 
 Any additional arguments from the `useLoader` function will be passed as additional arguments to your loader function.
 
 ## loader.read()
 
-Fetchs data using the Loader Function and the provided arguments. Firebolt seamlessly handles calling your Loader Function during server-side rendering or on the client behind the scenes.
+Fetches data using the Loader Function and the provided arguments. Firebolt seamlessly handles calling your Loader Function during server-side rendering or on the client behind the scenes.
 
 When `loader.read()` is called in the example above, if there is no data in the cache it will throw a promise triggering any Suspense boundaries you have set up to display loading UI until the data is fetched.
 
@@ -59,7 +59,7 @@ After loading data you may want to refresh it. When data is invalidated it will 
 
 ## loader.set(newData)
 
-This method allows you to manually update the data stored in the cache and re-render any components observing that data with the `set` method.
+This method allows you to manually update the data stored in the cache and re-render any components observing that data.
 
 ## loader.edit(editFn)
 

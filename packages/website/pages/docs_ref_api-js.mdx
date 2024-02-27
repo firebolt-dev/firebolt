@@ -5,10 +5,30 @@
 
 # [api].js
 
-**IMPORTANT:** Unless your app needs to provide a public API to its users, we recommend building your entire app using [Loaders](/docs/loaders) and [Actions](/docs/actions) instead of API routes.
-
 Any `.js` file added to the `api` folder will become a publicly available API endpoint.
 
-## Coming Soon
+**IMPORTANT:** Unless your app needs to provide a public API to its users, we recommend building your entire app using [Loaders](/docs/loaders) and [Actions](/docs/actions) instead of API routes.
 
-API Routes are currently work in progress. Stay tuned!!!!
+## Handlers
+
+Any exported functions with the name `get`, `put`, `post` or `del` will be used as a request handler for its corresponding method.
+
+```jsx title='api/users_$id.js' lineNumbers
+export async function get(req) {
+  const { id } = req.params
+  const user = await req.db('users').where({ id }).first()
+  return user
+}
+
+export async function put(req) {
+  const { id } = req.params
+  const data = await req.json()
+  await req.db('users').where({ id }).update(data)
+}
+```
+
+Handlers are provided a [Request](/docs/ref/request) object as their first argument which can be decorated in your [firebolt.config.js](/docs/ref/config) to provide utilities such database access.
+
+## Matching
+
+API Routes use the same route matching rules as [[page].js](/docs/ref/page-js) including support for dynamic route segments that are available on the `req.params` object.

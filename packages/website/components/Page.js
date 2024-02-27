@@ -2,7 +2,7 @@ import { css } from 'firebolt'
 
 import { Header } from './Header'
 
-export function Page({ title, children }) {
+export function Page({ children }) {
   return (
     <div
       className='page'
@@ -28,7 +28,6 @@ export function Page({ title, children }) {
         }
       `}
     >
-      <title>{title ? `${title} | Firebolt` : `Firebolt`}</title>
       <Header />
       <div className='page-mid'>
         <div

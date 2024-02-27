@@ -26,9 +26,15 @@ export async function getCity(req, id) {
 }
 ```
 
-Loaders can be placed in any page or component and work seamlessly with server side rendering and on the client.
+Loaders simplify the way you build apps:
 
-## Loader Functions
+- Interact directly with a database or server resource right inside any component, anywhere in your app
+- Seamlessly works during SSR and on the client
+- 100% compatible with Suspense and ErrorBoundaries
+- Code only ever exists on the server and is removed from client bundles
+- You can forget about writing API endpoints completely (unless you [need them](/docs/ref/api-js))
+
+## Request Object
 
 Loader functions are provided a [Request](/docs/ref/request) object that provides access to cookies, setting data expiration and performing redirects.
 
@@ -40,22 +46,20 @@ Calling `loader.read()` throws a promise to Suspense boundaries for loading UI w
 
 If your Loader fails you can catch it with an `<ErrorBoundary>` to display an error message.
 
-```jsx title='pages/cities_$cityId.js' lineNumbers
+```jsx title='pages/cities_$id.js' lineNumbers
 import { Suspense } from 'react'
 import { ErrorBoundary, useLocation } from 'firebolt'
 
 import { City } from '../components/City'
 
 export function CityPage() {
-  const { cityId } = useLocation().params
+  const { id } = useLocation().params
   return (
     <ErrorBoundary fallback={<div>Error</div>}>
       <Suspense fallback={<div>Loading...</div>}>
-        <City id={cityId} />
+        <City id={id} />
       </Suspense>
     </ErrorBoundary>
   )
 }
 ```
-
-Loaders work with Suspense with the way React intended, and you can use them anywhere in your app hierarchy.

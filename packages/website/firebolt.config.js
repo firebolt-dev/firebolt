@@ -4,7 +4,7 @@ import rehypeShiki from '@shikijs/rehype'
 export default function config() {
   return {
     productionBrowserSourceMaps: true,
-    async middleware(req) {
+    async decorate(req) {
       // ...
     },
     mdx: {

@@ -241,6 +241,22 @@ export const components = {
       </div>
     )
   },
+  ul(props) {
+    return (
+      <ul
+        {...props}
+        css={css`
+          list-style-type: disc;
+          padding-left: 32px;
+          li {
+            padding-left: 4px;
+            line-height: 1.5;
+            margin: 0 0 8px;
+          }
+        `}
+      />
+    )
+  },
 }
 
 function stringToId(str) {

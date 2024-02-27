@@ -92,6 +92,7 @@ export async function handleFunction(req, res) {
     params: {},
     defaultCookieOptions,
   })
+  await config.decorate(fireboltRequest)
   let value
   let error
   try {
@@ -101,9 +102,9 @@ export async function handleFunction(req, res) {
   }
   const data = {}
   // get changed cookies to notify client UI
-  data.cookies = fireboltRequest._getChangedCookies()
+  data.cookies = fireboltRequest.cookies._getChanged()
   // apply cookie changes to express response
-  fireboltRequest._pushCookieChangesToExpressResponse(res)
+  fireboltRequest.cookies._pushChangesToExpressResponse(res)
   // handle redirect if any
   if (error === fireboltRequest && error._redirectInfo) {
     data.redirect = error._redirectInfo
@@ -147,7 +148,7 @@ export async function handleApi(req, res) {
     return res.status(500).end()
   }
   // apply any cookie changes
-  fireboltRequest._pushCookieChangesToExpressResponse(res)
+  fireboltRequest.cookies._pushChangesToExpressResponse(res)
   // if result is a FireboltResponse, pipe it through
   if (result instanceof FireboltResponse) {
     return result.applyToExpressResponse(res)
@@ -218,7 +219,7 @@ export async function handlePage(req, res) {
           error = err
         }
         // write out any cookies first
-        fireboltRequest._pushCookieChangesToStream(inserts)
+        fireboltRequest.cookies._pushChangesToStream(inserts)
         // if FireboltRequest error, write out the redirect and stop
         if (error instanceof FireboltRequest && error._redirectInfo) {
           return fireboltRequest._applyRedirectToExpressResponse(res)

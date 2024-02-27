@@ -39,15 +39,15 @@ export function Content() {
 export async function getTitle(req) {
   // const header = req.headers.get('Foobars')
   // req.expire(5, 'days')
-  // req.getCookie('foo')
-  // req.setCookie('foo', bar)
+  // req.cookies.get('foo')
+  // req.cookies.set('foo', bar)
   // req.error('Yeah nah its wrong') // throws to boundary
   await new Promise(resolve => setTimeout(resolve, 1000))
   // req.redirect('/about')
   req.expire(5)
-  console.log('loader cookie get foo', req.getCookie('foo'))
+  console.log('loader cookie get foo', req.cookies.get('foo'))
   const foo = { id: req.uuid() }
   console.log('loader cookie set foo', foo)
-  req.setCookie('foo', foo)
+  req.cookies.set('foo', foo)
   return 'HEYOO' + Math.random()
 }

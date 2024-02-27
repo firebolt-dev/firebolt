@@ -23,27 +23,27 @@ The hash of the current URL, eg `#trains`
 
 And object that includes both query parameters and dynamic route segment values.
 
-Given the page `pages/blog_$postId.js` and the url `/blog/123?foo=bar` then the params object would look like this:
+Given the page `pages/blog_$id.js` and the url `/blog/123?foo=bar` then the params object would look like this:
 
 ```js
 {
-  postId: '123',
+  id: '123',
   foo: 'bar'
 }
 ```
 
 ## .push(href)
 
-Performs a client-side navigation, adding the new route.
+Performs client-side navigation, adding the new route.
 
 ## .replace(href)
 
-Performs a client-side navigation, replacing the current route with the new route.
+Performs client-side navigation, replacing the current route with the new route.
 
 ## .back()
 
-Navigate back to the previous route in history.
+Navigate to the previous route in the history.
 
 ## .forward()
 
-Navigate forward to the next route in history.
+Navigate to the next route in the history.

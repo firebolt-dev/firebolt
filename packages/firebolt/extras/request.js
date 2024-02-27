@@ -21,10 +21,9 @@ export class FireboltRequest extends FetchRequest {
 
     this._ctx = ctx
     this._xReq = xReq
-    this._defaultCookieOptions = defaultCookieOptions
-    this._cookieChanges = []
 
     this.params = params
+    this.cookies = new Cookies(xReq, defaultCookieOptions)
   }
 
   error(data, message) {
@@ -46,48 +45,6 @@ export class FireboltRequest extends FetchRequest {
   expire(amount, unit = 'seconds') {
     // todo: warn if not loader
     this._expire = unitToSeconds[unit](amount)
-  }
-
-  setCookie(key, value, options) {
-    if (value === null || value === undefined || value === '') {
-      this._xReq.cookies[key] = null
-      this._cookieChanges.push({
-        type: 'remove',
-        key,
-      })
-    } else {
-      let data
-      try {
-        data = JSON.stringify(value)
-      } catch (err) {
-        return console.error(
-          `could not serialize cookie ${key} with value:`,
-          value
-        )
-      }
-      this._xReq.cookies[key] = data
-      this._cookieChanges.push({
-        type: 'set',
-        key,
-        data,
-        options: options || this._defaultCookieOptions,
-      })
-    }
-  }
-
-  getCookie(key) {
-    let data = this._xReq.cookies[key]
-    if (data === null || data === undefined || data === '') {
-      return null
-    }
-    let value
-    try {
-      value = JSON.parse(data)
-    } catch (err) {
-      console.error(`could not deserialize cookie ${key} with value:`, data)
-      return null
-    }
-    return value
   }
 
   _applyRedirectToExpressResponse(res) {
@@ -116,10 +73,60 @@ export class FireboltRequest extends FetchRequest {
       res.flush()
     }
   }
+}
 
-  _getChangedCookies() {
+class Cookies {
+  constructor(xReq, defaultCookieOptions) {
+    this._xReq = xReq
+    this._defaultCookieOptions = defaultCookieOptions
+    this._changes = []
+  }
+
+  set(key, value, options) {
+    if (value === null || value === undefined || value === '') {
+      this._xReq.cookies[key] = null
+      this._changes.push({
+        type: 'remove',
+        key,
+      })
+    } else {
+      let data
+      try {
+        data = JSON.stringify(value)
+      } catch (err) {
+        return console.error(
+          `could not serialize cookie ${key} with value:`,
+          value
+        )
+      }
+      this._xReq.cookies[key] = data
+      this._changes.push({
+        type: 'set',
+        key,
+        data,
+        options: options || this._defaultCookieOptions,
+      })
+    }
+  }
+
+  get(key) {
+    let data = this._xReq.cookies[key]
+    if (data === null || data === undefined || data === '') {
+      return null
+    }
+    let value
+    try {
+      value = JSON.parse(data)
+    } catch (err) {
+      console.error(`could not deserialize cookie ${key} with value:`, data)
+      return null
+    }
+    return value
+  }
+
+  _getChanged() {
     const keys = []
-    for (const change of this._cookieChanges) {
+    for (const change of this._changes) {
       if (!keys.includes(change.key)) {
         keys.push(change.key)
       }
@@ -127,8 +134,8 @@ export class FireboltRequest extends FetchRequest {
     return keys
   }
 
-  _pushCookieChangesToExpressResponse(res) {
-    for (const change of this._cookieChanges) {
+  _pushChangesToExpressResponse(res) {
+    for (const change of this._changes) {
       if (change.type === 'set') {
         let { key, data, options } = change
         options = cookieOptionsToExpress(options)
@@ -139,11 +146,11 @@ export class FireboltRequest extends FetchRequest {
         res.clearCookie(key)
       }
     }
-    this._cookieChanges.length = 0
+    this._changes.length = 0
   }
 
-  _pushCookieChangesToStream(inserts) {
-    for (const change of this._cookieChanges) {
+  _pushChangesToStream(inserts) {
+    for (const change of this._changes) {
       if (change.type === 'set') {
         let { key, data, options } = change
         options = JSON.stringify(options)
@@ -158,7 +165,7 @@ export class FireboltRequest extends FetchRequest {
         `)
       }
     }
-    this._cookieChanges.length = 0
+    this._changes.length = 0
   }
 }
 

@@ -9,9 +9,9 @@ Both [Loader](/docs/ref/useLoader) and [Action](/docs/ref/useAction) functions r
 
 The Request object provides utilities such as cookie management and redirects, but more importantly you can decorate it with access to a database or anything else you might need. See [firebolt.config.js](/docs/ref/config) to learn more.
 
-## .expire(seconds)
+## expire(seconds)
 
-Can only be used in a Loader Function.
+Available to Loader functions only.
 
 By default data fetched from a Loader will be cached until the user leaves or refreshes. For data that changes often you can set it to expire after a certain amount of time.
 
@@ -26,44 +26,50 @@ export async function getTickets(req) {
 }
 ```
 
-## .redirect(url, type)
+## redirect(url, type)
+
+Available to both Loader and Action functions.
 
 Throws a redirect that will navigate the user to another page. The `type` argument can be `push` (default) or `replace`.
-
-Can be used in both Loader and Action functions.
 
 ```jsx
 req.redirect('/login', 'replace')
 ```
 
-## .error(data)
+## error(data)
+
+Available to Loader functions only.
 
 Throws an error that can be caught by an [\<ErrorBoundary\>](/docs/ref/error-boundary), decorating the error with an optional `data` prop that can be used to provide more context about operational errors.
 
-Can only be used in Loader function.
+## cookies.get(key)
 
-## .getCookie(key)
-
-Gets the value of a cookie
+Gets the value of a cookie.
 
 ```jsx
-req.getCookie('auth')
+req.cookies.get('auth')
 ```
 
-## .setCookie(key, value, options)
+## cookies.set(key, value, options)
 
 Sets the value of a cookie.
 
-Any changes to cookies made on the server will automatically update any UI on the client observing its value.
+Any changes to cookies made on the server will automatically update any UI observing that value on the client.
 
 ```jsx
-req.setCookie('auth', auth)
+req.cookies.set('auth', auth)
 ```
 
 Setting a cookie to `null` removes it.
 
 ```jsx
-req.setCookie('auth', null) // remove cookie
+req.cookies.set('auth', null)
 ```
 
 See the [useCookie](/docs/ref/useCookie) reference for more info about cookies.
+
+## params
+
+Available to API Routes only.
+
+An object with values for dynamic route segments and query parameters.

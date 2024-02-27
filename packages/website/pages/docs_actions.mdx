@@ -5,7 +5,7 @@
 
 # Actions
 
-Actions allow you to interact with your database or other server side code directly inside your components with the [useAction](/docs/ref/useAction) hook:
+Actions allow you to securely handle responses to user input on the client and interact with databases etc, directly inside your components using the [useAction](/docs/ref/useAction) hook:
 
 ```jsx title='components/Subscribe.js' lineNumbers
 import { useAction } from 'firebolt'
@@ -33,8 +33,8 @@ export async function subscribe(req, email) {
 }
 ```
 
-## Action Functions
+## Request Object
 
-Action functions are provided a [Request](/docs/ref/request) object that provides access to cookies and performing redirects.
+Action functions are also provided a [Request](/docs/ref/request) object that lets you interact with cookies or perform redirects.
 
 You can decorate Request objects with access to your database or anything else you might need, in your [firebolt.config.js](/docs/ref/config) file.
