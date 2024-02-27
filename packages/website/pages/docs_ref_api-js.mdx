@@ -27,7 +27,27 @@ export async function put(req) {
 }
 ```
 
+## Request Object
+
 Handlers are provided a [Request](/docs/ref/request) object as their first argument which can be decorated in your [firebolt.config.js](/docs/ref/config) to provide utilities such database access.
+
+## Response
+
+If a handler returns JSON it will automatically send it with a `Content-Type: application/json` header.
+
+Alternatively you can use a [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response/Response) for more control:
+
+```jsx title='api/items.js' lineNumbers
+export async function get(req) {
+  const items = await req.db('items')
+  const data = JSON.stringify(items)
+  return new Response(data, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  })
+}
+```
 
 ## Matching
 
