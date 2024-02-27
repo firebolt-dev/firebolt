@@ -67,9 +67,7 @@ export function Header() {
     >
       <div className='header-inner'>
         <Link href='/'>
-          <a>
-            <Logo className='header-logo' />
-          </a>
+          <Logo className='header-logo' />
         </Link>
         <div className='header-gap' />
         <Link
@@ -90,20 +88,20 @@ export function Header() {
         </Link>
         <div className='header-gap2' />
         <ThemeBtn className='header-theme' />
-        <a
+        <Link
           className='header-social'
           href='https://x.com/firebolt_dev'
           target='_blank'
         >
           <LogoX />
-        </a>
-        <a
+        </Link>
+        <Link
           className='header-social'
           href='https://github.com/firebolt-dev'
           target='_blank'
         >
           <LogoGithub />
-        </a>
+        </Link>
         <MobileMenu className='header-menu' />
       </div>
     </div>

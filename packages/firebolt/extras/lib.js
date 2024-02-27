@@ -26,18 +26,13 @@ export function Link({
   ...rest
 }) {
   const runtime = useRuntime()
-  const elem = isValidElement(children) ? (
-    children
-  ) : (
-    <a href={href} children={children} {...rest} />
-  )
 
   const handleClick = useEvent(e => {
     // ignore modifier clicks
     if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.button !== 0) {
       return
     }
-    if (e.defaultPrevented) return
+
     onClick?.(e)
     if (e.defaultPrevented) return
     e.preventDefault()
@@ -59,8 +54,11 @@ export function Link({
     runtime.loadRouteByUrl(href)
   }, [prefetch])
 
-  // return children
-  return cloneElement(elem, { href, onClick: handleClick })
+  return (
+    <a href={href} onClick={handleClick} {...rest}>
+      {children}
+    </a>
+  )
 }
 
 const RuntimeContext = createContext()

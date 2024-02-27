@@ -95,14 +95,13 @@ export default function DocsLayout({ children }) {
 function NavLink({ label, href }) {
   const location = useLocation()
   return (
-    <Link href={href}>
-      <a
-        className={cls('docs-nav-link', {
-          active: location.pathname === href,
-        })}
-      >
-        <span>{label}</span>
-      </a>
+    <Link
+      href={href}
+      className={cls('docs-nav-link', {
+        active: location.pathname === href,
+      })}
+    >
+      <span>{label}</span>
     </Link>
   )
 }

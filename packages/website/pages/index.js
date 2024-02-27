@@ -96,10 +96,8 @@ export default function Home() {
           Everything you need to rapidly build full-stack apps for the web, with
           ease.
         </p>
-        <Link href='/docs'>
-          <a className='home-cta'>
-            <span>Get Started</span>
-          </a>
+        <Link href='/docs' className='home-cta'>
+          <span>Get Started</span>
         </Link>
         <div className='home-install'>
           <ChevronRight className='home-install-chevron' size={20} />
