@@ -41,7 +41,7 @@ const routesForClient = routes.map(route => {
   }
 })
 
-const notFoundRoute = routes.find(r => (r.pattern = '/not-found'))
+const notFoundRoute = routes.find(r => r.pattern === '/not-found')
 
 // utility to find a route from a url
 function resolveRouteAndParams(url) {
