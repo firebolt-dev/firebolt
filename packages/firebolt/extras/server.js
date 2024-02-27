@@ -233,7 +233,7 @@ export async function handlePage(req, res) {
         // otherwise return the value
         const data = {
           value,
-          expire: request._expire,
+          expire: fireboltRequest._expire,
         }
         return data
       },
