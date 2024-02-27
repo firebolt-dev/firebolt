@@ -67,7 +67,7 @@ export const components = {
   a(props) {
     return (
       <Link
-        to={props.href}
+        href={props.href}
         css={css`
           color: var(--primary-color);
         `}

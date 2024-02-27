@@ -14,8 +14,10 @@ export { css } from '@firebolt/css'
 
 import { Document } from '../components/Document.js'
 
+const externalUrlRegex = new RegExp('^(?:[a-z]+:)?//', 'i')
+
 export function Link({
-  to,
+  href,
   replace,
   scroll = true,
   prefetch = true,
@@ -27,7 +29,7 @@ export function Link({
   const elem = isValidElement(children) ? (
     children
   ) : (
-    <a href={to} children={children} {...rest} />
+    <a href={href} children={children} {...rest} />
   )
 
   const handleClick = useEvent(e => {
@@ -39,10 +41,12 @@ export function Link({
     onClick?.(e)
     if (e.defaultPrevented) return
     e.preventDefault()
+    const isExternal = externalUrlRegex.test(href)
+    if (isExternal) return window.open(href)
     if (replace) {
-      history.replaceState(null, '', to)
+      history.replaceState(null, '', href)
     } else {
-      history.pushState(null, '', to)
+      history.pushState(null, '', href)
     }
     if (scroll) {
       window.scrollTo(0, 0)
@@ -50,13 +54,13 @@ export function Link({
   })
 
   useEffect(() => {
-    if (!to) return
+    if (!href) return
     if (!prefetch) return
-    runtime.loadRouteByUrl(to)
+    runtime.loadRouteByUrl(href)
   }, [prefetch])
 
   // return children
-  return cloneElement(elem, { href: to, onClick: handleClick })
+  return cloneElement(elem, { href, onClick: handleClick })
 }
 
 const RuntimeContext = createContext()

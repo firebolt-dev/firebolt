@@ -11,8 +11,8 @@ export default function Home({ test }) {
         Home holy shit: {test}
       </div>
       {/* <div onClick={() => history.pushState({}, '', '/about')}>/about</div> */}
-      <Link to='/about'>About</Link>
-      <Link to='/skeleton'>Skeleton</Link>
+      <Link href='/about'>About</Link>
+      <Link href='/skeleton'>Skeleton</Link>
     </div>
   )
 }

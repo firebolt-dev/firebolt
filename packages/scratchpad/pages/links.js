@@ -7,10 +7,10 @@ export default function Links() {
       <div>Url: {location.url}</div>
       <div>Params: {JSON.stringify(location.params)}</div>
       <div>
-        <Link to='/links/one'>/links/one</Link>
+        <Link href='/links/one'>/links/one</Link>
       </div>
       <div>
-        <Link to='/links/one' replace>
+        <Link href='/links/one' replace>
           /links/one (replace)
         </Link>
       </div>

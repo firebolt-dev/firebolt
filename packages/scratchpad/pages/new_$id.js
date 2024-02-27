@@ -52,10 +52,10 @@ function Item({ id }) {
       <div>Desc: {item.desc}</div>
       <Test />
       <div>
-        <Link to='/new/123'>Go 123</Link>
+        <Link href='/new/123'>Go 123</Link>
       </div>
       <div>
-        <Link to='/new/456'>Go 456</Link>
+        <Link href='/new/456'>Go 456</Link>
       </div> */}
     </>
   )

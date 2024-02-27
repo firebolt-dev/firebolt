@@ -66,14 +66,14 @@ export function Header() {
       `}
     >
       <div className='header-inner'>
-        <Link to='/'>
+        <Link href='/'>
           <a>
             <Logo className='header-logo' />
           </a>
         </Link>
         <div className='header-gap' />
         <Link
-          to='/docs'
+          href='/docs'
           className={cls('header-link', {
             active: location.url.startsWith('/docs'),
           })}
@@ -81,7 +81,7 @@ export function Header() {
           Documentation
         </Link>
         <Link
-          to='/blog'
+          href='/blog'
           className={cls('header-link', {
             active: location.url.startsWith('/blog'),
           })}

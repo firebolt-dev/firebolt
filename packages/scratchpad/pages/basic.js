@@ -6,13 +6,13 @@ export default function Page() {
       <div>Basic Page</div>
       <div>This is a basic page, rendered instantly server-side</div>
       <div>
-        <Link to='/basic-head'>Basic + Head</Link>
+        <Link href='/basic-head'>Basic + Head</Link>
       </div>
       <div>
-        <Link to='/dynamic/123'>Dynamic</Link>
+        <Link href='/dynamic/123'>Dynamic</Link>
       </div>
       <div>
-        <Link to='/loading/123'>Dynamic + Loading</Link>
+        <Link href='/loading/123'>Dynamic + Loading</Link>
       </div>
     </div>
   )

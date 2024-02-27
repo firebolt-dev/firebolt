@@ -72,7 +72,7 @@ export function MobileMenu({ className = '' }) {
       </div>
       {open && (
         <div className='menu-content'>
-          {/* <Link to='/'>
+          {/* <Link href='/'>
             <div
               className={cls('menu-item', {
                 active: location.url === '/',
@@ -82,7 +82,7 @@ export function MobileMenu({ className = '' }) {
               <span>Home</span>
             </div>
           </Link> */}
-          <Link to='/docs'>
+          <Link href='/docs'>
             <div
               className={cls('menu-item', {
                 active: location.url.startsWith('/docs'),
@@ -92,7 +92,7 @@ export function MobileMenu({ className = '' }) {
               <span>Documentation</span>
             </div>
           </Link>
-          <Link to='/blog'>
+          <Link href='/blog'>
             <div
               className={cls('menu-item', {
                 active: location.url.startsWith('/blog'),

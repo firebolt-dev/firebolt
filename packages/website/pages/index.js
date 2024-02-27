@@ -96,7 +96,7 @@ export default function Home() {
           Everything you need to rapidly build full-stack apps for the web, with
           ease.
         </p>
-        <Link to='/docs'>
+        <Link href='/docs'>
           <a className='home-cta'>
             <span>Get Started</span>
           </a>

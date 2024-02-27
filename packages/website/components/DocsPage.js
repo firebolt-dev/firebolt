@@ -51,38 +51,38 @@ export function DocsPage({ title, description, children }) {
       >
         <div className='docs-nav'>
           <div className='docs-section'>Getting Started</div>
-          <NavLink label='Introduction' to='/docs' />
-          <NavLink label='Quick Start' to='/docs/quick-start' />
-          <NavLink label='Document' to='/docs/document' />
-          <NavLink label='Pages' to='/docs/pages' />
-          <NavLink label='Styles' to='/docs/styles' />
-          <NavLink label='Metadata' to='/docs/metadata' />
-          <NavLink label='Loaders' to='/docs/loaders' />
-          <NavLink label='Actions' to='/docs/actions' />
-          <NavLink label='Cookies' to='/docs/cookies' />
-          <NavLink label='Deployment' to='/docs/deployment' />
+          <NavLink label='Introduction' href='/docs' />
+          <NavLink label='Quick Start' href='/docs/quick-start' />
+          <NavLink label='Document' href='/docs/document' />
+          <NavLink label='Pages' href='/docs/pages' />
+          <NavLink label='Styles' href='/docs/styles' />
+          <NavLink label='Metadata' href='/docs/metadata' />
+          <NavLink label='Loaders' href='/docs/loaders' />
+          <NavLink label='Actions' href='/docs/actions' />
+          <NavLink label='Cookies' href='/docs/cookies' />
+          <NavLink label='Deployment' href='/docs/deployment' />
 
           <div className='docs-section'>Reference</div>
-          <NavLink label='Document.js' to='/docs/ref/document' />
-          <NavLink label='firebolt.config.js' to='/docs/ref/config' />
-          <NavLink label='[page].js' to='/docs/ref/page-js' />
-          <NavLink label='[page].mdx' to='/docs/ref/page-mdx' />
-          <NavLink label='[api].js' to='/docs/ref/api-js' />
-          <NavLink label='useLocation' to='/docs/ref/useLocation' />
-          <NavLink label='useCookie' to='/docs/ref/useCookie' />
-          <NavLink label='useLoader' to='/docs/ref/useLoader' />
-          <NavLink label='useAction' to='/docs/ref/useAction' />
-          <NavLink label='useCache' to='/docs/ref/useCache' />
-          <NavLink label='<Link>' to='/docs/ref/link' />
-          <NavLink label='<ErrorBoundary>' to='/docs/ref/error-boundary' />
-          <NavLink label='Request' to='/docs/ref/request' />
-          <NavLink label='css' to='/docs/ref/css' />
-          <NavLink label='cls' to='/docs/ref/cls' />
-          <NavLink label='.env' to='/docs/ref/env' />
+          <NavLink label='Document.js' href='/docs/ref/document' />
+          <NavLink label='firebolt.config.js' href='/docs/ref/config' />
+          <NavLink label='[page].js' href='/docs/ref/page-js' />
+          <NavLink label='[page].mdx' href='/docs/ref/page-mdx' />
+          <NavLink label='[api].js' href='/docs/ref/api-js' />
+          <NavLink label='useLocation' href='/docs/ref/useLocation' />
+          <NavLink label='useCookie' href='/docs/ref/useCookie' />
+          <NavLink label='useLoader' href='/docs/ref/useLoader' />
+          <NavLink label='useAction' href='/docs/ref/useAction' />
+          <NavLink label='useCache' href='/docs/ref/useCache' />
+          <NavLink label='<Link>' href='/docs/ref/link' />
+          <NavLink label='<ErrorBoundary>' href='/docs/ref/error-boundary' />
+          <NavLink label='Request' href='/docs/ref/request' />
+          <NavLink label='css' href='/docs/ref/css' />
+          <NavLink label='cls' href='/docs/ref/cls' />
+          <NavLink label='.env' href='/docs/ref/env' />
 
           <div className='docs-section'>Guides</div>
-          <NavLink label='Theme toggles' to='/docs/guides/theme-toggles' />
-          <NavLink label='Deploy to fly.io' to='/docs/guides/deploy-to-fly' />
+          <NavLink label='Theme toggles' href='/docs/guides/theme-toggles' />
+          <NavLink label='Deploy to fly.io' href='/docs/guides/deploy-to-fly' />
         </div>
         <div className='docs-content'>
           <MDXProvider components={components}>{children}</MDXProvider>
@@ -92,13 +92,13 @@ export function DocsPage({ title, description, children }) {
   )
 }
 
-function NavLink({ label, to }) {
+function NavLink({ label, href }) {
   const location = useLocation()
   return (
-    <Link to={to}>
+    <Link href={href}>
       <a
         className={cls('docs-nav-link', {
-          active: location.pathname === to,
+          active: location.pathname === href,
         })}
       >
         <span>{label}</span>
