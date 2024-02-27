@@ -70,7 +70,7 @@ export function DocsPage({ title, description, children }) {
           <NavLink label='[api].js' to='/docs/ref/api-js' />
           <NavLink label='useLocation' to='/docs/ref/useLocation' />
           <NavLink label='useCookie' to='/docs/ref/useCookie' />
-          <NavLink label='useData' to='/docs/ref/useData' />
+          <NavLink label='useLoader' to='/docs/ref/useLoader' />
           <NavLink label='useAction' to='/docs/ref/useAction' />
           <NavLink label='useCache' to='/docs/ref/useCache' />
           <NavLink label='<Link>' to='/docs/ref/link' />

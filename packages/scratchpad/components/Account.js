@@ -1,9 +1,9 @@
-import { useData } from 'firebolt'
+import { useLoader } from 'firebolt'
 
 export default function Account() {
-  const data = useData(getAccount)
-  const account = data.read()
-  return <div onClick={() => data.invalidate()}>Name: {account.name}</div>
+  const loader = useLoader(getAccount)
+  const account = loader.read()
+  return <div onClick={() => loader.invalidate()}>Name: {account.name}</div>
 }
 
 export async function getAccount(req) {

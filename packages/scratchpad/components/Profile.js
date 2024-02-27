@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { useData, useAction, css } from 'firebolt'
+import { useLoader, useAction, css } from 'firebolt'
 
 export function Profile() {
   return (
@@ -11,14 +11,14 @@ export function Profile() {
 
 function Content() {
   // const [auth, setAuth] = useCookie('auth')
-  const data = useData(getUser)
-  const user = data.read()
+  const loader = useLoader(getUser)
+  const user = loader.read()
   return (
     <div
       css={css`
         color: red;
       `}
-      onClick={() => data.invalidate()}
+      onClick={() => loader.invalidate()}
     >
       <div>{user.name}</div>
     </div>

@@ -1,10 +1,10 @@
 import { Suspense, useState } from 'react'
-import { useData, useAction } from 'firebolt'
+import { useLoader, useAction } from 'firebolt'
 import Account from '../components/Account'
 
 export default function Page() {
-  const data = useData(getThing)
-  const thing = data.read()
+  const loader = useLoader(getThing)
+  const thing = loader.read()
 
   return (
     <div>

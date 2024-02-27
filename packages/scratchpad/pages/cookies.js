@@ -1,5 +1,5 @@
 import { Suspense, useState } from 'react'
-import { useCookie, useData, useAction } from 'firebolt'
+import { useCookie, useLoader, useAction } from 'firebolt'
 
 export default function Cookies() {
   return (
@@ -13,8 +13,8 @@ export function Content() {
   const [on, setOn] = useCookie('on')
   const [lastFetched] = useCookie('lastFetched')
   const toggleOnServer = useAction(toggle)
-  const data = useData(getBoop)
-  const boop = data.read()
+  const loader = useLoader(getBoop)
+  const boop = loader.read()
   return (
     <div>
       <div>Cookies</div>
@@ -23,7 +23,7 @@ export function Content() {
       <div>Last fetched: {lastFetched}</div>
       <div onClick={() => setOn(!on)}>Toggle in browser</div>
       <div onClick={() => toggleOnServer()}>Toggle on server</div>
-      <div onClick={() => data.invalidate()}>Invalidate data</div>
+      <div onClick={() => loader.invalidate()}>Invalidate data</div>
     </div>
   )
 }

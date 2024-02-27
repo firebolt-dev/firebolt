@@ -58,12 +58,12 @@ export function registryPlugin({ registry }) {
 
         // console.log('imports', imports)
 
-        // transform useData calls
+        // transform useLoader calls
         contents = await transform({
           modPath,
           imports,
           contents,
-          hook: 'useData',
+          hook: 'useLoader',
           registry,
         })
 
@@ -89,7 +89,7 @@ async function transform({ modPath, imports, contents, hook, registry }) {
   const usesHook = contents.includes(`${hook}(`)
   if (!usesHook) return contents
 
-  // extract all function names used in useData/useAction calls
+  // extract all function names used in useLoader/useAction calls
   const dataRegex = new RegExp(`${hook}\\s*\\(\\s*([^,)]+)`, 'g')
   let dataMatches
   const fnNames = []
@@ -121,7 +121,7 @@ async function transform({ modPath, imports, contents, hook, registry }) {
 
   // console.log('fnInfo', fnInfo)
 
-  // replace all the functions used in useData/useAction calls with their id string
+  // replace all the functions used in useLoader/useAction calls with their id string
   for (const item of fnInfo) {
     // regex pattern to find the exact function name
     const fnName = item.alias || item.name

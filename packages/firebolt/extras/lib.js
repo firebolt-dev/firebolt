@@ -183,7 +183,7 @@ function useForceUpdate() {
   }, [])
 }
 
-export function useData(id, ...args) {
+export function useLoader(id, ...args) {
   const forceUpdate = useForceUpdate()
   const runtime = useRuntime()
   const loader = runtime.getLoader(id, args)

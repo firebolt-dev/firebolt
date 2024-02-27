@@ -1,5 +1,5 @@
 import { Suspense, useState } from 'react'
-import { useData, useAction } from 'firebolt'
+import { useLoader, useAction } from 'firebolt'
 
 export default function Page() {
   return (
@@ -10,15 +10,15 @@ export default function Page() {
 }
 
 export function Todos() {
-  const data = useData(list)
-  const todos = data.read()
+  const loader = useLoader(list)
+  const todos = loader.read()
   const create = useAction(create)
   const [text, setText] = useState('')
   const submit = async e => {
     e.preventDefault()
     await create(text)
     setText('')
-    data.invalidate()
+    loader.invalidate()
   }
   return (
     <main>

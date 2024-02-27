@@ -1,5 +1,5 @@
 import { Suspense, useState } from 'react'
-import { Link, useData, css, useCookie } from 'firebolt'
+import { Link, useLoader, css, useCookie } from 'firebolt'
 
 export default function Page() {
   // return <Content />
@@ -13,10 +13,10 @@ export default function Page() {
 export function Content() {
   const [foo] = useCookie('foo')
   console.log('render cookie foo', cookies.get('foo'))
-  const data = useData(getTitle)
+  const loader = useLoader(getTitle)
   const [on, setOn] = useState()
   console.log('test2 render')
-  const title = data.read()
+  const title = loader.read()
   console.log('title', title)
   return (
     <div>

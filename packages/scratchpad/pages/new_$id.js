@@ -1,5 +1,5 @@
 import { Suspense, useState } from 'react'
-import { Link, useLocation, useData, useAction, useCache } from 'firebolt'
+import { Link, useLocation, useLoader, useAction, useCache } from 'firebolt'
 
 export default function Page() {
   return (
@@ -18,14 +18,14 @@ function Loading() {
 
 function Item({ id }) {
   // const { id } = useLocation().params
-  const data = useData(getItem, id)
-  const item = data.read()
+  const loader = useLoader(getItem, id)
+  const item = loader.read()
   const update = useAction(updateItem)
   // const cache = useCache()
   const save = async () => {
     const resp = await update(item)
     console.log('saved!', resp)
-    data.invalidate()
+    loader.invalidate()
     // cache.invalidate(args => args[0] === 'getItem' && args[1] === '1')
   }
   return (
@@ -35,17 +35,17 @@ function Item({ id }) {
       <input
         type='text'
         value={item.name}
-        onChange={e => data.edit(item => (item.name = e.target.value))}
+        onChange={e => loader.edit(item => (item.name = e.target.value))}
       />
       <div>Desc</div>
       <input
         type='text'
         value={item.desc}
-        onChange={e => data.edit(item => (item.desc = e.target.value))}
+        onChange={e => loader.edit(item => (item.desc = e.target.value))}
       />
       <div>Version: {item.version}</div>
       <div>ID: {item.id}</div>
-      <div>Fetching: {data.fetching ? 'Yes' : 'No'}</div>
+      <div>Fetching: {loader.fetching ? 'Yes' : 'No'}</div>
       <div onClick={save}>Save</div>
       <div>--------</div>
       {/* <div>Name: {item.name}</div>
@@ -87,7 +87,7 @@ export async function updateItem(req, data) {
 
 async function examples() {
   // get a loader
-  const loader = useData(getItem, '123')
+  const loader = useLoader(getItem, '123')
   // read the loader or suspend while it loads
   const item = loader.read()
   // check if the loader is refetching in the background

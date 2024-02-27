@@ -5,14 +5,14 @@
 
 # Loaders
 
-Loaders let you fetch data securely from a database (or anywhere else) using the [useData](/docs/ref/useData) hook:
+Loaders let you fetch data securely from a database (or anywhere else) using the [useLoader](/docs/ref/useLoader) hook:
 
 ```jsx title='components/City.js' lineNumbers
-import { useData } from 'firebolt'
+import { useLoader } from 'firebolt'
 
 export function City({ id }) {
-  const data = useData(getCity, id)
-  const city = data.read()
+  const loader = useLoader(getCity, id)
+  const city = loader.read()
   return (
     <div>
       <h1>{city.name}</h1>
@@ -36,7 +36,7 @@ You can decorate Request objects with access to your database or anything else y
 
 ## Suspense & Error Boundaries
 
-Calling `data.read()` throws a promise to Suspense boundaries for loading UI while data is being fetched.
+Calling `loader.read()` throws a promise to Suspense boundaries for loading UI while data is being fetched.
 
 If your Loader fails you can catch it with an `<ErrorBoundary>` to display an error message.
 

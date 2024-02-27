@@ -1,5 +1,5 @@
 import { Suspense, useState } from 'react'
-import { useData, useAction } from 'firebolt'
+import { useLoader, useAction } from 'firebolt'
 import { Profile } from '../components/Profile'
 import * as Foo from '../components/Profile'
 import { FnTests } from '../fn-tests/FnTests'

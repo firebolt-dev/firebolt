@@ -8,7 +8,7 @@
 The `<ErrorBoundary>` component captures errors thrown inside [Loader](/docs/loaders) functions and allows you to handle them gracefully with a custom error component. It also works seamlessly during both server side rendering and when using loaders on the client.
 
 ```jsx title='pages/trains_$id.js' lineNumbers
-import { ErrorBoundary, useLocation, useData } from 'firebolt'
+import { ErrorBoundary, useLocation, useLoader } from 'firebolt'
 
 export default function Train() {
   return (
@@ -22,8 +22,8 @@ export default function Train() {
 
 function TrainContent() {
   const { id } = useLocation().params
-  const data = useData(fetchTrain, id)
-  const train = data.read()
+  const loader = useLoader(fetchTrain, id)
+  const train = loader.read()
   return (
     <div>
       <div>Name: {train.name}</div>
