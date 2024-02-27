@@ -8,7 +8,7 @@ import chokidar from 'chokidar'
 import * as esbuild from 'esbuild'
 import { isEqual, debounce } from 'lodash-es'
 import mdx from '@mdx-js/esbuild'
-import { polyfillNode } from 'esbuild-plugin-polyfill-node'
+// import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 
 import express from 'express'
 import cors from 'cors'
