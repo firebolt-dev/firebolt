@@ -190,7 +190,7 @@ export function useLoader(id, ...args) {
   const runtime = useRuntime()
   const loader = runtime.getLoader(id, args)
   useEffect(() => {
-    return loader.watch(forceUpdate)
+    return loader.observe(forceUpdate)
   }, [])
   return loader
 }
@@ -217,7 +217,7 @@ export function useCookie(key, defaultValue = null) {
     }
   })
   useEffect(() => {
-    return runtime.watchCookie(key, setValue)
+    return runtime.observeCookie(key, setValue)
   }, [])
   return [value ?? defaultValue, update]
 }

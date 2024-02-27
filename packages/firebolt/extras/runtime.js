@@ -31,7 +31,7 @@ export function createRuntime(stack) {
     getCache,
     getCookie,
     setCookie,
-    watchCookie,
+    observeCookie,
   }
 
   function call(action, ...args) {
@@ -110,10 +110,6 @@ export function createRuntime(stack) {
 
   async function callFunction(id, args) {
     let result
-    // if (ssr) {
-    //   console.log('TODO: this shouldnt happen yeah?')
-    //   result = await ssr.callFunction(id, args)
-    // } else {
     const res = await fetch('/_firebolt_fn', {
       method: 'POST',
       headers: {
@@ -155,7 +151,7 @@ export function createRuntime(stack) {
       } else if (data) {
         status = 'ready'
         value = data.value
-        expiresAt = data.expire ? new Date().getTime() + data.expire * 1000 : null // prettier-ignore
+        expiresAt = isNumber(data.expire) ? new Date().getTime() + data.expire * 1000 : null // prettier-ignore
       } else {
         status = 'pending'
         value = null
@@ -166,9 +162,9 @@ export function createRuntime(stack) {
     const loader = {
       key,
       args,
-      watchers: new Set(),
+      observers: new Set(),
       fetching: status === 'pending',
-      invalidated: false,
+      stale: false,
       async fetch() {
         let result
         if (ssr) {
@@ -186,16 +182,8 @@ export function createRuntime(stack) {
       },
 
       read() {
-        // invalidate if expired
-        if (expiresAt !== null) {
-          const now = new Date().getTime()
-          const expired = now > expiresAt
-          if (expired) {
-            loader.invalidated = true
-          }
-        }
-        // background fetch if invalidated
-        if (loader.invalidated && !loader.fetching) {
+        // background fetch if stale
+        if (loader.stale && !loader.fetching) {
           loader.fetching = true
           loader.fetch().then(data => {
             if (data.redirect) {
@@ -204,12 +192,12 @@ export function createRuntime(stack) {
                 applyRedirect(data.redirect)
                 promise = null
                 loader.fetching = false
-                loader.invalidated = false
+                loader.stale = false
               })
             }
             setData(data)
             loader.fetching = false
-            loader.invalidated = false
+            loader.stale = false
             loader.notify()
           })
         }
@@ -253,15 +241,34 @@ export function createRuntime(stack) {
         loader.notify()
       },
       async invalidate() {
-        loader.invalidated = true
-        loader.notify()
+        if (loader.observers.size) {
+          // if there are observers we background refresh
+          loader.stale = true
+          loader.notify()
+        } else {
+          // otherwise do a hard reset
+          setData(null)
+          promise = null
+        }
       },
-      watch(callback) {
-        loader.watchers.add(callback)
-        return () => loader.watchers.delete(callback)
+      observe(callback) {
+        loader.observers.add(callback)
+        return () => {
+          loader.observers.delete(callback)
+
+          // check expiry after no observers
+          if (!loader.observers.size && expiresAt !== null) {
+            const now = new Date().getTime()
+            const expired = now > expiresAt
+            if (expired) {
+              setData(null)
+              promise = null
+            }
+          }
+        }
       },
       notify() {
-        for (const notify of loader.watchers) {
+        for (const notify of loader.observers) {
           notify()
         }
       },
@@ -353,7 +360,7 @@ export function createRuntime(stack) {
     return cache
   }
 
-  const cookieWatchers = {} // [key]: Set
+  const cookieObservers = {} // [key]: Set
 
   function getCookie(key) {
     let value
@@ -407,31 +414,31 @@ export function createRuntime(stack) {
         cookiejs.set(key, value, options)
       }
     }
-    const watchers = cookieWatchers[key]
-    if (watchers) {
-      for (const callback of watchers) {
+    const observers = cookieObservers[key]
+    if (observers) {
+      for (const callback of observers) {
         callback(data)
       }
     }
   }
 
-  function watchCookie(key, callback) {
-    let watchers = cookieWatchers[key]
-    if (!watchers) {
-      cookieWatchers[key] = new Set()
-      watchers = cookieWatchers[key]
+  function observeCookie(key, callback) {
+    let observers = cookieObservers[key]
+    if (!observers) {
+      cookieObservers[key] = new Set()
+      observers = cookieObservers[key]
     }
-    watchers.add(callback)
-    return () => watchers.delete(callback)
+    observers.add(callback)
+    return () => observers.delete(callback)
   }
 
   function invalidateCookies(keys) {
     if (!keys) return
     for (const key of keys) {
       const data = getCookie(key)
-      const watchers = cookieWatchers[key]
-      if (!watchers) continue
-      for (const callback of watchers) {
+      const observers = cookieObservers[key]
+      if (!observers) continue
+      for (const callback of observers) {
         callback(data)
       }
     }
@@ -442,4 +449,8 @@ export function createRuntime(stack) {
   }
 
   return runtime
+}
+
+function isNumber(val) {
+  return typeof val === 'number' && !isNaN(val)
 }
