@@ -95,7 +95,7 @@ async function examples() {
   // invalidate loader (background refetch)
   loader.invalidate()
   // update loader manually
-  loader.set({ name: 'YUP!' })
+  loader.edit({ name: 'YUP!' })
 
   // get an action
   const save = useAction_(saveItem)

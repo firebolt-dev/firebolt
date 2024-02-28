@@ -5,7 +5,7 @@
 
 # Metadata
 
-To set the browser tab title and insert meta tags for SEO or social sharing functionality you can use `<title>` and `<meta>` tags anywhere in your app hierarchy.
+In a Firebolt app you can place `<title>` and `<meta>` tags anywhere in your app and they'll automatically be hoisted to the `<head>`.
 
 ```jsx title='pages/index.js' lineNumbers
 export default function Home() {
@@ -19,6 +19,6 @@ export default function Home() {
 }
 ```
 
-Tags will automatically be hoisted to the `<head>` of your app.
+Use them for setting the browser window title, SEO and Open Graph tags etc.
 
-If you need to you can use the `key` prop to deal with tags of the same kind.
+You can use the `key` prop to categorize and de-duplicate tags of the same kind.

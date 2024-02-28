@@ -35,7 +35,7 @@ Handlers are provided a [Request](/docs/ref/request) object as their first argum
 
 If a handler returns JSON it will automatically send it with a `Content-Type: application/json` header.
 
-Alternatively you can use a [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response/Response) for more control:
+Alternatively you can use a [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response/Response) for more control over content types:
 
 ```jsx title='api/items.js' lineNumbers
 export async function get(req) {

@@ -5,7 +5,7 @@
 
 # [page].mdx
 
-Any `.mdx` file added to the `pages` directory is treated as an MDX route in your app.
+Any `.mdx` file in your `pages` directory is treated as an MDX page in your app.
 
 ```mdx title='pages/docs_intro.mdx' lineNumbers
 # Intro
@@ -13,9 +13,11 @@ Any `.mdx` file added to the `pages` directory is treated as an MDX route in you
 This is an intro page written using markdown.
 ```
 
+The markdown is parsed and converted to jsx automatically.
+
 ## Nesting
 
-You'll often want to wrap your MDX content with other UI, which can be accomplished using route nesting:
+You'll often want to wrap your MDX content with other UI, which can be accomplished using nested routing:
 
 ```jsx title='pages/docs.js' lineNumbers
 export default function Docs({ children }) {
@@ -32,7 +34,7 @@ Paired with the example from earlier, visiting `/docs/intro` will result in `pag
 
 ## Custom Components
 
-By default MDX will use default elements such as `<h1>` and `<p>` but you can provide your own by using an `MDXProvider`.
+By default MDX will use default elements such as `<h1>` and `<p>` but you can provide your own custom components using our `MDXProvider`.
 
 Building on the example above:
 

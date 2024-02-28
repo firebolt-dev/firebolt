@@ -5,17 +5,17 @@
 
 # Pages
 
-Add new pages to your app by creating a `.js` or `.mdx` file in the `pages` directory.
+Add new pages to your Firebolt app by creating a `.js` file in the `pages` directory.
 
 ```jsx title='pages/about.js' lineNumbers
 export default function About() {
-  return <h1>About Me</h1>
+  return <h1>About Us</h1>
 }
 ```
 
-Pages are just regular components with a special filename used for route matching.
+Pages are just regular components with no magical export functions for metadata/props.
 
-Pages can also be written with markdown which you can learn more about in the [[page].mdx](/docs/ref/page-mdx) reference.
+Firebolt also supports MDX, allowing you to create `.mdx` pages and write content with markdown. See the [[page].mdx](/docs/ref/page-mdx) reference for more details.
 
 ## Matching
 
@@ -32,7 +32,7 @@ The filename you give a page determines how its route is matched:
 
 The `_` symbol is used to nest paths. It's easier to see all of your pages at a glance when they're in a single folder, but as your app grows you can still nest pages in sub-folders if needed.
 
-The `$` symbol is used to create dynamic route segments and its value(s) will be provided to you in the `params` object.
+The `$` symbol is used to create dynamic route segments and its value(s) will be provided to you in the `params` object .
 
 Adding a `+` suffix to a dynamic route segment will match one or more parameters, while the `-` symbol will match zero or more.
 
@@ -50,4 +50,4 @@ To share common UI across multiple pages you can nest them to create layouts.
 | `pages/docs_index.mdx` | Page   | `/docs`       |
 | `pages/docs_intro.mdx` | Page   | `/docs/intro` |
 
-This example shows you how to create a shared layout for all of the MDX docs pages. The `pages/docs.js` component ensures that it uses the `children` prop to show child content.
+This example shows you how to create a shared layout for all of the docs pages. The `pages/docs.js` component uses the `children` prop to show content for child routes.

@@ -13,10 +13,13 @@ The Request object provides utilities such as cookie management and redirects, b
 
 Available to Loader functions only.
 
-By default data fetched from a Loader will be cached until the user leaves or refreshes. For data that changes often you can set it to expire after a certain amount of time.
+By default data fetched from a Loader will be cached indenfinitely. For data that changes often you can set it to expire after a certain amount of time.
 
-Once data expires it becomes invalidated. Any component observing that data will have it re-fetched in the background and automatically updated. No Suspense boundaries will be triggered.
-If no components are observing the data then the next time the data is read will trigger the usual Suspense flow with loading UI etc.
+When data expires it becomes invalidated.
+
+If any components are still observing this data it will be refetched in the background and automatically updated without triggering Suspense boundaries.
+
+If no components are observing the data then the data is evicted immediately, causing the next read to trigger Suspense boundaries as if the data was never there to begin with.
 
 ```jsx
 export async function getTickets(req) {
@@ -28,7 +31,7 @@ export async function getTickets(req) {
 
 ## redirect(url, type)
 
-Available to both Loader and Action functions.
+_Available to both Loader and Action functions._
 
 Throws a redirect that will navigate the user to another page. The `type` argument can be `push` (default) or `replace`.
 
@@ -38,7 +41,7 @@ req.redirect('/login', 'replace')
 
 ## error(data)
 
-Available to Loader functions only.
+_Available to Loader functions only._
 
 Throws an error that can be caught by an [\<ErrorBoundary\>](/docs/ref/error-boundary), decorating the error with an optional `data` prop that can be used to provide more context about operational errors.
 
@@ -70,6 +73,6 @@ See the [useCookie](/docs/ref/useCookie) reference for more info about cookies.
 
 ## params
 
-Available to API Routes only.
+_Available to API Routes only._
 
 An object with values for dynamic route segments and query parameters.

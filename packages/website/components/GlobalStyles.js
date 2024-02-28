@@ -78,7 +78,7 @@ function Theme() {
 
 const lightVariables = `
   :root {
-    --primary-color: rgb(255 65 88);
+    --primary-color: rgb(244 63 94);
     --bg-color: white;
     --text-color: rgb(23, 23, 23);
     --text-color-dim: rgb(102, 102, 102);
@@ -103,7 +103,7 @@ const lightVariables = `
 
 const darkVariables = `
   :root {
-    --primary-color: rgb(255 65 88);
+    --primary-color: rgb(244 63 94);
     --bg-color: rgb(18, 18, 18);
     --text-color: rgba(237, 237, 237);
     --text-color-dim: rgb(161, 161, 161);

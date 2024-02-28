@@ -22,7 +22,7 @@ export function City({ id }) {
 }
 
 export async function getCity(req, id) {
-  return req.db('cities').where({ id }).first()
+  return await req.db('cities').where({ id }).first()
 }
 ```
 
@@ -30,7 +30,7 @@ Loaders simplify the way you build apps:
 
 - Interact directly with a database or server resource right inside any component, anywhere in your app
 - Seamlessly works during SSR and on the client
-- 100% compatible with Suspense and ErrorBoundaries
+- 100% compatible with Suspense and [ErrorBoundary](/docs/ref/error-boundary)
 - Code only ever exists on the server and is removed from client bundles
 - You can forget about writing API endpoints completely (unless you [need them](/docs/ref/api-js))
 

@@ -5,7 +5,7 @@
 
 # Document
 
-The Document component is used to generate the outer shell of your app. All of your pages will be wrapped with this component and it's usually where you'll set up any global styles, meta tags, favicons and fonts that you need.
+The Document component is the root of your Firebolt app and includes the `<html>`, `<head>` and `<body>` elements that are common across all pages.
 
 ```jsx title='components/Document.js' lineNumbers
 import { css } from 'firebolt'
@@ -29,3 +29,7 @@ export function Document({ children }) {
   )
 }
 ```
+
+Use this to place your global styles, meta tags, favicons and fonts etc.
+
+There are no special framework-specific components, it's just regular old JSX!

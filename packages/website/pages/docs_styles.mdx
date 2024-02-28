@@ -5,7 +5,7 @@
 
 # Styles
 
-Firebolt includes it's own simple yet powerful CSS-in-JS implementation allowing you to be productive right away.
+Firebolt includes it's own simple yet powerful CSS-in-JS implementation allowing you to be productive immediately.
 
 ## Element Styles
 
@@ -39,11 +39,11 @@ For quick element styling you can just use a string like this:
 <div css='color:red'>
 ```
 
-Behind the scenes, Firebolt will compile and auto-prefix your styles, insert them into the `<head>` and give your element a `className` prop to scope the styles.
+Behind the scenes, Firebolt will compile and auto-prefix your styles, insert them into the `<head>` and give your element a `className` to scope the styles.
 
 ## Global Styles
 
-Global styles can be placed anywhere using a regular old `<style>` element. Global styles are useful for css-resets, themes and css-variables:
+Global styles can be placed anywhere using a regular old `<style>` element. Most of the time you'll put this in your `Document` component and include things like css-resets, fonts, themes and css-variables.
 
 ```jsx title='components/Document.js' lineNumbers
 export function Document({ children }) {

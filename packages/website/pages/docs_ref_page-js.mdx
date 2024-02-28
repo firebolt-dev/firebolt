@@ -5,7 +5,7 @@
 
 # [page].js
 
-Any `.js` file added to the `pages` directory is treated as a route in your app.
+Add new pages to your app by creating a `.js` file in your `pages` directory.
 
 ```jsx title='pages/index.js' lineNumbers
 export default function Home() {
@@ -57,6 +57,4 @@ To share common UI across multiple pages you can nest them to create layouts.
 | `pages/docs_index.mdx` | Page   | `/docs`       |
 | `pages/docs_intro.mdx` | Page   | `/docs/intro` |
 
-This example shows you how to create a shared layout for all of the MDX docs pages. The `pages/docs.js` component ensures that it uses the `children` prop to show child content.
-
-Files transition from a page to a layout when there is both an index and non-index file. For example the two files `pages/docs.js` and `pages/docs_index.js` would resolve to the same URL so, the former will be used as a layout.
+This example shows you how to create a shared layout for all of the docs pages. The `pages/docs.js` component uses the `children` prop to show content for child routes.

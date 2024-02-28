@@ -1,7 +1,8 @@
 import { Link, useCookie, css } from 'firebolt'
 
 import { Page } from '../components/Page'
-import { ChevronRight, Copy } from 'lucide-react'
+import { Check, ChevronRight, Copy } from 'lucide-react'
+import { useState } from 'react'
 
 export default function Home() {
   const [theme, setTheme] = useCookie('theme', 'system')
@@ -66,13 +67,22 @@ export default function Home() {
           }
           .home-install-copy {
             color: var(--icon-color-dim);
+            &:hover {
+              color: var(--icon-color);
+              cursor: pointer;
+            }
+          }
+          .home-install-copied {
+            color: var(--icon-color-dim);
           }
           .home-features {
             display: flex;
             flex-wrap: wrap;
-            margin: -8px -8px 0;
+            margin: -8px -8px 80px;
           }
           .home-feature {
+            display: flex;
+            align-items: stretch;
             flex-basis: 33.333%;
             padding: 8px;
           }
@@ -89,12 +99,37 @@ export default function Home() {
               // ...
             }
           }
+          @media all and (max-width: 930px) {
+            .home-feature {
+              flex-basis: 50%;
+            }
+          }
+          @media all and (max-width: 760px) {
+            .home-title {
+              font-size: 70px;
+            }
+          }
+          @media all and (max-width: 630px) {
+            .home-title {
+              font-size: 60px;
+              margin-top: 100px;
+            }
+          }
+          @media all and (max-width: 540px) {
+            .home-feature {
+              flex-basis: 100%;
+            }
+            .home-title {
+              font-size: 50px;
+              margin-top: 80px;
+            }
+          }
         `}
       >
         <h1 className='home-title'>The Simple React Framework</h1>
         <p className='home-tag'>
-          Everything you need to rapidly build full-stack apps for the web, with
-          ease.
+          Build full-stack apps for the web, with all of the features and none
+          of the complexity.
         </p>
         <Link href='/docs' className='home-cta'>
           <span>Get Started</span>
@@ -102,15 +137,15 @@ export default function Home() {
         <div className='home-install'>
           <ChevronRight className='home-install-chevron' size={20} />
           <span className='home-install-text'>npm create firebolt</span>
-          <Copy className='home-install-copy' size={16} />
+          <CopyButton />
         </div>
         <div className='home-features'>
           <div className='home-feature'>
             <div className='home-feature-inner'>
               <h1>Powerful Simplicity</h1>
               <p>
-                All the power of a super framework with none of the overwhelming
-                complexity. It's just React!
+                All the power of a super framework without any of the
+                overwhelming complexity. It's all just React.
               </p>
             </div>
           </div>
@@ -137,7 +172,7 @@ export default function Home() {
               <h1>Actions & Loaders</h1>
               <p>
                 Interact with your database directly inside your components.
-                Forget about building APIs.
+                Forget about building an API.
               </p>
             </div>
           </div>
@@ -163,4 +198,17 @@ export default function Home() {
       </div>
     </Page>
   )
+}
+
+function CopyButton() {
+  const [copied, setCopied] = useState(false)
+  const copy = () => {
+    navigator.clipboard.writeText('npm create firebolt@latest')
+    setCopied(true)
+    setTimeout(() => setCopied(false), 3000)
+  }
+  if (copied) {
+    return <Check className='home-install-copied' size={16} />
+  }
+  return <Copy className='home-install-copy' size={16} onClick={copy} />
 }

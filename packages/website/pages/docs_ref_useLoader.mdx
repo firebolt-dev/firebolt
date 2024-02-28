@@ -5,7 +5,9 @@
 
 # useLoader
 
-The `useLoader` hook allows you to fetch data from a Loader Function which is simply any function that you write alongside your component. Loader Functions have access to server-only resources such as databases that you provide and their code is never exposed to the browser.
+The `useLoader` hook allows you to fetch data from a Loader function, which is simply any function that you write alongside your component.
+
+Loader Functions have access to server-only resources that you provide (such as databases) and their code is never exposed to the browser.
 
 ```jsx title='components/Profile.js' lineNumbers
 import { useLoader } from 'firebolt'
@@ -25,11 +27,11 @@ export async function getUser(req, id) {
 }
 ```
 
-The component above loads a users data using the `getUser` function and then displays their name.
+The component above loads data for a user using the `getUser` function and then displays their name.
 
 ## useLoader(loaderFn, ...args)
 
-The first argument must be your Loader Function.
+The first argument must be your Loader function.
 
 Any additional arguments will be passed to the loader function. These arguments are also used to construct a cache key for the data that the function returns and allows you to invalidate or update data in the [cache](/docs/ref/useCache) manually.
 
@@ -37,25 +39,32 @@ The `useLoader` hook returns a loader instance specific to the data being loaded
 
 ## Loader Function
 
-The loader function must be exported from the same file OR imported from somewhere else.
+The loader function must be exported from the same file or alternatively imported from somewhere else.
 
-The first argument provided is a [Request](/docs/ref/request) object.
+The function is provided a [Request](/docs/ref/request) object as its first argument. The Request object has methods to access cookies, redirects, and set data expiration.
+You can decorate this object with access to a database or anything else in your [firebolt.config.js](/docs/ref/config) file.
 
 Any additional arguments from the `useLoader` function will be passed as additional arguments to your loader function.
 
 ## loader.read()
 
-Fetches data using the Loader Function and the provided arguments. Firebolt seamlessly handles calling your Loader Function during server-side rendering or on the client behind the scenes.
+Reads data from the Loader function with the provided arguments. Firebolt seamlessly handles this during both server side rendering and on the client.
 
-When `loader.read()` is called in the example above, if there is no data in the cache it will throw a promise triggering any Suspense boundaries you have set up to display loading UI until the data is fetched.
+When `loader.read()` is called, if there is no data in the cache it will throw a promise that triggers Suspense boundaries allowing you to show loading UI until the data is fetched.
 
-Once the promise resolves the component will re-render and `loader.read()` will return the actual data and the users name will be displayed.
+Once the promise resolves the component will re-render and `loader.read()` returns the data, finally rendering the component.
 
-If the loader function fails, the promise will reject and the error will be thrown for an `<ErrorBoundary>` to catch and display custom error messages etc.
+If the loader function fails, the promise will reject and the error will be thrown to the nearest [ErrorBoundary](/docs/ref/error-boundary) allowing you to show a custom error UI.
 
 ## loader.invalidate()
 
-After loading data you may want to refresh it. When data is invalidated it will be refetched in the background and then automatically update your UI. No Suspense boundaries are triggered during a background refetch.
+Calling `invalidate()` will mark loader data as stale.
+
+If any components are still observing this data it will be refetched in the background and automatically updated without triggering Suspense boundaries.
+
+If no components are observing the data then the data is evicted immediately, causing the next read to trigger Suspense boundaries as if the data was never there to begin with.
+
+**Note:** data can also become invalidated if you use the `expire` method on the [Request](/docs/ref/request) object passed into your loader function.
 
 ## loader.set(newData)
 

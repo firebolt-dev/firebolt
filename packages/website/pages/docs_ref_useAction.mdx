@@ -5,7 +5,7 @@
 
 # useAction
 
-The `useAction` hook allows you to fetch data from an Action Function which is simply any function that you write alongside your component. Action Functions have access to server-only resources such as databases that you provide and their code is never exposed to the browser.
+The `useAction` hook allows you to fetch data from an Action function written alongside a component. Action functions have access to server-only resources such as databases that you provide and their code is never exposed to the browser.
 
 ```jsx title='components/LikeButton.js' lineNumbers
 import { useState } from 'react'
@@ -31,22 +31,25 @@ export async function markLiked(req, postId) {
 }
 ```
 
-The component above renders a `Like` button that when clicked, inserts data into the database.
+The component above renders a `Like` button that when clicked, inserts data into the database and updates the UI.
 
 ## useAction(actionFn)
 
-The first argument must be your Action Function.
+The first argument must be your Action function.
 
-Returns an action execution function.
+Returns a function that executes the action when called.
 
 ## Action Function
 
-The action function must be exported from the same file OR imported from somewhere else.
+The action function must be exported from the same file or imported from another file.
 
-The first argument provided is a [Request](/docs/ref/request) object.
+The function is provided a [Request](/docs/ref/request) object as its first argument. The Request object has methods to access cookies and perform redirects.
+You can decorate this object with access to a database or anything else in your [firebolt.config.js](/docs/ref/config) file.
+
+Any additional arguments from the action execution function are passed as additional arguments to your action function.
 
 ## exec(...args)
 
-Calls your Action Function with the provided arguments. Firebolt seamlessly handles calling your Action Function on the server behind the scenes.
+Calls your Action function with the provided arguments. Firebolt seamlessly handles calling your Action function on the server behind the scenes.
 
-Returns a promise that resolves with the return value of the Action Function.
+Returns a promise that resolves with the return value of the Action function.

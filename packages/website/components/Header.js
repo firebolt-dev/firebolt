@@ -20,9 +20,10 @@ export function Header() {
         backdrop-filter: blur(8px);
         padding: 0 20px;
         z-index: 100;
+        border-bottom: 1px solid var(--line-color);
         .header-inner {
           width: 100%;
-          max-width: 1100px;
+          max-width: 1300px;
           margin: 0 auto;
           height: 70px;
           display: flex;
@@ -66,7 +67,7 @@ export function Header() {
       `}
     >
       <div className='header-inner'>
-        <Link href='/'>
+        <Link href='/' aria-label='Firebolt logo'>
           <Logo className='header-logo' />
         </Link>
         <div className='header-gap' />
@@ -92,6 +93,7 @@ export function Header() {
           className='header-social'
           href='https://x.com/firebolt_dev'
           target='_blank'
+          aria-label='Follow Firebolt on X'
         >
           <LogoX />
         </Link>
@@ -99,6 +101,7 @@ export function Header() {
           className='header-social'
           href='https://github.com/firebolt-dev'
           target='_blank'
+          aria-label='View Firebolt on GitHub'
         >
           <LogoGithub />
         </Link>
