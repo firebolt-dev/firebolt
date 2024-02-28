@@ -10,15 +10,19 @@ export function Document({ children }) {
         <link rel='icon' href='/icon.svg' type='image/svg+xml' />
         <link rel='apple-touch-icon' href='/apple-touch-icon.png' />
         <link rel='manifest' href='/manifest.json' />
-        <link rel='preconnect' href='https://fonts.googleapis.com' />
         <link
-          rel='preconnect'
-          href='https://fonts.gstatic.com'
+          rel='preload'
+          href='/roboto-flex.woff2'
+          as='font'
+          type='font/woff2'
           crossOrigin='true'
         />
         <link
-          href='https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap'
-          rel='stylesheet'
+          rel='preload'
+          href='/roboto-mono.woff2'
+          as='font'
+          type='font/woff2'
+          crossOrigin='true'
         />
         <GlobalStyles />
       </head>
