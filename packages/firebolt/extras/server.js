@@ -26,6 +26,13 @@ const prod = process.env.NODE_ENV === 'production'
 
 export { config }
 
+const methodToApiFunction = {
+  GET: 'get',
+  PUT: 'put',
+  POST: 'post',
+  DELETE: 'del',
+}
+
 // provide Request global for api routes
 globalThis.Response = FireboltResponse
 
@@ -122,7 +129,7 @@ export async function handleFunction(req, res) {
 
 export async function handleApi(req, res) {
   const url = req.originalUrl
-  const method = req.method.toLowerCase()
+  const method = methodToApiFunction[req.method]
 
   const [route, params] = resolveApiAndParams(url)
 

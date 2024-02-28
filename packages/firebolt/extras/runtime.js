@@ -226,18 +226,18 @@ export function createRuntime(stack) {
           throw value
         }
       },
-      get() {
-        return value
-      },
-      set(value) {
-        setData({ value })
-        loader.notify()
-      },
-      edit(fn) {
-        const newValue = produce(value, draft => {
-          fn(draft)
-        })
-        setData({ value: newValue })
+      // get() {
+      //   return value
+      // },
+      edit(fnOrValue) {
+        if (typeof fnOrValue === 'function') {
+          const newValue = produce(value, draft => {
+            fn(draft)
+          })
+          setData({ value: newValue })
+        } else {
+          setData({ value })
+        }
         loader.notify()
       },
       async invalidate() {
@@ -319,7 +319,7 @@ export function createRuntime(stack) {
 
   const cache = {
     invalidate(...args) {
-      // invalidate everything
+      // invalidate all
       if (!args[0]) {
         for (const key in loaders) {
           const loader = loaders[key]
@@ -327,32 +327,77 @@ export function createRuntime(stack) {
         }
         return
       }
-      // invalidate via predicate
+      // invalidate all by predicate
       if (typeof args[0] === 'function') {
         const check = args[0]
         for (const key in loaders) {
           const loader = loaders[key]
-          const shouldInvalidate = check(loader.args)
-          if (shouldInvalidate) {
-            loader.invalidate()
-          }
+          const match = check(loader.args)
+          if (match) loader.invalidate()
         }
         return
       }
-      // invalidate via matching
+      // invalidate all by args
       for (const key in loaders) {
         const loader = loaders[key]
         let match = true
-        for (let i = 0; i < args.length; i++) {
-          if (loader.args[i] !== args[i]) {
+        for (const arg of args) {
+          if (!loader.args.includes(arg)) {
             match = false
             break
           }
         }
-        if (match) {
-          loader.invalidate()
+        if (match) loader.invalidate()
+      }
+    },
+    find(...args) {
+      // find one by predicate
+      if (typeof args[0] === 'function') {
+        const check = args[0]
+        for (const key in loaders) {
+          const loader = loaders[key]
+          const match = check(loader.args)
+          if (match) return loader
+        }
+        return null
+      }
+      // find one by args
+      for (const key in loaders) {
+        const loader = loaders[key]
+        let match = true
+        for (const arg of args) {
+          if (!loader.args.includes(arg)) {
+            match = false
+            break
+          }
+        }
+        if (match) return loader
+      }
+    },
+    findAll(...args) {
+      const matches = []
+      // find all by predicate
+      if (typeof args[0] === 'function') {
+        const check = args[0]
+        for (const key in loaders) {
+          const loader = loaders[key]
+          const match = check(loader.args)
+          if (match) matches.push(loader)
         }
       }
+      // find all by args
+      for (const key in loaders) {
+        const loader = loaders[key]
+        let match = true
+        for (const arg of args) {
+          if (!loader.args.includes(arg)) {
+            match = false
+            break
+          }
+        }
+        if (match) matches.push(loader)
+      }
+      return matches
     },
   }
 
