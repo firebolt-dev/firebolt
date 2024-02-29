@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { MDXProvider, Link, useLocation, css, cls } from 'firebolt'
 
 import { Page } from '../components/Page'
-import { components } from '../components/docs-components'
+import { components } from '../components/md'
 import { ChevronDown, ChevronLeft, ChevronRight, List } from 'lucide-react'
 
 export default function DocsLayout({ children }) {
@@ -122,9 +122,7 @@ export default function DocsLayout({ children }) {
             <span>Documentation</span>
           </div>
           <div className='docs-nav-content' onClick={close}>
-            <div className='docs-nav-section'>Getting Started</div>
-            <NavLink label='Introduction' href='/docs' />
-            <NavLink label='Installation' href='/docs/installation' />
+            <NavLink label='Getting Started' href='/docs' />
             <NavLink label='Document' href='/docs/document' />
             <NavLink label='Pages' href='/docs/pages' />
             <NavLink label='Styles' href='/docs/styles' />

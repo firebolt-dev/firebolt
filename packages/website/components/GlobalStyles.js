@@ -177,7 +177,7 @@ function Main() {
         // general
 
         p {
-          line-height: 1.5;
+          line-height: 1.9;
         }
 
         pre {

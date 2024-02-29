@@ -1,0 +1,181 @@
+![Firebolt box art](/introducing-firebolt.png)
+
+_February 29, 2024_
+
+# Introducing Firebolt: The Simple React Framework
+
+_Building for the web should be easy..._
+
+Unfortunately, modern web development has slowly become more and more complex and convoluted. The web has always just been the web, so why hasn't it become simpler? Why aren't we becoming more productive?
+
+Today i'm excited to publicly introduce Firebolt: a new kind of react framework for building applications on the web.
+Firebolt takes everything we've learned over the past few years and condenses it down into a simple, tiny, blazing fast framework that includes all the features you'd expect from a super framework, without over complicating everything.
+
+## It's Just React
+
+Creating an app with Firebolt feels just like writing React. Most of the time you'll forget Firebolt even exists because you'll spend most of your time writing plain old React components and delivering instant value to your users.
+
+```jsx title='pages/about.js' lineNumbers
+export async function About() {
+  return <h1>About Us</h1>
+}
+```
+
+Behind the scenes, Firebolt takes care of bundling, server rendering, parallel streaming, routing, data access and so much more.
+
+You can use Firebolt to build websites, docs, blogs, and pretty much any other kind of app on the web.
+
+## Components All The Way Down
+
+React components offer an extremely simple mental model for building apps.
+
+With Firebolt, we decided to focus on keeping this simplicity by allowing you to craft small self-contained components that include everything they need to function, that you then compose together to create your web app.
+
+Not only do Firebolt components include your JS, HTML and CSS, they also have direct, secure access to your business logic or database.
+
+```jsx title='components/Profile.js' lineNumbers
+import { useLoader, css } from 'firebolt'
+
+export function Profile() {
+  const user = useLoader(getProfile).read()
+  return (
+    <div
+      css={css`
+        border: 1px solid black;
+        border-radius: 10px;
+      `}
+    >
+      <div>{user.name}</div>
+    </div>
+  )
+}
+
+export async function getProfile(req) {
+  const token = req.cookies.get('auth')
+  const id = req.auth(token)
+  return await req.db('users').where({ id }).first()
+}
+```
+
+Both [Loaders](/docs/loaders) and [Actions](/docs/actions) in Firebolt allow you interact with private code that is never exposed to the browser.
+They work seamlessly with SSR and on the client, and are fully compatible with Suspense and Error Boundaries, just how React intended.
+
+Forget about building API's and infrastructure and just focus on your product. Of course if you still need to provide a public API for your users to consume, we have [API Routes](/docs/ref/api-js).
+
+## Ultra Speed
+
+The Firebolt runtime is just 10 KB, meaning your pages will load extremely fast. Your users and search engines will thank you.
+
+On top of this, Firebolt provides parallel streaming from the server allowing your app to be interactive and in front of users faster than ever before.
+
+Firebolt offers first class support for streaming with Suspense, without any complex concepts to learn.
+
+## Other Goodies
+
+Our goal is to simplify web development by providing everything you need to be productive and deliver value immediatey.
+
+### CSS-in-JS
+
+Firebolt includes its own simple yet powerful CSS-in-JS implementation that is ready to go.
+You no longer have to wrangle with hacky, flaky workarounds to get good runtime CSS-in-JS that works with SSR and streaming flawlessly.
+
+```jsx title='components/Button.js' lineNumbers
+import { css } from 'firebolt'
+
+export function Button({ label, onClick }) {
+  return (
+    <button
+      css={css`
+        border: 1px solid black;
+        border-radius: 10px;
+        padding: 0 12px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+      `}
+    >
+      <span>{label}</span>
+    </button>
+  )
+}
+```
+
+### Super Metadata
+
+Forget about framework specific `<Head>` components, thanks to React 19 you can use `<title>` and `<meta>` tags anywhere in your app and they'll automatically be hoisted to the `<head>` element.
+
+```jsx title='pages/cities_$id.js' lineNumbers
+export default function City() {
+  const { id } = useLocation().params
+  const city = useLoader(getCity, id).read()
+  return (
+    <>
+      <title>{city.name}</title>
+      <meta name='description' content={city.description} />
+
+      {/* content */}
+    </>
+  )
+}
+```
+
+### Cookies
+
+We baked cookie management into the core of Firebolt allowing you interact with them easily on both the server and client.
+
+```jsx title='components/CountrySelect.js' lineNumbers
+import { useCookie } from 'firebolt'
+
+export function CountrySelect() {
+  const [country, setCountry] = useCookie('country', 'US')
+  return (
+    <select value={country} onChange={e => setCountry(e.target.value)}>
+      <option value='US'>United States</option>
+      <option value='AU'>Australia</option>
+      {/* ... */}
+    </select>
+  )
+}
+```
+
+In this example, updating the `country` cookie will also update any other components observing its value.
+
+You can even update cookies on the server inside Loaders & Actions and they will instantly update on the client.
+
+### Markdown & MDX
+
+Firebolt supports MDX for writing pages with markdown by simply adding a `.mdx` page.
+
+```jsx title='pages/docs_intro.mdx' lineNumbers
+# Introduction
+
+Heres a little introduction...
+```
+
+And we give you full control over all MDX plugins you might need.
+
+### Layouts & Nested Routes
+
+It's easy to create shared layouts by simply nesting routes together. As an example, we can nest our MDX page from above into a shared navigation component like this:
+
+```jsx title='pages/docs.js' lineNumbers
+export default function DocsLayout({ children }) {
+  return (
+    <div>
+        <nav>{/* shared nav */}</div>
+        <main>{children}</main>
+    </div>
+  )
+}
+```
+
+## Summary
+
+Firebolt is currently in beta and aims to make it easier for anyone to build on the web without sacrificing power.
+We care deeply about the web and building a more sustainable future. Firebolt will always remain free and open source with an MIT license.
+
+To get started, check out our [documentation](/docs) and [github repo](https://github.com/firebolt-dev) and follow us on X to stay up to date.
+
+If you are as excited about the future of web development as we are, be sure to share your thoughts on social media and share this post!
+
+Peace 🖖

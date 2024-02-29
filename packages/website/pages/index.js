@@ -22,11 +22,16 @@ export default function Home() {
             font-weight: 700;
             text-align: center;
             line-height: 1.1;
+            > span {
+              color: var(--primary-color);
+              /* font-style: italic; */
+            }
           }
           .home-tag {
             text-align: center;
             font-size: 21px;
             margin: 0 0 60px;
+            line-height: 1.5;
           }
           .home-cta {
             align-self: center;
@@ -96,6 +101,7 @@ export default function Home() {
               margin: 0 0 16px;
             }
             p {
+              line-height: 1.4;
               // ...
             }
           }
@@ -126,7 +132,9 @@ export default function Home() {
           }
         `}
       >
-        <h1 className='home-title'>The Simple React Framework</h1>
+        <h1 className='home-title'>
+          The <span>Simple</span> React Framework
+        </h1>
         <p className='home-tag'>
           Build full-stack apps for the web, with all of the features and none
           of the complexity.

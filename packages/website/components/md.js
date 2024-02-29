@@ -6,6 +6,9 @@ import { Metadata } from './Metadata'
 
 export const components = {
   Metadata,
+  img(props) {
+    return <img {...props} css='border-radius: 10px;' />
+  },
   h1(props) {
     return (
       <h1
@@ -25,9 +28,9 @@ export const components = {
         {...props}
         id={id}
         css={css`
-          font-size: 24px;
+          font-size: 28px;
           font-weight: 700;
-          margin-top: 32px;
+          margin-top: 50px;
           margin-bottom: 16px;
           scroll-margin-top: 102px;
         `}
@@ -45,7 +48,7 @@ export const components = {
         css={css`
           font-size: 18px;
           font-weight: 700;
-          margin-top: 32px;
+          margin-top: 50px;
           margin-bottom: 16px;
           scroll-margin-top: 102px;
         `}
@@ -250,7 +253,7 @@ export const components = {
           padding-left: 32px;
           li {
             padding-left: 4px;
-            line-height: 1.5;
+            line-height: 1.9;
             margin: 0 0 8px;
           }
         `}
