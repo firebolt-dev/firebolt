@@ -27,11 +27,11 @@ setValue(value => value + 1)
 
 ## Synchronization
 
-When observing a cookie, if you were to update it on the server from a [Request](/docs/ref/request) object, the UI on the client will also update to reflect those changes.
+Updating a cookie will also update any other components observing its value. This also works when updating cookies on the server using the [Request](/docs/ref/request) object.
 
 ## Options
 
-By default cookies will use session storage but you can change the defaults per-cookie using the 2nd argument, or globally in your [firebolt.config.js](/docs/ref/config) file.
+By default cookies use session storage but you can change these per-cookie by providing an additional options object, or globally in your [firebolt.config.js](/docs/ref/config) file.
 
 ```jsx
 setValue(authToken, { expires: 30 })

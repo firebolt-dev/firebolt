@@ -123,8 +123,7 @@ export default function DocsLayout({ children }) {
           </div>
           <div className='docs-nav-content' onClick={close}>
             <NavLink label='Getting Started' href='/docs' />
-            <NavLink label='Document' href='/docs/document' />
-            <NavLink label='Pages' href='/docs/pages' />
+            <NavLink label='Routes' href='/docs/routes' />
             <NavLink label='Styles' href='/docs/styles' />
             <NavLink label='Metadata' href='/docs/metadata' />
             <NavLink label='Loaders' href='/docs/loaders' />
@@ -133,12 +132,13 @@ export default function DocsLayout({ children }) {
             <NavLink label='Deployment' href='/docs/deployment' />
 
             <div className='docs-nav-section'>Reference</div>
-            <NavLink label='Document.js' href='/docs/ref/document' />
+            <NavLink label='_layout.js' href='/docs/ref/layout' />
+            <NavLink label='page.js' href='/docs/ref/page-js' />
+            <NavLink label='page.mdx' href='/docs/ref/page-mdx' />
+            <NavLink label='handler.js' href='/docs/ref/handler-js' />
             <NavLink label='firebolt.config.js' href='/docs/ref/config' />
-            <NavLink label='[page].js' href='/docs/ref/page-js' />
-            <NavLink label='[page].mdx' href='/docs/ref/page-mdx' />
-            <NavLink label='[api].js' href='/docs/ref/api-js' />
-            <NavLink label='useLocation' href='/docs/ref/useLocation' />
+            <NavLink label='.env' href='/docs/ref/env' />
+            <NavLink label='useRoute' href='/docs/ref/useRoute' />
             <NavLink label='useCookie' href='/docs/ref/useCookie' />
             <NavLink label='useLoader' href='/docs/ref/useLoader' />
             <NavLink label='useAction' href='/docs/ref/useAction' />
@@ -148,7 +148,6 @@ export default function DocsLayout({ children }) {
             <NavLink label='Request' href='/docs/ref/request' />
             <NavLink label='css' href='/docs/ref/css' />
             <NavLink label='cls' href='/docs/ref/cls' />
-            <NavLink label='.env' href='/docs/ref/env' />
 
             <div className='docs-nav-section'>Guides</div>
             <NavLink label='Theme toggles' href='/docs/guides/theme-toggles' />

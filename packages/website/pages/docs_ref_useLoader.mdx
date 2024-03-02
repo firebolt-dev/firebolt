@@ -5,9 +5,9 @@
 
 # useLoader
 
-The `useLoader` hook allows you to fetch data from a Loader function, which is simply any function that you write alongside your component.
+The `useLoader` hook allows you to fetch data from a Loader function, which is simply any function that you write alongside your components.
 
-Loader Functions have access to server-only resources that you provide (such as databases) and their code is never exposed to the browser.
+Loader functions have access to server-only resources that you provide (such as databases) and their code is never exposed to the browser.
 
 ```jsx title='components/Profile.js' lineNumbers
 import { useLoader } from 'firebolt'
@@ -44,13 +44,13 @@ The loader function must be exported from the same file or alternatively importe
 The function is provided a [Request](/docs/ref/request) object as its first argument. The Request object has methods to access cookies, redirects, and set data expiration.
 You can decorate this object with access to a database or anything else in your [firebolt.config.js](/docs/ref/config) file.
 
-Any additional arguments from the `useLoader` function will be passed as additional arguments to your loader function.
+Additional arguments from the `useLoader` function are passed as additional arguments to your loader function.
 
 ## loader.read()
 
-Reads data from the Loader function with the provided arguments. Firebolt seamlessly handles this during both server side rendering and on the client.
+Reads data from the loader. Firebolt seamlessly handles this during both server side streaming and on the client.
 
-When `loader.read()` is called, if there is no data in the cache it will throw a promise that triggers Suspense boundaries allowing you to show loading UI until the data is fetched.
+When `loader.read()` is called, if there is no data in the cache it will throw a promise to trigger Suspense boundaries allowing you to show loading UI until the data is fetched.
 
 Once the promise resolves the component will re-render and `loader.read()` returns the data, finally rendering the component.
 
@@ -58,9 +58,9 @@ If the loader function fails, the promise will reject and the error will be thro
 
 ## loader.invalidate()
 
-Calling `invalidate()` will mark loader data as stale.
+Calling `invalidate()` will mark loader data in the cache as stale.
 
-If any components are still observing this data it will be refetched in the background and automatically updated without triggering Suspense boundaries.
+If any components are observing this data it will be refetched in the background and automatically updated without triggering Suspense boundaries.
 
 If no components are observing the data then the data is evicted immediately, causing the next read to trigger Suspense boundaries as if the data was never there to begin with.
 

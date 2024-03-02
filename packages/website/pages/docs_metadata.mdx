@@ -5,7 +5,7 @@
 
 # Metadata
 
-In a Firebolt app you can place `<title>` and `<meta>` tags anywhere in your app and they'll automatically be hoisted to the `<head>`.
+In a Firebolt app you can simply place `<title>` and `<meta>` tags anywhere in your app hierarchy and they'll automatically be hoisted to the `<head>`.
 
 ```jsx title='pages/index.js' lineNumbers
 export default function Home() {
@@ -13,12 +13,13 @@ export default function Home() {
     <main>
       <title>Home</title>
       <meta name='description' content='The home page' />
-      {/* ...rest of the page... */}
+
+      {/* page content */}
     </main>
   )
 }
 ```
 
-Use them for setting the browser window title, SEO and Open Graph tags etc.
+Use these to set per-page tags for the window title, SEO, open graph and social media preview links.
 
-You can use the `key` prop to categorize and de-duplicate tags of the same kind.
+You can use the `key` prop to de-dupe tags of the same kind.

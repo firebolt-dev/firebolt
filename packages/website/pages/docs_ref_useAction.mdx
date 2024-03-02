@@ -5,7 +5,7 @@
 
 # useAction
 
-The `useAction` hook allows you to fetch data from an Action function written alongside a component. Action functions have access to server-only resources such as databases that you provide and their code is never exposed to the browser.
+The `useAction` hook allows you to fetch data from an Action function written alongside any component. Action functions have access to server-only resources such as databases that you provide and their code is never exposed to the browser.
 
 ```jsx title='components/LikeButton.js' lineNumbers
 import { useState } from 'react'
@@ -31,7 +31,7 @@ export async function markLiked(req, postId) {
 }
 ```
 
-The component above renders a `Like` button that when clicked, inserts data into the database and updates the UI.
+The component above renders a Like button that when clicked, inserts data into the database and updates the UI.
 
 ## useAction(actionFn)
 
@@ -46,7 +46,7 @@ The action function must be exported from the same file or imported from another
 The function is provided a [Request](/docs/ref/request) object as its first argument. The Request object has methods to access cookies and perform redirects.
 You can decorate this object with access to a database or anything else in your [firebolt.config.js](/docs/ref/config) file.
 
-Any additional arguments from the action execution function are passed as additional arguments to your action function.
+Additional arguments from the action execution function are passed as additional arguments to your action function.
 
 ## exec(...args)
 

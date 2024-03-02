@@ -1,0 +1,115 @@
+<Metadata
+  title='Getting Started: Routes'
+  description='Learn how to add routes to a new Firebolt app.'
+/>
+
+# Routes
+
+The `routes` directory is a unique way of organising all of your static and dynamic content that needs to be available via URL.
+
+## Static Files
+
+At it's most basic, the `routes` directory can serve static assets such a fonts, robots files and images by simply placing them here.
+
+For example the `routes/robots.txt` file will be accessible at `/robots.txt`.
+
+## Virtual Files
+
+For dynamic files that need to be generated on the fly you can create virtual assets by giving them a `.js` extension and handling the appropriate HTTP method
+
+```jsx title='routes/robots.txt.js' lineNumbers
+export function get(req) {
+  const data = `
+    User-agent: *
+    Disallow:
+  `
+  return new Response(data, {
+    headers: {
+      'Content-Type': 'text/plain',
+    },
+  })
+}
+```
+
+This gives you full control over all of your content and can be useful for many things incuding sitemap generation, image transformation and open graph image generators.
+
+## API Routes
+
+You can use the same mechanism to create API endpoints, eg `GET /api/users`:
+
+```jsx title='routes/api/users.js' lineNumbers
+export function get(req) {
+  return await req.db('users')
+}
+```
+
+As you'll see later on, you _probably_ won't even need to bother building an API unless your product requires one.
+
+## Pages
+
+You can add pages to your app by creating a `.js` file that exports a default React component
+
+```jsx title='routes/about.js' lineNumbers
+export default function About() {
+  return (
+    <main>
+      <h1>About Us</h1>
+      <p>...</p>
+    </main>
+  )
+}
+```
+
+Pages are just regular React components with no special exports etc. You'll learn more about how to load and interact with data later on in this guide.
+
+## Dynamic Pages
+
+You can create dynamic route segments by using a `$` variable in your file or folder name:
+
+```jsx title='routes/blog/$slug.js' lineNumbers
+import { useRoute } from 'firebolt'
+
+export default function Post() {
+  const { slug } = useRoute().params
+  return <div>Slug: {slug}</div>
+}
+```
+
+We also support catch-all segments that you can read more about on the [page.js](/docs/ref/page-js) reference.
+
+## Layouts
+
+Firebolt also supports nested layouts that maintain their state when switching between pages that share the same layout.
+
+```jsx title='routes/docs/_layout.js' lineNumbers
+export default function Docs({ children }) {
+  return (
+    <div>
+      <nav>{/* shared navigation */}</nav>
+      {children}
+    </div>
+  )
+}
+```
+
+```md title='routes/docs/intro.mdx' lineNumbers
+# Intro
+
+Lets get started...
+```
+
+In the example above, visiting `/docs/intro` will show the intro page nested inside the docs layout.
+
+The root layout at `routes/_layout.js` is used to wrap your entire app with `<html>` and `<body>` tags.
+
+## MDX
+
+Yup, we also support MDX pages out of the box, allowing you write your content with super powered markdown. Simply use the `.mdx` extension.
+
+You can [configure](/docs/ref/config) MDX with plugins to provide syntax highlighting or support github flavored markdown, whatever you need.
+
+You can also customize the components rendered by MDX with an [MDXProvider](/docs/ref/mdx-provider)
+
+## Summary
+
+The `routes` folder is a simple yet powerful concept that allows you to better organise your app and keep things as clean as possible.

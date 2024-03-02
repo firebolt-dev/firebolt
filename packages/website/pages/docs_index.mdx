@@ -24,30 +24,16 @@ A brand new Firebolt app looks like this:
 
 ```
 my-app/
-├─ components/
-│  └─ Document.js
-├─ pages/
+├─ routes/
+│  ├─ _layout.js
 │  └─ index.js
-├─ public/
 ├─ firebolt.config.js
 └─ package.json
 ```
 
-### components/\*
+The `routes` directory is where all addressable content goes including layouts, pages, static and dynamic assets and api routes.
 
-The `components` directory is where you'll put all of your React components.
-
-### pages/\*
-
-The `pages` directory is where you put all of your pages. Pages are exactly the same as components, except they have a special filename for routing. There are no magical exports for metadata or server side props.
-
-### public/\*
-
-The `public` folder is for all of your public assets such as favicons, images and robots files.
-
-### firebolt.config.js
-
-The config file lets you configure different aspects of your Firebolt app.
+The `firebolt.config.js` file lets you configure your app including using plugins and middleware.
 
 ## Development
 

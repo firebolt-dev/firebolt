@@ -262,7 +262,7 @@ export const components = {
   },
 }
 
-function stringToId(str) {
+function stringToId(str = '') {
   // converts a string into an ID that can be used for anchors
   str = str.toLowerCase()
   str = str

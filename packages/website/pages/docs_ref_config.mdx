@@ -39,25 +39,27 @@ export default function config() {
 }
 ```
 
-## Decorate
+## Request
 
-You can decorate the [Request](/docs/ref/request) object that is passed to all [Loader](/docs/loaders) and [Action](/docs/actions) functions:
+You can decorate the [Request](/docs/ref/request) object that is passed to all [Loader](/docs/loaders), [Action](/docs/actions) and [handler.js](/docs/ref/handler.js) functions
 
 ```jsx title='firebolt.config.js' lineNumbers
 import db from './db'
 
 export default function config() {
   return {
-    decorate(req) {
-      req.db = db
+    request: {
+      db,
     },
   }
 }
 ```
 
+In this example, all Request objects will be provided a `req.db` value
+
 ## MDX Plugins
 
-Firebolt uses [MDX](https://mdxjs.com/) and you can configure any plugins for it here:
+Firebolt uses [MDX](https://mdxjs.com/) and you can configure plugins for it here:
 
 ```jsx title='firebolt.config.js' lineNumbers
 import remarkGFM from 'remark-gfm'
@@ -77,7 +79,7 @@ export default function config() {
 
 By default, if you don't provide options when setting cookies they will expire after the current session.
 
-It can be useful to set your global cookie defaults so that you don't have to provide options everywhere in your app.
+It can be useful to set your cookie defaults globally so that you don't have to provide options repeatedly throughout your app.
 
 ```jsx title='firebolt.config.js' lineNumbers
 export default function config() {

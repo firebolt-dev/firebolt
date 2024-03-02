@@ -3,11 +3,11 @@
   description='API Reference for mdx page files in Firebolt.'
 />
 
-# [page].mdx
+# page.mdx
 
-Any `.mdx` file in your `pages` directory is treated as an MDX page in your app.
+Any `.mdx` file in the `routes` directory that exports a default component is treated as an MDX page in your app.
 
-```mdx title='pages/docs_intro.mdx' lineNumbers
+```mdx title='routes/docs/intro.mdx' lineNumbers
 # Intro
 
 This is an intro page written using markdown.
@@ -15,40 +15,19 @@ This is an intro page written using markdown.
 
 The markdown is parsed and converted to jsx automatically.
 
-## Nesting
-
-You'll often want to wrap your MDX content with other UI, which can be accomplished using nested routing:
-
-```jsx title='pages/docs.js' lineNumbers
-export default function Docs({ children }) {
-  return (
-    <div>
-      <div>{/* docs navigation etc */}</div>
-      <div>{children}</div>
-    </div>
-  )
-}
-```
-
-Paired with the example from earlier, visiting `/docs/intro` will result in `pages/docs_intro.mdx` being nested inside `pages/docs.js`.
-
 ## Custom Components
 
-By default MDX will use default elements such as `<h1>` and `<p>` but you can provide your own custom components using our `MDXProvider`.
+By default, MDX uses default elements such as `<h1>` and `<p>` but you can provide your own custom components using our [MDXProvider](/docs/ref/mdx-provider) in a parent layout.
 
-Building on the example above:
-
-```jsx title='pages/docs.js' lineNumbers
+```jsx title='routes/docs/_layout.js' lineNumbers
 import { MDXProvider } from 'firebolt'
 
-export default function Docs({ children }) {
+export default function DocsLayout({ children }) {
   return (
-    <div>
-      <div>{/* docs navigation etc */}</div>
-      <MDXProvider components={components}>
-        <div>{children}</div>
-      </MDXProvider>
-    </div>
+    <MDXProvider components={components}>
+      <nav>{/* docs nav */}</nav>
+      {children}
+    </MDXProvider>
   )
 }
 
@@ -59,11 +38,11 @@ const components = {
 }
 ```
 
-This can be used to apply syntax highlighting to code blocks or wrapping `<a>` tags with `<Link>`.
+This can be useful to apply syntax highlighting to code blocks or wrapping `<a>` tags with `<Link>`.
 
 ## MDX Plugins
 
-You can enhance MDX with plugins for Syntax Highlighting, Github Flavored Markdown and more using remark and rehype plugins in your [firebolt.config.js](/docs/ref/config) file.
+You can enhance MDX with any Remark/Rehype plugins in your [firebolt.config.js](/docs/ref/config).
 
 ```jsx title='firebolt.config.js' lineNumbers
 import remarkGFM from 'remark-gfm'

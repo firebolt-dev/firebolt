@@ -1,11 +1,11 @@
 <Metadata
-  title='Reference: useLocation'
-  description='API Reference for the useLocation hook in Firebolt.'
+  title='Reference: useRoute'
+  description='API Reference for the useRoute hook in Firebolt.'
 />
 
-# useLocation
+# useRoute
 
-The `useLocation` hook provides details about the current route and methods to redirect users to another location.
+The `useRoute` hook provides details about the current route and methods to redirect users to another location.
 
 ## .url
 
@@ -23,7 +23,7 @@ The hash of the current URL, eg `#trains`
 
 An object that includes both query parameters and dynamic route segment values.
 
-Given the page `pages/blog_$id.js` and the url `/blog/123?foo=bar` then the params object would look like this:
+Given the page `pages/blog/$id.js` and the url `/blog/123?foo=bar`, the params object would look like this:
 
 ```js
 {

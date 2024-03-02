@@ -5,14 +5,13 @@
 
 # Loaders
 
-Loaders let you fetch data securely from a database (or anywhere else) using the [useLoader](/docs/ref/useLoader) hook:
+Loaders let you fetch data securely from a database or anywhere else, directly inside your pages and components.
 
 ```jsx title='components/City.js' lineNumbers
 import { useLoader } from 'firebolt'
 
 export function City({ id }) {
-  const loader = useLoader(getCity, id)
-  const city = loader.read()
+  const city = useLoader(getCity, id).read()
   return (
     <div>
       <h1>{city.name}</h1>
@@ -28,38 +27,15 @@ export async function getCity(req, id) {
 
 Loaders simplify the way you build apps:
 
-- Interact directly with a database or server resource right inside any component, anywhere in your app
-- Seamlessly works during SSR and on the client
-- 100% compatible with Suspense and [ErrorBoundary](/docs/ref/error-boundary)
-- Code only ever exists on the server and is removed from client bundles
-- You can forget about writing API endpoints completely (unless you [need them](/docs/ref/api-js))
+- Write business logic and access your database right alongside the components that use them.
+- They're designed to work with both Suspense and [ErrorBoundaries](/docs/ref/error-boundary) the way React intended.
+- Loaders work seamlessly via server streaming and on the client.
+- Secure code is stripped completely from all client bundles.
+- Forget about writing API endpoints completely (unless you [need them](/docs/ref/api-js))
 
-## Request Object
+## Requests & Invalidation
 
-Loader functions are provided a [Request](/docs/ref/request) object that provides access to cookies, setting data expiration and performing redirects.
+All loader functions are called with a [Request](/docs/ref/request) object that allows you to read/write cookies, perform redirects and set an expiration date on the data returned.
+You can decorate the Request object with access your database etc in your [firebolt.config.js](/docs/ref/config).
 
-You can decorate Request objects with access to your database or anything else you might need, in your [firebolt.config.js](/docs/ref/config) file.
-
-## Suspense & Error Boundaries
-
-Calling `loader.read()` throws a promise to Suspense boundaries for loading UI while data is being fetched.
-
-If your Loader fails you can catch it with an `<ErrorBoundary>` to display an error message.
-
-```jsx title='pages/cities_$id.js' lineNumbers
-import { Suspense } from 'react'
-import { ErrorBoundary, useLocation } from 'firebolt'
-
-import { City } from '../components/City'
-
-export function CityPage() {
-  const { id } = useLocation().params
-  return (
-    <ErrorBoundary fallback={<div>Error</div>}>
-      <Suspense fallback={<div>Loading...</div>}>
-        <City id={id} />
-      </Suspense>
-    </ErrorBoundary>
-  )
-}
-```
+If you set data to expire or manually invalidate data it will be refetched in the background and seamelessly update the UI. Learn more on the [useLoader](/docs/ref/useLoader) and [useCache](/docs/ref/useCache) pages.

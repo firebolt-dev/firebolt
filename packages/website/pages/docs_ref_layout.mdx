@@ -1,0 +1,58 @@
+<Metadata
+  title='Reference: Document.js'
+  description='API Reference for the root document file.'
+/>
+
+# \_layout.js
+
+Any file in the `routes` folder named `_layout.js` will be used as a layout, wrapping the pages beneath it.
+
+## Root Layout
+
+The `routes/_layout.js` component wraps your entire app with `<html>`, `<head>` and `<body>` tags.
+
+```jsx title='routes/_layout.js' lineNumbers
+import { css } from 'firebolt'
+
+export default function Layout({ children }) {
+  return (
+    <html lang='en'>
+      <head>
+        <meta charSet='utf-8' />
+        <meta name='viewport' content='width=device-width, initial-scale=1' />
+        <style
+          global={css`
+            :root {
+              background: #ffffff;
+            }
+          `}
+        />
+      </head>
+      <body>{children}</body>
+    </html>
+  )
+}
+```
+
+Use this to place your global styles, meta tags, favicons and fonts etc.
+
+There are no special framework-specific components, it's just regular old JSX!
+
+## Page Layout
+
+All other `_layout.js` files are used to wrap the content beneath them.
+
+```jsx title='routes/docs/_layout.js' lineNumbers
+export default function DocsLayout({ children }) {
+  return (
+    <div>
+      <nav>{/* shared navigation */}</nav>
+      {children}
+    </div>
+  )
+}
+```
+
+In this example, all pages such as `/docs/intro` or `/docs/ref` will be wrapped with and share this layout.
+
+When navigating between two pages that share the same layout, the state of the layout is maintained so that things like navigation scroll position remain the same.

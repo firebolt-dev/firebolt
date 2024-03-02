@@ -3,58 +3,49 @@
   description='API Reference for page files in Firebolt.'
 />
 
-# [page].js
+# page.js
 
-Add new pages to your app by creating a `.js` file in your `pages` directory.
+Any `.js` file inside the `routes` directory that exports a default component is treated as a page.
 
-```jsx title='pages/index.js' lineNumbers
-export default function Home() {
-  return <h1>Home Page</h1>
+```jsx title='routes/dashboard/settings.js' lineNumbers
+export default function Settings() {
+  return (
+    <div>
+      <h1>Settings</h1>
+      {/* content */}
+    </div>
+  )
 }
 ```
 
-The default export is used as the component when people visit the page.
+The file above maps to the `/dashboard/settings` URL and renders a settings page.
 
-## Matching
+## Dynamic Segments
 
-The filename you give a page determines how its route is matched:
+Pages can include dynamic segments by using the `$` symbol
 
-| Page                          | Example URL                | Params                              |
-| ----------------------------- | -------------------------- | ----------------------------------- |
-| `pages/index.js`              | `/`                        | `{}`                                |
-| `pages/dashboard_settings.js` | `/dashboard/settings`      | `{}`                                |
-| `pages/blog_$postId.js`       | `/blog/123`                | `{ postId: "123" }`                 |
-| `pages/cities_$tags+.js`      | `/cities/coastal/tech-hub` | `{ tags: ["coastal", "tech-hub"] }` |
-| `pages/cities_$tags-.js`      | `/cities/coastal/tech-hub` | `{ tags: ["coastal", "tech-hub"] }` |
-| `pages/cities_$tags-.js`      | `/cities`                  | `{ tags: [] }`                      |
+```jsx title='routes/blog/$slug.js' lineNumbers
+import { useRoute } from 'firebolt'
 
-The `_` symbol is used to nest paths. It's easier to see all of your pages at a glance when they're in a single folder, but as your app grows you can still nest pages in sub-folders if needed.
-
-The `$` symbol is used to create dynamic route segments and its value(s) will be provided to you in the `params` object.
-
-Adding a `+` suffix to a dynamic route segment will match one or more parameters, while the `-` symbol will match zero or more.
-
-## Params
-
-You can retrieve params from dynamic routes anywhere in your app with the [useLocation](/docs/useLocation) hook:
-
-```jsx title='pages/posts_$id.js' lineNumbers
-import { useLocation } from 'firebolt'
-
-export function Post() {
-  const { id } = useLocation().params
-  // ...
+export default function Post() {
+  const { slug } = useRoute().params
+  return (
+    <div>
+      <h1>Post</h1>
+      <p>Slug: {slug}</p>
+    </div>
+  )
 }
 ```
 
-## Layouts
+The [useRoute](/docs/ref/useRoute) hook provides information about the current page, including dynamic segment variables that you can then use to load data or drive the UI with.
 
-To share common UI across multiple pages you can nest them to create layouts.
+## Catch-all
 
-| File                   | Type   | URL           |
-| ---------------------- | ------ | ------------- |
-| `pages/docs.js`        | Layout | none          |
-| `pages/docs_index.mdx` | Page   | `/docs`       |
-| `pages/docs_intro.mdx` | Page   | `/docs/intro` |
+Firebolt also supports catch-all dynamic segments with the `+` and `-` suffix
 
-This example shows you how to create a shared layout for all of the docs pages. The `pages/docs.js` component uses the `children` prop to show content for child routes.
+| Page                     | Example URL                | Params                              |
+| ------------------------ | -------------------------- | ----------------------------------- |
+| `pages/cities_$tags+.js` | `/cities/coastal/tech-hub` | `{ tags: ["coastal", "tech-hub"] }` |
+| `pages/cities_$tags-.js` | `/cities/coastal/tech-hub` | `{ tags: ["coastal", "tech-hub"] }` |
+| `pages/cities_$tags-.js` | `/cities`                  | `{ tags: [] }`                      |

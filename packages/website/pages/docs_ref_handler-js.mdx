@@ -1,0 +1,59 @@
+<Metadata
+  title='Reference: [api].js'
+  description='API Reference for an api route file.'
+/>
+
+# handler.js
+
+Any `.js` file in the `routes` directory that exports an HTTP method function will be treated as a handler.
+
+This includes both virtual files and API routes.
+
+## Virtual Files
+
+You can use a handler to expose what appears to be a static file that is actually generated on the fly.
+
+```jsx title='routes/sitemap.xml.js' lineNumbers
+import getOrRefreshSitemap from '../scripts/sitemap.js'
+
+export async function get(req) {
+  const sitemap = await getOrRefreshSitemap()
+  return new Response(sitemap, {
+    headers: {
+      'Content-Type': 'application/xml',
+    },
+  })
+}
+```
+
+In this example, a sitemap is generated, cached and updated over time when the `/sitemap.xml` url is requested.
+
+## API Routes
+
+You can handle all HTTP methods to create API routes
+
+```jsx title='route/api/users/$id.js' lineNumbers
+export async function get(req) {
+  const { id } = req.params
+  return await req.db('users').where({ id }).first()
+}
+
+export async function put(req) {
+  const data = await req.json()
+  /* update and return user */
+}
+```
+
+**IMPORTANT:** Unless your app needs to provide a public API to its users, we recommend building your entire app using [Loaders](/docs/loaders) and [Actions](/docs/actions) instead of API routes due to how efficient they can be.
+
+## Request
+
+The [Request](/docs/ref/request) object provided to handlers is a Fetch API [Request](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) that includes some extras such as params and cookies.
+
+You can decorate your Request object with anything you might need such as your database from the [firebolt.config.js](/docs/ref/config) file.
+
+## Response
+
+If a handler returns json, Firebolt will automatically generate a Response with the correct 'Content-Type' headers.
+
+For more fine grained control, you can return a Fetch API [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response) instance, giving you full control over response type and headers.

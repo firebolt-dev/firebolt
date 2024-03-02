@@ -5,11 +5,11 @@
 
 # Styles
 
-Firebolt includes it's own simple yet powerful CSS-in-JS implementation allowing you to be productive immediately.
+Firebolt boasts its own simple yet powerful CSS-in-JS implementation that works flawlessly with React server streaming, allowing you to be productive immediately.
 
 ## Element Styles
 
-Style any element in your app using the `css` prop and the `css` tagged template literal:
+Style any element in your app with the `css` prop and tagged template literal
 
 ```jsx title='components/Account.js' lineNumbers
 import { css } from 'firebolt'
@@ -33,7 +33,7 @@ export function Account({ name }) {
 }
 ```
 
-For quick element styling you can just use a string like this:
+For quick little styles you can also just write it directly as a string
 
 ```jsx
 <div css='color:red'>
@@ -43,10 +43,12 @@ Behind the scenes, Firebolt will compile and auto-prefix your styles, insert the
 
 ## Global Styles
 
-Global styles can be placed anywhere using a regular old `<style>` element. Most of the time you'll put this in your `Document` component and include things like css-resets, fonts, themes and css-variables.
+Global styles can be placed anywhere using a regular old `<style>` element. Most of the time you'll put this in your `document` component with css-resets, font-faces, themes and variables.
 
-```jsx title='components/Document.js' lineNumbers
-export function Document({ children }) {
+```jsx title='routes/_layout.js' lineNumbers
+import { css } from 'firebolt'
+
+export default function Document({ children }) {
   return (
     <html>
       <head>
