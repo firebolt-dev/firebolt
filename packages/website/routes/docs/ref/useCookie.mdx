@@ -11,18 +11,20 @@ The `useCookie` hook provides the value of a cookie and a setter to update it, m
 const [value, setValue] = useCookie('theme', 'system')
 ```
 
-The 1st argument is the cookie `key` and the 2nd argument is an optional default value.
+The 1st argument to `useCookie` is the cookie `key` and the 2nd argument is an optional default value.
 
-You can then update the cookie like this:
+Returns an aray with exactly two values:
+
+1. The current value of the cookie
+2. The `set` function that lets you update the value of the cookie.
+
+## set(value|fn, options)
+
+The set function returned by useCookie lets you update the cookie to a different value and trigger a re-render. You can pass the next value directly, or a function that calculates it from the previous value:
 
 ```jsx
-setValue('dark')
-```
-
-Or atomically with:
-
-```jsx
-setValue(value => value + 1)
+setTheme('dark')
+setNumber(n => n + 1)
 ```
 
 ## Synchronization
