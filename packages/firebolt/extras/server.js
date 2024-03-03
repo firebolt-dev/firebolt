@@ -37,7 +37,7 @@ const methodToApiFunction = {
   OPTIONS: 'options',
 }
 
-// provide Request global for handlers
+// provide Response global for handlers
 globalThis.Response = FireboltResponse
 
 // hydrate manifest
@@ -91,6 +91,16 @@ async function callFunction(req, id, args) {
 // handle loader/action function call requests from the client
 export async function handleFunction(req, res) {
   const { id, args } = req.body
+
+  // deserialize FormData if used
+  if (args[0] && args[0].$form) {
+    const form = new FetchFormData()
+    for (const key in args[0]) {
+      form.set(key, args[0][key])
+    }
+    args[0] = form
+  }
+
   const fireboltRequest = new FireboltRequest({
     ctx: 'fn',
     xReq: req,

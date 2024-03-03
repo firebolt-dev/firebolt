@@ -303,6 +303,16 @@ export function createRuntime(stack) {
     const key = `${id}`
     if (actions[key]) return actions[key]
     const action = function (...args) {
+      // serialize FormData if used
+      if (args[0] instanceof FormData) {
+        const form = args[0]
+        const data = { $form: true }
+        for (const key of form.keys()) {
+          data[key] = form.get(key)
+        }
+        args[0] = data
+      }
+
       let promise
       if (ssr) {
         promise = ssr.callFunction(id, args)

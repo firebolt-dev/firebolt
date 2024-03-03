@@ -1,6 +1,9 @@
-import fetch, { Headers, Request, Response } from 'node-fetch'
+import fetch, { Headers, FormData, Request, Response } from 'node-fetch'
 
 globalThis.fetch = fetch
-globalThis.FetchHeaders = Headers
+globalThis.Headers = Headers
+globalThis.FormData = FormData
+
+// these are extended
 globalThis.FetchRequest = Request
 globalThis.FetchResponse = Response
