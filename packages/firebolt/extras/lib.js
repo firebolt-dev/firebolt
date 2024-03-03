@@ -167,9 +167,12 @@ export function Router() {
 }
 
 function Route({ route }) {
-  return (
-    <RouteProvider value={route}>{route.page.content(route.url)}</RouteProvider>
-  )
+  // NOTE:
+  // - pathname is used as a key for the page, and not layouts.
+  // - keys ensure that eg going from /foo/1 to /foo/2 fully re-mounts the page.
+  // - search params are excluded from the key to allow soft updates (no re-mounts).
+  const key = route.pathname
+  return <RouteProvider value={route}>{route.page.content(key)}</RouteProvider>
 }
 
 function useForceUpdate() {
