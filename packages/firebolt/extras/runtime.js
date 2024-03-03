@@ -348,16 +348,6 @@ export function createRuntime(stack) {
         }
         return
       }
-      // invalidate all by predicate
-      if (typeof args[0] === 'function') {
-        const check = args[0]
-        for (const key in loaders) {
-          const loader = loaders[key]
-          const match = check(loader.args)
-          if (match) loader.invalidate()
-        }
-        return
-      }
       // invalidate all by args
       for (const key in loaders) {
         const loader = loaders[key]
@@ -372,17 +362,6 @@ export function createRuntime(stack) {
       }
     },
     find(...args) {
-      // find one by predicate
-      if (typeof args[0] === 'function') {
-        const check = args[0]
-        for (const key in loaders) {
-          const loader = loaders[key]
-          const match = check(loader.args)
-          if (match) return loader
-        }
-        return null
-      }
-      // find one by args
       for (const key in loaders) {
         const loader = loaders[key]
         let match = true
@@ -397,16 +376,6 @@ export function createRuntime(stack) {
     },
     findAll(...args) {
       const matches = []
-      // find all by predicate
-      if (typeof args[0] === 'function') {
-        const check = args[0]
-        for (const key in loaders) {
-          const loader = loaders[key]
-          const match = check(loader.args)
-          if (match) matches.push(loader)
-        }
-      }
-      // find all by args
       for (const key in loaders) {
         const loader = loaders[key]
         let match = true

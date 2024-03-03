@@ -60,14 +60,6 @@ You can invalidate its data by calling
 cache.invalidate('tech-hub')
 ```
 
-## .invalidate(predicateFn)
-
-Invalidates loaders where the predicateFn returns true, for example:
-
-```jsx
-cache.invalidate(args => args.includes('night-life'))
-```
-
 ## .find(...args)
 
 Retrieves the first loader instance that uses all `args`, allowing you to invalidate or edit its data.
@@ -76,26 +68,10 @@ Retrieves the first loader instance that uses all `args`, allowing you to invali
 const loader = cache.find(postId)
 ```
 
-## .find(predicateFn)
-
-Retrieves the first loader instance that matches a predicate, allowing you to invalidate or edit its data.
-
-```jsx
-const loader = cache.find(args => args.includes(postId))
-```
-
 ## .findAll(...args)
 
 Retrieves all loader instances that use `args`, allowing you to invalidate or edit their data.
 
 ```jsx
 const loaders = cache.findAll(postId)
-```
-
-## .findAll(predicateFn)
-
-Retrieves all loader instances that match the predicate, allowing you to invalidate or edit their data.
-
-```jsx
-const loaders = cache.findAll(args => args.includes(postId))
 ```
