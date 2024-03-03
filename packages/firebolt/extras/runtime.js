@@ -132,7 +132,6 @@ export function createRuntime(stack) {
       }),
     })
     result = await res.json()
-    // }
     return result
   }
 
@@ -312,6 +311,7 @@ export function createRuntime(stack) {
       }
       return promise.then(data => {
         invalidateCookies(data.cookies)
+        invalidateData(data.invalidations)
         if (data.error) {
           throw data.error
         }
@@ -410,6 +410,13 @@ export function createRuntime(stack) {
       }
       return matches
     },
+  }
+
+  function invalidateData(items) {
+    if (!items) return
+    for (const args of items) {
+      cache.invalidate(...args)
+    }
   }
 
   function getCache() {

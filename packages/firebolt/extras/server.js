@@ -122,11 +122,11 @@ export async function handleFunction(req, res) {
   // otherwise respond with the return value
   data.value = value
   data.expire = fireboltRequest._expire
+  data.invalidations = fireboltRequest._invalidations
   res.status(200).json(data)
 }
 
 export async function handleHandler(req, res, route, params) {
-  const url = req.originalUrl
   const method = methodToApiFunction[req.method]
 
   const fireboltRequest = new FireboltRequest({
@@ -229,6 +229,7 @@ async function handlePage(req, res, route, params) {
         const data = {
           value,
           expire: fireboltRequest._expire,
+          invalidations: fireboltRequest._invalidations,
         }
         return data
       },
@@ -308,9 +309,9 @@ export async function handleRequest(req, res) {
   // find matching route
   let [route, params] = resolveRouteAndParams(url)
 
-  console.log('handleRequest', url)
-  console.log('route', route)
-  console.log('params', params)
+  // console.log('handleRequest', url)
+  // console.log('route', route)
+  // console.log('params', params)
 
   if (!route) {
     if (hasExt(url)) {

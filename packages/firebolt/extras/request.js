@@ -21,9 +21,14 @@ export class FireboltRequest extends FetchRequest {
 
     this._ctx = ctx
     this._xReq = xReq
+    this._invalidations = []
 
     this.params = params
     this.cookies = new Cookies(xReq, defaultCookieOptions)
+  }
+
+  invalidate(...args) {
+    this._invalidations.push(args)
   }
 
   error(data, message) {
