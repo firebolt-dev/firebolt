@@ -1,4 +1,4 @@
-import { css, Link } from 'firebolt'
+import { Link, css } from 'firebolt'
 
 export default function Home() {
   return <div>__projectName__</div>
