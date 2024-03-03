@@ -5,45 +5,7 @@
 
 # Request
 
-Both [Loader](/docs/ref/useLoader) and [Action](/docs/ref/useAction) functions receive a `Request` object as their first argument.
-
-The Request object provides utilities such as cookie management and redirects, but more importantly you can decorate it with access to a database or anything else you might need. See [firebolt.config.js](/docs/ref/config) to learn more.
-
-## expire(seconds)
-
-_Available to Loader functions only._
-
-By default data fetched from a Loader will be cached indenfinitely. For data that changes often you can set it to expire after a certain amount of time.
-
-When data expires it becomes invalidated.
-
-If any components are still observing this data it will be refetched in the background and automatically updated without triggering Suspense boundaries.
-
-If no components are observing the data then the data is evicted immediately, causing the next read to trigger Suspense boundaries as if the data was never there to begin with.
-
-```jsx
-export async function getTickets(req) {
-  const tickets = await req.db('tickets')
-  req.expire(60) // data will become invalidated after 60 seconds
-  return tickets
-}
-```
-
-## redirect(url, type)
-
-_Available to both Loader and Action functions._
-
-Throws a redirect that will navigate the user to another page. The `type` argument can be `push` (default) or `replace`.
-
-```jsx
-req.redirect('/login', 'replace')
-```
-
-## error(data)
-
-_Available to Loader functions only._
-
-Throws an error that can be caught by an [\<ErrorBoundary\>](/docs/ref/error-boundary), decorating the error with an optional `data` prop that can be used to provide more context about operational errors.
+[Loaders](/docs/ref/useLoader), [Actions](/docs/ref/useAction) and [handlers](/docs/ref/handler-js) all receive a `Request` object that provides useful utilities including custom properties that you define (such as database access) in your [firebolt.config.js](/docs/ref/config).
 
 ## cookies.get(key)
 
@@ -57,8 +19,6 @@ req.cookies.get('auth')
 
 Sets the value of a cookie.
 
-Any changes to cookies made on the server will automatically update any UI observing that value on the client.
-
 ```jsx
 req.cookies.set('auth', auth)
 ```
@@ -69,10 +29,48 @@ Setting a cookie to `null` removes it.
 req.cookies.set('auth', null)
 ```
 
-See the [useCookie](/docs/ref/useCookie) reference for more info about cookies.
+See the [useCookie](/docs/ref/useCookie) reference for more info about cookies and synchronization.
+
+## expire(seconds)
+
+_Restricted to: Loaders_
+
+By default data fetched from a Loader is cached indefinitely. Use this to set the data to expire after a certain amount of time, or immediately.
+
+When data expires it becomes invalidated. Any components still observing the data it will be refetched in the background and automatically updated without triggering Suspense boundaries. If no components are observing the data then the data is evicted, causing the next read to trigger Suspense boundaries as if the data was never there to begin with.
+
+```jsx
+export async function getTickets(req) {
+  const tickets = await req.db('tickets')
+  req.expire(60) // data will become invalidated after 60 seconds
+  return tickets
+}
+```
+
+## invalidate(...args)
+
+_Restricted to: Actions_
+
+Notifies the client to invalidate data matching the supplied `args`. Equivalent to calling `cache.invalidate(...args)` on the client.
+
+## redirect(url, type)
+
+_Restricted to: Actions, Loaders_
+
+Throws a redirect that will navigate the user to another page. The `type` argument can be `push` (default) or `replace`.
+
+```jsx
+req.redirect('/login')
+```
+
+## error(data)
+
+_Restricted to: Loaders_
+
+Throws an error that can be caught by an [\<ErrorBoundary\>](/docs/ref/error-boundary), decorating the error with an optional `data` prop that can be used to provide more context about operational errors.
 
 ## params
 
-_Available to API Routes only._
+_Restricted to: API Routes_
 
-An object with values for dynamic route segments and query parameters.
+An object that includes search params and dynamic route segments.
