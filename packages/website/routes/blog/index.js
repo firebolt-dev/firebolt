@@ -1,7 +1,7 @@
 import { Link, css } from 'firebolt'
 
-import { Page } from '../components/Page'
-import { Image } from '../components/Image'
+import { Page } from '@/components/Page'
+import { Image } from '@/components/Image'
 
 export default function Blog({ children }) {
   return (

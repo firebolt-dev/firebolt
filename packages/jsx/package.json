@@ -1,5 +1,5 @@
 {
-  "name": "@firebolt/jsx",
+  "name": "@firebolt-dev/jsx",
   "version": "0.0.1",
   "main": "./dist/index.js",
   "type": "module",
@@ -11,7 +11,7 @@
     "build": "node scripts/build.mjs --minify"
   },
   "dependencies": {
-    "@firebolt/css": "*",
+    "@firebolt-dev/css": "*",
     "react": "canary"
   },
   "overrides": {

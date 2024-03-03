@@ -7,7 +7,7 @@
 
 The `useCache` hook lets you interact with the cache that stores [Loaders](/docs/loaders) and their data.
 
-The hook returns a `cache` instance:
+This hook returns the `cache` instance.
 
 ```jsx
 import { useCache } from 'firebolt'
@@ -17,6 +17,22 @@ export function MyComponent() {
   // ...interact with the cache
 }
 ```
+
+## Cache Keys
+
+All of the arguments that you pass in to the [useLoader](/docs/ref/useLoader) hook are combined to form a "cache key".
+
+This cache key corresponds directly to its cached data and can be used to find, update or invalidate data at a later date, by matching some or all parts of a cache key.
+
+## Tags
+
+Because of how loader arguments and cache keys work, it can be useful to insert **additional** arguments to your `useLoader` calls that can be used as tags to categorize data.
+
+```jsx
+const loader = useLoader(getCities, id, '#cities')
+```
+
+In this example, the tag `#cities` is used purely to tag the data as city related, allowing you to easily update or refresh it at any point in the future.
 
 ## Invalidation Logic
 
@@ -54,7 +70,7 @@ cache.invalidate(args => args.includes('night-life'))
 
 ## .find(...args)
 
-Retrieves the first loader instance that use `args`, allowing you to invalidate or edit its data.
+Retrieves the first loader instance that uses all `args`, allowing you to invalidate or edit its data.
 
 ```jsx
 const loader = cache.find(postId)

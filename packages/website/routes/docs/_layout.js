@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { MDXProvider, Link, useLocation, css, cls } from 'firebolt'
-
-import { Page } from '../components/Page'
-import { components } from '../components/md'
+import { MDXProvider, Link, useRoute, css, cls } from 'firebolt'
 import { ChevronDown, ChevronLeft, ChevronRight, List } from 'lucide-react'
+
+import { Page } from '@/components/Page'
+import { components } from '@/components/md'
 
 export default function DocsLayout({ children }) {
   const [open, setOpen] = useState(false)
@@ -166,12 +166,12 @@ export default function DocsLayout({ children }) {
 }
 
 function NavLink({ label, href }) {
-  const location = useLocation()
+  const route = useRoute()
   return (
     <Link
       href={href}
       className={cls('docs-nav-link', {
-        active: location.pathname === href,
+        active: route.pathname === href,
       })}
     >
       <span>{label}</span>

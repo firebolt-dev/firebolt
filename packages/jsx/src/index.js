@@ -1,5 +1,5 @@
 import runtime from 'react/jsx-runtime'
-import { GlobalStyle, Style, createProps } from '@firebolt/css'
+import { GlobalStyle, Style, createProps } from '@firebolt-dev/css'
 
 export const Fragment = runtime.Fragment
 

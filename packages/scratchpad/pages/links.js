@@ -1,11 +1,11 @@
-import { Link, css, useLocation } from 'firebolt'
+import { Link, css, useRoute } from 'firebolt'
 
 export default function Links() {
-  const location = useLocation()
+  const route = useRoute()
   return (
     <div>
-      <div>Url: {location.url}</div>
-      <div>Params: {JSON.stringify(location.params)}</div>
+      <div>Url: {route.url}</div>
+      <div>Params: {JSON.stringify(route.params)}</div>
       <div>
         <Link href='/links/one'>/links/one</Link>
       </div>

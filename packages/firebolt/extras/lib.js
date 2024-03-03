@@ -10,9 +10,9 @@ import React, {
   useMemo,
   Suspense,
 } from 'react'
-export { css } from '@firebolt/css'
+export { css } from '@firebolt-dev/css'
 
-import { Document } from '../components/Document.js'
+import Document from '../routes/_layout.js'
 
 const externalUrlRegex = new RegExp('^(?:[a-z]+:)?//', 'i')
 
@@ -51,7 +51,7 @@ export function Link({
   useEffect(() => {
     if (!href) return
     if (!prefetch) return
-    runtime.loadRouteByUrl(href)
+    runtime.loadPageByUrl(href)
   }, [prefetch])
 
   return (
@@ -100,19 +100,15 @@ if (globalThis.history) {
   }
 }
 
-const LocationContext = createContext()
+const RouteContext = createContext()
 
-function LocationProvider({ value, children }) {
-  return (
-    <LocationContext.Provider value={value}>
-      {children}
-    </LocationContext.Provider>
-  )
+function RouteProvider({ value, children }) {
+  return <RouteContext.Provider value={value}>{children}</RouteContext.Provider>
 }
 
-export function useLocation() {
-  const location = useContext(LocationContext)
-  return location
+export function useRoute() {
+  const route = useContext(RouteContext)
+  return route
 }
 
 const historyEvents = ['popstate', 'pushState', 'replaceState', 'hashchange']
@@ -124,22 +120,22 @@ function getBrowserUrl() {
 
 export function Router() {
   const runtime = useRuntime()
-  const [previousLocation, setPreviousLocation] = useState(null)
-  const [currentLocation, setCurrentLocation] = useState(() => runtime.resolveLocation(runtime.ssr?.url || getBrowserUrl())) // prettier-ignore
+  const [previousRoute, setPreviousRoute] = useState(null)
+  const [currentRoute, setCurrentRoute] = useState(() => runtime.resolveRoute(runtime.ssr?.url || getBrowserUrl())) // prettier-ignore
 
   useEffect(() => {
     function onChange(e) {
       const browserUrl = getBrowserUrl() // prettier-ignore
-      if (browserUrl === currentLocation.url) return
+      if (browserUrl === currentRoute.url) return
       let cancelled
       const exec = async () => {
-        const location = runtime.resolveLocation(browserUrl)
-        if (!location.route.content) {
-          await runtime.loadRoute(location.route)
+        const route = runtime.resolveRoute(browserUrl)
+        if (!route.page.content) {
+          await runtime.loadPage(route.page)
         }
         if (cancelled) return
-        setPreviousLocation(currentLocation)
-        setCurrentLocation(location)
+        setPreviousRoute(currentRoute)
+        setCurrentRoute(route)
       }
       exec()
       return () => {
@@ -154,27 +150,25 @@ export function Router() {
         removeEventListener(event, onChange)
       }
     }
-  }, [currentLocation.url])
+  }, [currentRoute.url])
 
   // we work some magic here because if the new route doesn't have its own
   // suspense, we want to continue showing the previous route until its ready
   let fallback
-  if (previousLocation) {
-    fallback = <Route location={previousLocation} />
+  if (previousRoute) {
+    fallback = <Route route={previousRoute} />
   }
 
   return (
     <Suspense fallback={fallback}>
-      <Route location={currentLocation} />
+      <Route route={currentRoute} />
     </Suspense>
   )
 }
 
-function Route({ location }) {
+function Route({ route }) {
   return (
-    <LocationProvider value={location}>
-      {location.route.content}
-    </LocationProvider>
+    <RouteProvider value={route}>{route.page.content(route.url)}</RouteProvider>
   )
 }
 

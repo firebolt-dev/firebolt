@@ -9,19 +9,19 @@ const tempBase = 'https://example.com'
 
 export function createRuntime(stack) {
   let ssr
-  let routes
+  let pages
   let defaultCookieOptions
-  let notFoundRoute
+  let notFoundPage
 
   const runtime = {
     ssr,
     call,
     init,
     registerPage,
-    resolveRouteAndParams,
-    resolveLocation,
-    loadRoute,
-    loadRouteByUrl,
+    resolvePageAndParams,
+    resolveRoute,
+    loadPage,
+    loadPageByUrl,
     callFunction,
     applyRedirect,
     getLoader,
@@ -40,44 +40,44 @@ export function createRuntime(stack) {
 
   function init(opts) {
     ssr = runtime.ssr = opts.ssr
-    routes = opts.routes
+    pages = opts.pages
     defaultCookieOptions = opts.defaultCookieOptions
-    notFoundRoute = routes.find(r => r.pattern === '/not-found')
+    notFoundPage = pages.find(p => p.pattern === '/not-found')
   }
 
-  function registerPage(routeId, content) {
-    const route = routes.find(route => route.id === routeId)
-    route.content = content
+  function registerPage(pageId, content) {
+    const page = pages.find(page => page.id === pageId)
+    page.content = content
   }
 
-  function resolveRouteAndParams(url) {
+  function resolvePageAndParams(url) {
     if (!url) {
       return [null, {}]
     }
-    for (const route of routes) {
-      const [hit, params] = match(route.pattern, url)
-      if (hit) return [route, params]
+    for (const page of pages) {
+      const [hit, params] = match(page.pattern, url)
+      if (hit) return [page, params]
     }
     return [null, {}]
   }
 
-  function resolveLocation(url) {
+  function resolveRoute(url) {
     const info = new URL(url, tempBase)
     const pathname = info.pathname
     const hash = info.hash
-    let [route, params] = resolveRouteAndParams(pathname)
-    if (!route) route = notFoundRoute
+    let [page, params] = resolvePageAndParams(pathname)
+    if (!page) page = notFoundPage
     info.searchParams.forEach((value, key) => {
       if (!params.hasOwnProperty(key)) {
         params[key] = value
       }
     })
-    const location = {
+    const route = {
       url,
       pathname,
       hash,
       params,
-      route,
+      page,
       push(href) {
         history.pushState(null, '', href)
       },
@@ -91,21 +91,21 @@ export function createRuntime(stack) {
         history.forward()
       },
     }
-    return location
+    return route
   }
 
-  async function loadRoute(route) {
-    if (!route) return
-    if (route.content) return
-    if (!route.loader) {
-      route.loader = import(route.file)
+  async function loadPage(page) {
+    if (!page) return
+    if (page.content) return
+    if (!page.loader) {
+      page.loader = import(page.file)
     }
-    return await route.loader
+    return await page.loader
   }
 
-  function loadRouteByUrl(url) {
-    const [route] = resolveRouteAndParams(url)
-    return loadRoute(route)
+  function loadPageByUrl(url) {
+    const [page] = resolvePageAndParams(url)
+    return loadPage(page)
   }
 
   async function callFunction(id, args) {

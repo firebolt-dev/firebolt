@@ -1,12 +1,12 @@
-import { Link, css, useLocation } from 'firebolt'
+import { Link, css, useRoute } from 'firebolt'
 
 export default function BlogPost() {
-  const location = useLocation()
-  console.log('params', location.params)
+  const route = useRoute()
+  console.log('params', route.params)
   return (
     <div>
-      <div>Blog Post: {location.params.slug}</div>
-      <div>Cake: {location.params.cake}</div>
+      <div>Blog Post: {route.params.slug}</div>
+      <div>Cake: {route.params.cake}</div>
       <div>
         <Link href='/blog/123?cake=true' replace>
           With Cake

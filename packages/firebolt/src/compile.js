@@ -8,7 +8,6 @@ import chokidar from 'chokidar'
 import * as esbuild from 'esbuild'
 import { isEqual, debounce } from 'lodash-es'
 import mdx from '@mdx-js/esbuild'
-// import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 
 import express from 'express'
 import cors from 'cors'
@@ -42,8 +41,7 @@ export async function compile(opts) {
 
   const dir = __dirname
   const appDir = process.cwd()
-  const appPagesDir = path.join(appDir, 'pages')
-  const appApiDir = path.join(appDir, 'api')
+  const appRoutesDir = path.join(appDir, 'routes')
   const appConfigFile = path.join(appDir, 'firebolt.config.js')
 
   const buildDir = path.join(appDir, '.firebolt')
@@ -52,7 +50,6 @@ export async function compile(opts) {
   const buildConfigFile = path.join(appDir, '.firebolt/config.js')
   const buildManifestFile = path.join(appDir, '.firebolt/manifest.json')
   const buildLibFile = path.join(appDir, '.firebolt/lib.js')
-  const buildApiFile = path.join(appDir, '.firebolt/api.js')
   const buildBoostrapFile = path.join(appDir, '.firebolt/bootstrap.js')
   const buildRegistryFile = path.join(appDir, '.firebolt/registry.js')
   const buildServerFile = path.join(appDir, '.firebolt/server.js')
@@ -112,13 +109,12 @@ export async function compile(opts) {
         logLevel: 'silent',
         define: {
           'process.env.NODE_ENV': JSON.stringify(env),
-          // FIREBOLT_NODE_ENV: JSON.stringify(env),
         },
         loader: {
           '.js': 'jsx',
         },
         jsx: 'automatic',
-        jsxImportSource: '@firebolt/jsx',
+        jsxImportSource: '@firebolt-dev/jsx',
         plugins: [
           // mdxPlugin,
         ],
@@ -130,6 +126,7 @@ export async function compile(opts) {
 
     const config = (await reimport(tmpConfigFile)).config
 
+    // get all public env variables for client bundles
     const publicDefineEnvs = {}
     for (const key in process.env) {
       if (key.startsWith(config.publicEnvPrefix)) {
@@ -144,98 +141,72 @@ export async function compile(opts) {
       mdxPlugin = mdx({
         jsx: false,
         jsxRuntime: 'automatic',
-        jsxImportSource: '@firebolt/jsx',
+        jsxImportSource: '@firebolt-dev/jsx',
         remarkPlugins: config.mdx.remarkPlugins,
         rehypePlugins: config.mdx.rehypePlugins,
       })
     }
 
-    // initialize manifest
+    // initialize manifest, which stores all the output page and bootstrap
+    // file hashes as urls  that the client can load
     const manifest = {
       pageFiles: {},
       bootstrapFile: null,
     }
 
-    // get a list of api files
-    const apiFiles = await getFilePaths(appApiDir, ['js'])
-
-    // generate api route details
-    let apiIds = 0
-    const api = []
-    for (const file of apiFiles) {
-      const id = `api${++apiIds}`
-      const fileBase = path.relative(appApiDir, file)
-      const fileBaseNoExt = fileBase.split('.').slice(0, -1).join('.')
-      const basePattern = fileBaseNoExt.replace(/_/g, '/')
-      const pattern = createRoutePattern(basePattern)
-      const relBuildToRouteFile = path.relative(buildDir, file)
-      api.push({
-        id,
-        file,
-        pattern,
-        relBuildToRouteFile,
-      })
-    }
-
-    // generate api routes file
-    const apiCode = `
-      ${api.map(route => `import * as ${route.id} from '${route.relBuildToRouteFile}'\n`)}
-      const api = [
-        ${api.map(
-          route => `
-          {
-            id: '${route.id}',
-            pattern: '${route.pattern}',
-            module: ${route.id}
-          },
-        `
-        )}
-      ]
-      export default api
-    `
-    await fs.outputFile(buildApiFile, apiCode)
-
-    // get a list of page files
-    const pageFiles = await getFilePaths(appPagesDir, ['js', 'mdx'])
+    // get list of route files
+    const routeFiles = await getFilePaths(appRoutesDir)
 
     // generate route details
-    let pageIds = 0
+    let routeIds = 0
     const routes = []
-    // first pass (pre-generate base pattern)
-    for (const file of pageFiles) {
-      const id = `route${++pageIds}`
-      const fileBase = path.relative(appPagesDir, file)
-      const fileBaseNoExt = fileBase.split('.').slice(0, -1).join('.')
-      const basePattern = fileBaseNoExt.replace(/_/g, '/')
-      routes.push({
-        id,
-        file,
-        basePattern,
-      })
-    }
-    // second pass (generate rest of fields)
-    for (const route of routes) {
-      const isPage =
-        route.basePattern.endsWith('/index') ||
-        !routes.find(r => r.basePattern.startsWith(route.basePattern + '/'))
-      route.isPage = isPage
-      route.isLayout = !isPage
-      route.isMDX = route.file.endsWith('.mdx')
-      route.appFileBase = path.relative(appDir, route.file)
-      route.pagesFileBase = path.relative(appPagesDir, route.file)
-      route.shimFile = path.join(buildPageShimsDir, route.pagesFileBase.replace('/', '_')) // prettier-ignore
-      if (route.isMDX) route.shimFile = route.shimFile.replace('.mdx', '.js')
+    for (const file of routeFiles) {
+      const route = {}
+      route.id = `route${++routeIds}`
+      route.file = file
+      route.fileBase = path.relative(appRoutesDir, file)
+      route.fileBaseNoExt = route.fileBase.split('.').slice(0, -1).join('.')
+      route.fileExt = route.fileBase.split('.').pop()
+      // figure out route type
+      if (
+        route.fileBase === '_layout.js' ||
+        route.fileBase.endsWith('/_layout.js')
+      ) {
+        route.type = 'layout'
+      } else if (route.fileExt === 'js') {
+        route.type = 'pageOrHandler' // intermediary, replaced with 'handler' or 'page' during inspection
+      } else if (route.fileExt === 'mdx') {
+        route.type = 'page'
+        route.mdx = true
+      } else {
+        route.type = 'static'
+      }
+      // patterns for addressable urls
+      if (route.type === 'pageOrHandler' || route.type === 'page') {
+        route.pattern = createRoutePattern(route.fileBaseNoExt)
+      } else if (route.type === 'static') {
+        route.pattern = createRoutePattern(route.fileBase)
+      } else {
+        route.pattern = ''
+      }
+      route.relAppToFile = path.relative(appDir, route.file)
+      route.shimFile = path.join(buildPageShimsDir, route.fileBase.replace(/\//g, '_')) // prettier-ignore
+      if (route.mdx) route.shimFile = route.shimFile.replace('.mdx', '.js') // prettier-ignore
       route.shimFileName = path.relative(path.dirname(route.shimFile), route.shimFile) // prettier-ignore
-      route.relBuildToRouteFile = path.relative(buildDir, route.file)
-      route.relShimToRouteFile = path.relative(path.dirname(route.shimFile), route.file) // prettier-ignore
-      route.pattern = createRoutePattern(route.basePattern)
+      route.relBuildToFile = path.relative(buildDir, route.file)
+      route.relShimToFile = path.relative(path.dirname(route.shimFile), route.file) // prettier-ignore
+      routes.push(route)
+    }
+    for (const route of routes) {
       route.parents = []
-      if (route.isPage) {
-        const segments = route.basePattern.split('/')
+      if (route.type === 'pageOrHandler' || route.type === 'page') {
+        // populate parent layouts for each page
+        const segments = route.fileBaseNoExt.split('/')
         for (let i = 0; i < segments.length; i++) {
-          const subBasePattern = [...segments].slice(0, i).join('/')
+          const sub = [...segments].slice(0, i).join('/')
+          if (!sub) continue
           const layout = routes.find(r => {
-            return r.isLayout && r.basePattern === subBasePattern
+            return r.type === 'layout' && r.fileBaseNoExt === sub + '/_layout' // ignore root layout!
           })
           if (layout) {
             route.parents.push(layout)
@@ -260,15 +231,16 @@ export async function compile(opts) {
     // building mdx pages is really slow so we build them once and use their output in future builds (and rebuilds) as a virtual module.
     // our file watcher will evict mdx pages from the cache so they get rebuilt.
     const routesNeedingMDXBuild = routes.filter(route => {
+      if (!route.mdx) return false
       // if config changed then all mdx pages need building
-      if (freshConfig) return route.isMDX
+      if (freshConfig) return true
       // otherwise only include mdx pages not cached
-      return route.isMDX && !mdxCache[route.file]
+      return !mdxCache[route.file]
     })
     if (routesNeedingMDXBuild.length) {
       // console.log(
       //   'building mdx',
-      //   routesNeedingMDXBuild.map(r => r.appFileBase)
+      //   routesNeedingMDXBuild.map(r => r.relAppToFile)
       // )
       // console.time('mdx')
       const result = await esbuild.build({
@@ -282,7 +254,7 @@ export async function compile(opts) {
         platform: 'neutral',
         format: 'esm',
         packages: 'external',
-        // external: ['react', 'react-dom', '@firebolt/jsx'],
+        // external: ['react', 'react-dom', '@firebolt-dev/jsx'],
         // external: [],
         logLevel: 'silent',
         // alias: {
@@ -291,13 +263,12 @@ export async function compile(opts) {
         define: {
           'process.env.NODE_ENV': JSON.stringify(env),
           ...publicDefineEnvs,
-          // FIREBOLT_NODE_ENV: JSON.stringify(env),
         },
         // loader: {
         //   '.js': 'jsx',
         // },
         // jsx: 'automatic',
-        // jsxImportSource: '@firebolt/jsx',
+        // jsxImportSource: '@firebolt-dev/jsx',
         plugins: [mdxPlugin, zombieImportPlugin],
       })
       // todo: this doesn't feel like a robust way to match output files
@@ -305,18 +276,19 @@ export async function compile(opts) {
       let i = 0
       for (let out of result.outputFiles) {
         const route = routesNeedingMDXBuild[i]
-        // console.log(route.file)
-        // console.log(out.path)
         mdxCache[route.file] = out.text
         i++
       }
       // console.timeEnd('mdx')
     }
 
-    // build and inspect pages
-    const inspectionCode = `
-      ${routes.map(route => `export * as ${route.id} from '${route.relBuildToRouteFile}'`).join('\n')}
-    `
+    // build, inspect and resolve pages and handlers
+    let inspectionCode = ''
+    for (const route of routes) {
+      if (route.type === 'pageOrHandler' || route.type === 'page') {
+        inspectionCode += `export * as ${route.id} from '${route.relBuildToFile}'\n`
+      }
+    }
     await fs.outputFile(buildInspectionFile, inspectionCode)
     if (!ctx.pageInspector) {
       ctx.pageInspector = await esbuild.context({
@@ -329,7 +301,7 @@ export async function compile(opts) {
         platform: 'node',
         format: 'esm',
         packages: 'external',
-        // external: ['react', 'react-dom', '@firebolt/jsx'],
+        // external: ['react', 'react-dom', '@firebolt-dev/jsx'],
         // external: [],
         logLevel: 'silent',
         alias: {
@@ -338,13 +310,12 @@ export async function compile(opts) {
         define: {
           'process.env.NODE_ENV': JSON.stringify(env),
           ...publicDefineEnvs,
-          // FIREBOLT_NODE_ENV: JSON.stringify(env),
         },
         loader: {
           '.js': 'jsx',
         },
         jsx: 'automatic',
-        jsxImportSource: '@firebolt/jsx',
+        jsxImportSource: '@firebolt-dev/jsx',
         plugins: [
           // mdxPlugin,
           virtualModule(mdxCache),
@@ -357,49 +328,51 @@ export async function compile(opts) {
     const inspection = await reimport(tmpInspectionFile)
     // console.log('inspection', inspection)
     for (const route of routes) {
-      if (!inspection[route.id].default) {
-        throw new BundlerError(
-          `missing default page export for ${style.mark(route.appFileBase)}`
-        )
-      }
-      if (route.isMDX && inspection[route.id].components) {
-        route.hasMDXComponents = true
+      const module = inspection[route.id]
+      if (route.type === 'pageOrHandler') {
+        // finally determine if this route is a 'page' or a 'handler'
+        route.type = module.default ? 'page' : 'handler'
       }
     }
 
-    const generateNestedContent = route => {
+    // function that generates JSX for each page, nested inside their layouts
+    const generateNestedJSX = route => {
+      if (route.type !== 'page') return null
       let open = ''
       let close = ''
       for (const parent of route.parents) {
         open += `<${parent.id}.default>`
         close = `</${parent.id}.default>` + close
       }
-      if (route.isMDX) {
-        return `${open}<MDXWrapper component={${route.id}.default} />${close}`
+      if (route.mdx) {
+        return `key => ${open}<MDXWrapper key={key} component={${route.id}.default} />${close}`
       } else {
-        return `${open}<${route.id}.default/>${close}`
+        return `key => ${open}<${route.id}.default key={key}/>${close}`
       }
     }
 
     // create routes file
     const routesCode = `
       import { MDXWrapper } from 'firebolt'
-      ${routes.map(route => `import * as ${route.id} from '${route.relBuildToRouteFile}'`).join('\n')}
+      ${routes
+        .filter(route => isType(route, 'layout', 'page', 'handler'))
+        .map(route => `import * as ${route.id} from '${route.relBuildToFile}'`)
+        .join('\n')}
       const routes = [
         ${routes
-          .filter(route => route.isPage)
           .map(route => {
             return `
             {
-              module: ${route.id},
+              module: ${isType(route, 'page', 'handler') ? route.id : 'null'},
               id: '${route.id}',
-              appFileBase: '${route.appFileBase}',
+              type: '${route.type}',
+              relAppToFile: '${route.relAppToFile}',
               pattern: '${route.pattern}',
               shimFile: '${route.shimFile}',
               shimFileName: '${route.shimFileName}',
-              relBuildToRouteFile: '${route.relBuildToRouteFile}',
-              relShimToRouteFile: '${route.relShimToRouteFile}',
-              content: ${generateNestedContent(route)}
+              relBuildToFile: '${route.relBuildToFile}',
+              relShimToFile: '${route.relShimToFile}',
+              content: ${generateNestedJSX(route)}
             },
           `
           })
@@ -409,13 +382,14 @@ export async function compile(opts) {
     `
     await fs.outputFile(buildRoutesFile, routesCode)
 
-    // generate page shims for client (tree shaking)
+    // generate page shims for client
     for (const route of routes) {
+      if (route.type !== 'page') continue
       const code = `
         import { MDXWrapper } from 'firebolt'
-        import * as ${route.id} from '${route.relShimToRouteFile}'
-        ${route.parents.map(parent => `import * as ${parent.id} from '${parent.relShimToRouteFile}'`).join('\n')}
-        const content = ${generateNestedContent(route)}
+        import * as ${route.id} from '${route.relShimToFile}'
+        ${route.parents.map(parent => `import * as ${parent.id} from '${parent.relShimToFile}'`).join('\n')}
+        const content = ${generateNestedJSX(route)}
         globalThis.$firebolt('registerPage', '${route.id}', content)
       `
       await fs.outputFile(route.shimFile, code)
@@ -428,10 +402,12 @@ export async function compile(opts) {
     const publicDir = path.join(buildDir, 'public')
     const newClientEntryPoints = []
     for (const route of routes) {
-      newClientEntryPoints.push(route.shimFile)
+      if (route.type === 'page') {
+        newClientEntryPoints.push(route.shimFile)
+      }
     }
     newClientEntryPoints.push(buildBoostrapFile)
-    let clientEntryPointsChanged = !isEqual(
+    const clientEntryPointsChanged = !isEqual(
       clientEntryPoints,
       newClientEntryPoints
     )
@@ -461,13 +437,12 @@ export async function compile(opts) {
         define: {
           'process.env.NODE_ENV': JSON.stringify(env),
           ...publicDefineEnvs,
-          // FIREBOLT_NODE_ENV: JSON.stringify(env),
         },
         loader: {
           '.js': 'jsx',
         },
         jsx: 'automatic',
-        jsxImportSource: '@firebolt/jsx',
+        jsxImportSource: '@firebolt-dev/jsx',
         plugins: [
           // mdxPlugin,
           virtualModule(mdxCache),
@@ -498,11 +473,12 @@ export async function compile(opts) {
     const bundleResult = await ctx.clientBundles.rebuild()
     // console.timeEnd('clientBundles')
     // reconcile hashed build files with their source
+
     const metafile = bundleResult.metafile
     for (const file in metafile.outputs) {
       const output = metafile.outputs[file]
       if (output.entryPoint) {
-        // page wrappers
+        // page shims
         if (output.entryPoint.startsWith('.firebolt/page-shims/')) {
           const shimFileName = output.entryPoint.replace('.firebolt/page-shims/', '') // prettier-ignore
           const route = routes.find(route => {
@@ -513,7 +489,7 @@ export async function compile(opts) {
             '/_firebolt'
           )
         }
-        // bootstrap
+        // bootstrap file
         if (output.entryPoint === '.firebolt/bootstrap.js') {
           manifest.bootstrapFile = file.replace('.firebolt/public', '/_firebolt') // prettier-ignore
         }
@@ -549,13 +525,12 @@ export async function compile(opts) {
         define: {
           'process.env.NODE_ENV': JSON.stringify(env),
           ...publicDefineEnvs,
-          // FIREBOLT_NODE_ENV: JSON.stringify(env),
         },
         loader: {
           '.js': 'jsx',
         },
         jsx: 'automatic',
-        jsxImportSource: '@firebolt/jsx',
+        jsxImportSource: '@firebolt-dev/jsx',
         plugins: [
           mdxPlugin,
           registryPlugin({ registry: null }), // dont write to registry, we already have it from the client bundles
@@ -591,28 +566,18 @@ export async function compile(opts) {
       app.use(cookieParser())
       app.use(async (req, res, next) => {
         res.setHeader('X-Powered-By', 'Firebolt')
-        if (!prod) {
-          // during development pause requests while builds are in progress
-          await runProgress.wait()
-        }
+        if (!prod) await runProgress.wait() // during development pause requests while builds are in progress
         next()
       })
-      app.use(express.static('public'))
+      // app.use(express.static('public'))
       app.use('/_firebolt', express.static('.firebolt/public'))
       app.post('/_firebolt_fn', async (req, res) => {
         // todo: try/catch
         server.handleFunction(req, res)
       })
-      app.use('/api/*', async (req, res) => {
-        try {
-          await server.handleApi(req, res)
-        } catch (err) {
-          console.error(err)
-        }
-      })
       app.use('*', async (req, res) => {
         try {
-          await server.handlePage(req, res)
+          await server.handleRequest(req, res)
         } catch (err) {
           console.error(err)
           // console.log('server.handleRequest catch')
@@ -718,4 +683,8 @@ export async function compile(opts) {
   if (!opts.serve && !opts.watch) {
     process.exit()
   }
+}
+
+function isType(route, ...types) {
+  return types.includes(route.type)
 }

@@ -12,7 +12,7 @@ if (
   config.productionBrowserSourceMaps = false
 }
 
-if (!config.decorate) config.decorate = () => {}
+if (!config.req) config.req = {}
 
 if (!config.mdx) config.mdx = {}
 if (!config.mdx.remarkPlugins) config.mdx.remarkPlugins = []

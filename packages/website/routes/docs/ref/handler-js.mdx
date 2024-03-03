@@ -30,7 +30,9 @@ In this example, a sitemap is generated, cached and updated over time when the `
 
 ## API Routes
 
-You can handle all HTTP methods to create API routes
+You can handle multiple HTTP methods to form API routes.
+
+Supported function names are `get`, `put`, `patch`, `post`, `del` and `options`.
 
 ```jsx title='route/api/users/$id.js' lineNumbers
 export async function get(req) {

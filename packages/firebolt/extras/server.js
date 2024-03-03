@@ -1,14 +1,14 @@
-import './process'
-import { renderToPipeableStream } from 'react-dom/server'
-import React from 'react'
-import { isbot } from 'isbot'
+import path from 'path'
 import { PassThrough } from 'stream'
+import fs from 'fs-extra'
+import React from 'react'
+import { renderToPipeableStream } from 'react-dom/server'
+import { isbot } from 'isbot'
 import { Root } from 'firebolt'
 
 import { matcher } from './matcher'
 import { config } from './config.js'
 import routes from './routes.js'
-import api from './api.js'
 import manifest from './manifest.json'
 import * as registry from './registry'
 import { cookieOptionsToExpress } from './cookies'
@@ -22,6 +22,8 @@ React.useLayoutEffect = React.useEffect
 
 const match = matcher()
 
+const cwd = process.cwd()
+
 const prod = process.env.NODE_ENV === 'production'
 
 export { config }
@@ -29,42 +31,37 @@ export { config }
 const methodToApiFunction = {
   GET: 'get',
   PUT: 'put',
+  PATCH: 'patch',
   POST: 'post',
   DELETE: 'del',
+  OPTIONS: 'options',
 }
 
-// provide Request global for api routes
+// provide Request global for handlers
 globalThis.Response = FireboltResponse
 
 // hydrate manifest
 const bootstrapFile = manifest.bootstrapFile
-// TODO: why can't these just be in routes.js?
 for (const route of routes) {
   route.file = manifest.pageFiles[route.id]
 }
 
 // build route definitions to be used by the client
-const routesForClient = routes.map(route => {
-  return {
-    id: route.id,
-    pattern: route.pattern,
-    file: route.file,
-  }
-})
+const pagesForClient = routes
+  .filter(route => route.type === 'page')
+  .map(route => {
+    return {
+      id: route.id,
+      pattern: route.pattern,
+      file: route.file,
+    }
+  })
+
+const pagesForServer = routes.filter(route => route.type === 'page')
 
 const notFoundRoute = routes.find(r => r.pattern === '/not-found')
 
 const defaultCookieOptions = config.cookie
-
-// utility to find an api route from a url
-function resolveApiAndParams(url) {
-  url = url.slice(4) // remove /api prefix
-  for (const route of api) {
-    const [hit, params] = match(route.pattern, url)
-    if (hit) return [route, params]
-  }
-  return [null, {}]
-}
 
 // utility to find a route from a url
 function resolveRouteAndParams(url) {
@@ -72,6 +69,7 @@ function resolveRouteAndParams(url) {
     return [null, {}]
   }
   for (const route of routes) {
+    if (route.type !== 'page' && route.type !== 'handler') continue
     const [hit, params] = match(route.pattern, url)
     if (hit) return [route, params]
   }
@@ -80,7 +78,7 @@ function resolveRouteAndParams(url) {
 
 // utility to call loader/action functions
 async function callFunction(req, id, args) {
-  await config.decorate(req)
+  decorate(req, config.req)
   const fn = registry[id]
   if (!fn) throw new Error('Invalid function')
   let value = fn(req, ...args)
@@ -99,7 +97,7 @@ export async function handleFunction(req, res) {
     params: {},
     defaultCookieOptions,
   })
-  await config.decorate(fireboltRequest)
+  decorate(fireboltRequest, config.req)
   let value
   let error
   try {
@@ -127,15 +125,9 @@ export async function handleFunction(req, res) {
   res.status(200).json(data)
 }
 
-export async function handleApi(req, res) {
+export async function handleHandler(req, res, route, params) {
   const url = req.originalUrl
   const method = methodToApiFunction[req.method]
-
-  const [route, params] = resolveApiAndParams(url)
-
-  if (!route || !route.module[method]) {
-    return res.status(404).end()
-  }
 
   const fireboltRequest = new FireboltRequest({
     ctx: 'api',
@@ -164,12 +156,8 @@ export async function handleApi(req, res) {
   return res.json(result)
 }
 
-// handle requests for pages
-export async function handlePage(req, res) {
+async function handlePage(req, res, route, params) {
   let url = req.originalUrl
-
-  // handle page requests
-  let [route, params] = resolveRouteAndParams(url)
 
   let notFound
   if (!route) {
@@ -245,7 +233,7 @@ export async function handlePage(req, res) {
         return data
       },
     },
-    routes,
+    pages: pagesForServer,
   }
 
   const runtime = createRuntime([['init', options]])
@@ -281,7 +269,7 @@ export async function handlePage(req, res) {
       globalThis.$firebolt.stack = []
       globalThis.$firebolt('init', {
         ssr: null,
-        routes: ${JSON.stringify(routesForClient)},
+        pages: ${JSON.stringify(pagesForClient)},
         defaultCookieOptions: ${JSON.stringify(config.cookie)},
       })
     `,
@@ -313,6 +301,42 @@ export async function handlePage(req, res) {
   })
 }
 
+// handle requests (pages, handlers, static)
+export async function handleRequest(req, res) {
+  let url = req.originalUrl
+
+  // find matching route
+  let [route, params] = resolveRouteAndParams(url)
+
+  console.log('handleRequest', url)
+  console.log('route', route)
+  console.log('params', params)
+
+  if (!route) {
+    if (hasExt(url)) {
+      const file = path.join(cwd, 'routes', url)
+      const exists = await fs.exists(file)
+      if (exists) {
+        return res.sendFile(file)
+      } else {
+        return res.status(404).send('Not found')
+      }
+    } else {
+      return handlePage(req, res, null, {})
+    }
+  }
+  if (route.type === 'page') {
+    return handlePage(req, res, route, params)
+  }
+  if (route.type === 'handler') {
+    return handleHandler(req, res, route, params)
+  }
+
+  // if (route.type === 'static') {
+  //   return res.sendFile(path.join(cwd, route.relAppToFile))
+  // }
+}
+
 function serializeFunctionError(error, prod) {
   if (error instanceof FireboltRequest) {
     return {
@@ -333,4 +357,15 @@ function serializeFunctionError(error, prod) {
     message: error.message,
     data: {},
   }
+}
+
+const extRegex = /\/[^/]+\.[^/]+$/
+function hasExt(url) {
+  return extRegex.test(url)
+}
+
+function decorate(obj, extras) {
+  Object.keys(extras).forEach(key => {
+    obj[key] = extras[key]
+  })
 }

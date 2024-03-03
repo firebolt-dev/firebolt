@@ -39,7 +39,7 @@ async function build() {
       '.js': 'jsx',
     },
     jsx: 'automatic',
-    // jsxImportSource: '@firebolt/jsx',
+    // jsxImportSource: '@firebolt-dev/jsx',
   })
 }
 

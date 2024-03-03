@@ -24,6 +24,7 @@ export async function getFilePaths(baseDir, exts) {
 }
 
 function hasExt(filePath, exts) {
+  if (!exts) return true
   const fileExt = path.extname(filePath).slice(1)
   return exts.includes(fileExt)
 }

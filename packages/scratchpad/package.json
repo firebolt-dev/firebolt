@@ -1,5 +1,5 @@
 {
-  "name": "@firebolt/scratchpad",
+  "name": "@firebolt-dev/scratchpad",
   "version": "0.0.1",
   "private": true,
   "main": "src/index.js",

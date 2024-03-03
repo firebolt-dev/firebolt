@@ -4,10 +4,6 @@ import rehypeShiki from '@shikijs/rehype'
 export default function config() {
   return {
     productionBrowserSourceMaps: true,
-    req: {
-      // todo: use this instead of decorate()
-      // db
-    },
     async middleware(req) {
       // todo: intercept requests eg icon generator!
     },

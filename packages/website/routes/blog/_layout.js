@@ -1,11 +1,11 @@
-import { MDXProvider, useLocation, css } from 'firebolt'
+import { MDXProvider, useRoute, css } from 'firebolt'
 
-import { Page } from '../components/Page'
-import { components } from '../components/md'
+import { Page } from '@/components/Page'
+import { components } from '@/components/md'
 
 export default function BlogLayout({ children }) {
-  const location = useLocation()
-  const home = location.pathname === '/blog'
+  const route = useRoute()
+  const home = route.pathname === '/blog'
   if (home) {
     return children
   }

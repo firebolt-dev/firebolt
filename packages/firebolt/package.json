@@ -13,8 +13,8 @@
     "build": "node scripts/build.mjs --minify"
   },
   "dependencies": {
-    "@firebolt/css": "*",
-    "@firebolt/jsx": "*",
+    "@firebolt-dev/css": "*",
+    "@firebolt-dev/jsx": "*",
     "@mdx-js/esbuild": "^3.0.1",
     "@mdx-js/react": "^3.0.1",
     "chalk": "^5.3.0",

@@ -1,4 +1,4 @@
-import { Metadata } from '../components/Metadata'
+import { Metadata } from '@/components/Metadata'
 
 export default function NotFound() {
   return (

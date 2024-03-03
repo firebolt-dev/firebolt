@@ -1,5 +1,5 @@
 import { Suspense, useState } from 'react'
-import { useLocation } from 'firebolt'
+import { useRoute } from 'firebolt'
 
 /**
  * Basic + Head
@@ -20,7 +20,7 @@ export default function Page() {
 //  */
 
 // export default function Page() {
-//   const { id } = useLocation().query
+//   const { id } = useRoute().query
 //   const item = useSuspense(() => fetch(`/api/items/${id}`), [id])
 //   return (
 //     <>
@@ -50,7 +50,7 @@ export default function Page() {
 // }
 
 // function Item() {
-//   const { id } = useLocation().query
+//   const { id } = useRoute().query
 //   const item = useSuspense(() => fetch(`/api/items/${id}`), [id])
 //   return (
 //     <>

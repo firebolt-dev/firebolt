@@ -15,13 +15,13 @@ Firebolt takes everything we've learned over the past few years and condenses it
 
 Creating an app with Firebolt feels just like writing React. Most of the time you'll forget Firebolt even exists because you'll spend most of your time writing plain old React components and delivering instant value to your users.
 
-```jsx title='pages/about.js' lineNumbers
-export async function About() {
+```jsx title='routes/about.js' lineNumbers
+export default function About() {
   return <h1>About Us</h1>
 }
 ```
 
-Behind the scenes, Firebolt takes care of bundling, server rendering, parallel streaming, routing, data access and so much more.
+Behind the scenes, Firebolt takes care of bundling, parallel server streaming, routing, data access and so much more.
 
 You can use Firebolt to build websites, docs, blogs, and pretty much any other kind of app on the web.
 
@@ -58,9 +58,9 @@ export async function getProfile(req) {
 ```
 
 Both [Loaders](/docs/loaders) and [Actions](/docs/actions) in Firebolt allow you interact with private code that is never exposed to the browser.
-They work seamlessly with SSR and on the client, and are fully compatible with Suspense and Error Boundaries, just how React intended.
+They work seamlessly with server streaming and on the client, and are fully compatible with Suspense and Error Boundaries, just how React intended.
 
-Forget about building API's and infrastructure and just focus on your product. Of course if you still need to provide a public API for your users to consume, we have [API Routes](/docs/ref/api-js).
+Forget about building API's and infrastructure and just focus on your product. Of course if you still need to provide a public API for your users to consume, we have [API Routes](/docs/ref/handler-js).
 
 ## Ultra Speed
 
@@ -77,7 +77,7 @@ Our goal is to simplify web development by providing everything you need to be p
 ### CSS-in-JS
 
 Firebolt includes its own simple yet powerful CSS-in-JS implementation that is ready to go.
-You no longer have to wrangle with hacky, flaky workarounds to get good runtime CSS-in-JS that works with SSR and streaming flawlessly.
+You no longer have to wrangle with hacky, flaky workarounds to get good runtime CSS-in-JS that works with server streaming.
 
 ```jsx title='components/Button.js' lineNumbers
 import { css } from 'firebolt'
@@ -102,11 +102,11 @@ export function Button({ label, onClick }) {
 
 ### Super Metadata
 
-Forget about framework specific `<Head>` components, thanks to React 19 you can use `<title>` and `<meta>` tags anywhere in your app and they'll automatically be hoisted to the `<head>` element.
+Forget about framework specific components and named exports, thanks to React 19 you can use `<title>` and `<meta>` tags anywhere in your app and they'll automatically be hoisted to the `<head>` element for you.
 
-```jsx title='pages/cities_$id.js' lineNumbers
+```jsx title='routes/cities/$id.js' lineNumbers
 export default function City() {
-  const { id } = useLocation().params
+  const { id } = useRoute().params
   const city = useLoader(getCity, id).read()
   return (
     <>
@@ -121,7 +121,7 @@ export default function City() {
 
 ### Cookies
 
-We baked cookie management into the core of Firebolt allowing you interact with them easily on both the server and client.
+Firebolt makes it easy to manage cookies across your app and make them react to changes, even changes made on the server.
 
 ```jsx title='components/CountrySelect.js' lineNumbers
 import { useCookie } from 'firebolt'
@@ -138,15 +138,13 @@ export function CountrySelect() {
 }
 ```
 
-In this example, updating the `country` cookie will also update any other components observing its value.
-
-You can even update cookies on the server inside Loaders & Actions and they will instantly update on the client.
+In this example, updating the `country` cookie from another component or from the server will update all other components observing its value.
 
 ### Markdown & MDX
 
 Firebolt supports MDX for writing pages with markdown by simply adding a `.mdx` page.
 
-```jsx title='pages/docs_intro.mdx' lineNumbers
+```md title='routes/docs/intro.mdx' lineNumbers
 # Introduction
 
 Heres a little introduction...
@@ -156,9 +154,9 @@ And we give you full control over all MDX plugins you might need.
 
 ### Layouts & Nested Routes
 
-It's easy to create shared layouts by simply nesting routes together. As an example, we can nest our MDX page from above into a shared navigation component like this:
+It's easy to create shared layouts that nest routes together. As an example, we can nest our MDX page from above into a shared navigation component like this:
 
-```jsx title='pages/docs.js' lineNumbers
+```jsx title='pages/docs/_layout.js' lineNumbers
 export default function DocsLayout({ children }) {
   return (
     <div>
@@ -174,8 +172,8 @@ export default function DocsLayout({ children }) {
 Firebolt is currently in beta and aims to make it easier for anyone to build on the web without sacrificing power.
 We care deeply about the web and building a more sustainable future. Firebolt will always remain free and open source with an MIT license.
 
-To get started, check out our [documentation](/docs) and [github repo](https://github.com/firebolt-dev) and follow us on X to stay up to date.
+To get started, check out our [documentation](/docs) and [github repo](https://github.com/firebolt-dev) and follow us on [X](https://x.com/firebolt_dev) to stay up to date.
 
-If you are as excited about the future of web development as we are, be sure to share your thoughts on social media and share this post!
+If you are as excited about the future of web development as we are, be sure to share this post on social media!
 
 Peace 🖖

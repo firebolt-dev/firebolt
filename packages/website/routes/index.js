@@ -1,8 +1,8 @@
-import { Link, useCookie, css } from 'firebolt'
-
-import { Page } from '../components/Page'
-import { Check, ChevronRight, Copy } from 'lucide-react'
 import { useState } from 'react'
+import { Link, useCookie, css } from 'firebolt'
+import { Check, ChevronRight, Copy } from 'lucide-react'
+
+import { Page } from '@/components/Page'
 
 export default function Home() {
   const [theme, setTheme] = useCookie('theme', 'system')
@@ -153,7 +153,7 @@ export default function Home() {
               <h1>Powerful Simplicity</h1>
               <p>
                 All the power of a super framework without any of the
-                overwhelming complexity. It's all just React.
+                overwhelming complexity. It's just React.
               </p>
             </div>
           </div>
@@ -170,8 +170,8 @@ export default function Home() {
             <div className='home-feature-inner'>
               <h1>Parallel Streaming</h1>
               <p>
-                Full Server-side rendering and parallel streaming means your
-                pages load fast and your SEO skyrockets!
+                Parallel server-side streaming means your pages load faster than
+                ever and your SEO skyrockets!
               </p>
             </div>
           </div>
@@ -189,7 +189,7 @@ export default function Home() {
               <h1>CSS-in-JS</h1>
               <p>
                 Ready to go, first class support for CSS-in-JS that works
-                flawlessly with SSR and Streaming.
+                flawlessly with server streaming.
               </p>
             </div>
           </div>

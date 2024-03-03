@@ -44,8 +44,8 @@ The [useRoute](/docs/ref/useRoute) hook provides information about the current p
 
 Firebolt also supports catch-all dynamic segments with the `+` and `-` suffix
 
-| Page                     | Example URL                | Params                              |
-| ------------------------ | -------------------------- | ----------------------------------- |
-| `pages/cities_$tags+.js` | `/cities/coastal/tech-hub` | `{ tags: ["coastal", "tech-hub"] }` |
-| `pages/cities_$tags-.js` | `/cities/coastal/tech-hub` | `{ tags: ["coastal", "tech-hub"] }` |
-| `pages/cities_$tags-.js` | `/cities`                  | `{ tags: [] }`                      |
+| Page                      | Example URL                | Params                              |
+| ------------------------- | -------------------------- | ----------------------------------- |
+| `routes/cities/$tags+.js` | `/cities/coastal/tech-hub` | `{ tags: ["coastal", "tech-hub"] }` |
+| `routes/cities/$tags-.js` | `/cities/coastal/tech-hub` | `{ tags: ["coastal", "tech-hub"] }` |
+| `routes/cities/$tags-.js` | `/cities`                  | `{ tags: [] }`                      |

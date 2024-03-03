@@ -1,4 +1,4 @@
-import { Link, css, cls, useCookie, useLocation } from 'firebolt'
+import { Link, css, cls, useCookie, useRoute } from 'firebolt'
 
 import { Logo } from './Logo'
 import { LogoX } from './LogoX'
@@ -7,7 +7,7 @@ import { ThemeBtn } from './ThemeBtn'
 import { MobileMenu } from './MobileMenu'
 
 export function Header() {
-  const location = useLocation()
+  const route = useRoute()
   return (
     <div
       className='header'
@@ -74,7 +74,7 @@ export function Header() {
         <Link
           href='/docs'
           className={cls('header-link', {
-            active: location.url.startsWith('/docs'),
+            active: route.url.startsWith('/docs'),
           })}
         >
           Documentation
@@ -82,7 +82,7 @@ export function Header() {
         <Link
           href='/blog'
           className={cls('header-link', {
-            active: location.url.startsWith('/blog'),
+            active: route.url.startsWith('/blog'),
           })}
         >
           Blog

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link, css, cls, useLocation } from 'firebolt'
+import { Link, css, cls, useRoute } from 'firebolt'
 import { Menu, Code, BookText, Home } from 'lucide-react'
 
 export function MobileMenu({ className = '' }) {
-  const location = useLocation()
+  const route = useRoute()
   const [open, setOpen] = useState(false)
   useEffect(() => {
     if (!open) return
@@ -75,7 +75,7 @@ export function MobileMenu({ className = '' }) {
           {/* <Link href='/'>
             <div
               className={cls('menu-item', {
-                active: location.url === '/',
+                active: route.url === '/',
               })}
             >
               <Home className='menu-item-icon' size={20} />
@@ -85,7 +85,7 @@ export function MobileMenu({ className = '' }) {
           <Link href='/docs'>
             <div
               className={cls('menu-item', {
-                active: location.url.startsWith('/docs'),
+                active: route.url.startsWith('/docs'),
               })}
             >
               <Code className='menu-item-icon' size={20} />
@@ -95,7 +95,7 @@ export function MobileMenu({ className = '' }) {
           <Link href='/blog'>
             <div
               className={cls('menu-item', {
-                active: location.url.startsWith('/blog'),
+                active: route.url.startsWith('/blog'),
               })}
             >
               <BookText className='menu-item-icon' size={20} />

@@ -1,6 +1,6 @@
-import { GlobalStyles } from './GlobalStyles'
+import { GlobalStyles } from '@/components/GlobalStyles'
 
-export function Document({ children }) {
+export default function Document({ children }) {
   return (
     <html lang='en'>
       <head>

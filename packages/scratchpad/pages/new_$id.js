@@ -1,5 +1,5 @@
 import { Suspense, useState } from 'react'
-import { Link, useLocation, useLoader, useAction, useCache } from 'firebolt'
+import { Link, useRoute, useLoader, useAction, useCache } from 'firebolt'
 
 export default function Page() {
   return (
@@ -17,7 +17,7 @@ function Loading() {
 }
 
 function Item({ id }) {
-  // const { id } = useLocation().params
+  // const { id } = useRoute().params
   const loader = useLoader(getItem, id)
   const item = loader.read()
   const update = useAction(updateItem)

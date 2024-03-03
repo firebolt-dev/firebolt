@@ -39,7 +39,7 @@ async function build() {
       '.js': 'jsx',
     },
     jsx: 'automatic',
-    jsxImportSource: '@firebolt/jsx',
+    jsxImportSource: '@firebolt-dev/jsx',
   })
   const bin = path.join(cwd, 'dist/index.js')
   await fs.chmod(bin, '755')

@@ -5,11 +5,11 @@
 
 # Routes
 
-The `routes` directory is a unique way of organising all of your static and dynamic content that needs to be available via URL.
+The `routes` directory is an intuitive yet unique way of organising all of your static and dynamic content that needs to be available at a URL.
 
 ## Static Files
 
-At it's most basic, the `routes` directory can serve static assets such a fonts, robots files and images by simply placing them here.
+At it's most basic, the `routes` directory can serve static assets such a fonts, robots files and images by simply placing them there.
 
 For example the `routes/robots.txt` file will be accessible at `/robots.txt`.
 
@@ -60,6 +60,8 @@ export default function About() {
 }
 ```
 
+This page will render when you visit `/about`.
+
 Pages are just regular React components with no special exports etc. You'll learn more about how to load and interact with data later on in this guide.
 
 ## Dynamic Pages
@@ -106,10 +108,14 @@ The root layout at `routes/_layout.js` is used to wrap your entire app with `<ht
 
 Yup, we also support MDX pages out of the box, allowing you write your content with super powered markdown. Simply use the `.mdx` extension.
 
-You can [configure](/docs/ref/config) MDX with plugins to provide syntax highlighting or support github flavored markdown, whatever you need.
+You can [configure](/docs/ref/config) MDX with plugins to provide syntax highlighting or support github flavored markdown, anything you need.
 
 You can also customize the components rendered by MDX with an [MDXProvider](/docs/ref/mdx-provider)
 
 ## Summary
 
-The `routes` folder is a simple yet powerful concept that allows you to better organise your app and keep things as clean as possible.
+The `routes` folder is a simple yet powerful concept that allows you to keep your app organised, supporting essentially anything you might need.
+
+When building components that need to be shared across multiple routes, you can place them outside of the `routes` directory in a `components` directory or similar, and pull them in as needed.
+
+By the end of this guide you'll see that it's possible to build large complex SaaS applications that have little more than a `routes` and `components` directory. It's magic.
