@@ -78,6 +78,17 @@ export function createRuntime(stack) {
       hash,
       params,
       page,
+      search(key, value) {
+        const searchParams = info.searchParams
+        if (value && typeof value === 'string') {
+          searchParams.set(key, value)
+        } else {
+          searchParams.delete(key)
+        }
+        const query = searchParams.size ? `?${searchParams.toString()}` : ''
+        const href = pathname + query + hash
+        history.replaceState(null, '', href)
+      },
       push(href) {
         history.pushState(null, '', href)
       },
