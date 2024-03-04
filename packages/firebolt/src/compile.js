@@ -51,12 +51,15 @@ export async function compile(opts) {
   const buildLibFile = path.join(appDir, '.firebolt/lib.js')
   const buildBoostrapFile = path.join(appDir, '.firebolt/bootstrap.js')
   const buildRegistryFile = path.join(appDir, '.firebolt/registry.js')
-  const buildServerFile = path.join(appDir, '.firebolt/server.js')
+  const buildControllerFile = path.join(appDir, '.firebolt/controller.js')
   const buildInspectionFile = path.join(appDir, '.firebolt/inspection.js')
 
   const extrasDir = path.join(dir, '../extras')
 
-  const serverServerFile = path.join(appDir, '.firebolt/server/index.js')
+  const outputControllerFile = path.join(
+    appDir,
+    '.firebolt/controller/index.js'
+  )
 
   const tmpConfigFile = path.join(appDir, '.firebolt/tmp/config.js')
   const tmpInspectionFile = path.join(appDir, '.firebolt/tmp/inspection.js')
@@ -69,7 +72,7 @@ export async function compile(opts) {
     configValidator: null,
     pageInspector: null,
     clientBundles: null,
-    serverEntry: null,
+    controller: null,
   }
   let clientEntryPoints = []
 
@@ -504,12 +507,12 @@ export async function compile(opts) {
     })
     await fs.outputFile(buildRegistryFile, registryCode)
 
-    // build server entry
-    if (!ctx.serverEntry || freshConfig) {
+    // build server controller
+    if (!ctx.controller || freshConfig) {
       // config changes require new mdxPlugin
-      ctx.serverEntry = await esbuild.context({
-        entryPoints: [buildServerFile],
-        outfile: serverServerFile,
+      ctx.controller = await esbuild.context({
+        entryPoints: [buildControllerFile],
+        outfile: outputControllerFile,
         bundle: true,
         treeShaking: true,
         sourcemap: true,
@@ -536,9 +539,9 @@ export async function compile(opts) {
         ],
       })
     }
-    // console.time('serverEntry')
-    await ctx.serverEntry.rebuild()
-    // console.timeEnd('serverEntry')
+    // console.time('controller')
+    await ctx.controller.rebuild()
+    // console.timeEnd('controller')
     const elapsed = (performance.now() - startAt).toFixed(0)
     log.info(`${freshBuild ? 'built' : 'rebuilt'} ${style.dim(`(${elapsed}ms)`)}\n`) // prettier-ignore
     freshBuild = false
@@ -547,17 +550,17 @@ export async function compile(opts) {
 
   let runProgress = new Pending()
 
-  let appServer
   let server
+  let controller
   let port
 
   async function serve() {
-    server = await reimport(serverServerFile)
-    if (appServer && server.config.port !== port) {
-      appServer.close()
-      appServer = null
+    controller = await reimport(outputControllerFile)
+    if (server && controller.config.port !== port) {
+      server.close()
+      server = null
     }
-    if (!appServer) {
+    if (!server) {
       const app = express()
       app.use(cors())
       app.use(compression())
@@ -568,26 +571,25 @@ export async function compile(opts) {
         if (!prod) await runProgress.wait() // during development pause requests while builds are in progress
         next()
       })
-      // app.use(express.static('public'))
       app.use('/_firebolt', express.static('.firebolt/public'))
       app.post('/_firebolt_fn', async (req, res) => {
         // todo: try/catch
-        server.handleFunction(req, res)
+        controller.handleFunction(req, res)
       })
       app.use('*', async (req, res) => {
         try {
-          await server.handleRequest(req, res)
+          await controller.handleRequest(req, res)
         } catch (err) {
           console.error(err)
-          // console.log('server.handleRequest catch')
-          // if (err instanceof server.Request) {
+          // console.log('controller.handleRequest catch')
+          // if (err instanceof controller.Request) {
           //   logCodeError(parseServerError(err, appDir))
           // } else {
           //   console.error(err)
           // }
         }
       })
-      port = server.config.port
+      port = controller.config.port
       function onConnected() {
         console.log(`server running at http://localhost:${port}\n`)
       }
@@ -599,7 +601,7 @@ export async function compile(opts) {
           log.error(`failed to start server: ${err.message}`)
         }
       }
-      appServer = app.listen(port, onConnected).on('error', onError)
+      server = app.listen(port, onConnected).on('error', onError)
     }
   }
 

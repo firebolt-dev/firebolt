@@ -46,7 +46,7 @@ for (const route of routes) {
   route.file = manifest.pageFiles[route.id]
 }
 
-// build route definitions to be used by the client
+// build page definitions to be used by the client
 const pagesForClient = routes
   .filter(route => route.type === 'page')
   .map(route => {
@@ -57,6 +57,7 @@ const pagesForClient = routes
     }
   })
 
+// build page definitions to be used by the server
 const pagesForServer = routes.filter(route => route.type === 'page')
 
 const notFoundRoute = routes.find(r => r.pattern === '/not-found')
