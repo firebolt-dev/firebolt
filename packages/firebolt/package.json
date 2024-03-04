@@ -31,7 +31,6 @@
     "immer": "^10.0.3",
     "isbot": "^4.4.0",
     "lodash-es": "^4.17.21",
-    "node-fetch": "^3.3.2",
     "react": "canary",
     "react-dom": "canary",
     "source-map-support": "^0.5.21"

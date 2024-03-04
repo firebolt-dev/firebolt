@@ -94,7 +94,7 @@ export async function handleFunction(req, res) {
 
   // deserialize FormData if used
   if (args[0] && args[0].$form) {
-    const form = new FetchFormData()
+    const form = new FormData()
     for (const key in args[0]) {
       form.set(key, args[0][key])
     }

@@ -110,8 +110,6 @@ declare module 'firebolt' {
     ...args: any[]
   ): Loader<T>
 
-  import { Request } from 'node-fetch'
-
   /**
    * Hooks into an action function for server-side operations.
    *

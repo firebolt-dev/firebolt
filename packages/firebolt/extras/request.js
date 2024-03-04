@@ -1,6 +1,6 @@
 import { cookieOptionsToExpress } from './cookies'
 
-export class FireboltRequest extends FetchRequest {
+export class FireboltRequest extends Request {
   constructor({ ctx, xReq, defaultCookieOptions, params }) {
     const url = `${xReq.protocol}://${xReq.get('host')}${xReq.originalUrl}`
 
@@ -174,7 +174,7 @@ class Cookies {
   }
 }
 
-export class FireboltResponse extends FetchResponse {
+export class FireboltResponse extends Response {
   constructor(body, options) {
     super(body, options)
     this.foo = true
