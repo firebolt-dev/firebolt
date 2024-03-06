@@ -5,7 +5,7 @@ import { db } from './db.js'
 export default function config() {
   return {
     productionBrowserSourceMaps: true,
-    req: {
+    context: {
       uuid: nanoid,
       db,
     },

@@ -42,7 +42,7 @@ If any components are still observing this data it will be refetched in the back
 
 If no components are observing the data then the data is evicted immediately, causing the next read to trigger Suspense boundaries as if the data was never there to begin with.
 
-Note: data can also become invalidated if you use the `expire` method on the [Request](/docs/ref/request) object passed into your loader functions.
+**Note:** data can also become invalidated after an expiration time, as set with the `expire` method on the [Context](/docs/ref/context) object passed into your loader functions.
 
 ## .invalidate(...args)
 

@@ -16,7 +16,7 @@ You can use a handler to expose what appears to be a static file that is actuall
 ```jsx title='routes/sitemap.xml.js' lineNumbers
 import getOrRefreshSitemap from '../scripts/sitemap.js'
 
-export async function get(req) {
+export async function get(req, ctx) {
   const sitemap = await getOrRefreshSitemap()
   return new Response(sitemap, {
     headers: {
@@ -35,12 +35,12 @@ You can handle multiple HTTP methods to form API routes.
 Supported function names are `get`, `put`, `patch`, `post`, `del` and `options`.
 
 ```jsx title='route/api/users/$id.js' lineNumbers
-export async function get(req) {
+export async function get(req, ctx) {
   const { id } = req.params
-  return await req.db('users').where({ id }).first()
+  return await ctx.db('users').where({ id }).first()
 }
 
-export async function put(req) {
+export async function put(req, ctx) {
   const data = await req.json()
   /* update and return user */
 }
@@ -48,14 +48,14 @@ export async function put(req) {
 
 **IMPORTANT:** Unless your app needs to provide a public API to its users, we recommend building your entire app using [Loaders](/docs/loaders) and [Actions](/docs/actions) instead of API routes due to how efficient they can be.
 
-## Request
+## Request & Context
 
-The [Request](/docs/ref/request) object provided to handlers is a Fetch API [Request](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) that includes some extras such as params and cookies.
+Handlers are provided a Fetch API [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) object with details about the request.
 
-You can decorate your Request object with anything you might need such as your database from the [firebolt.config.js](/docs/ref/config) file.
+They're also given a [Context](/docs/ref/context) object that includes some utilities for managing cookies, route params, and any extras you've provided in your [firebolt.config.js](/docs/ref/config) such as database access.
 
 ## Response
 
-If a handler returns json, Firebolt will automatically generate a Response with the correct 'Content-Type' headers.
+Handlers can return any valid JSON and Firebolt will automatically respond with a `Content-Type: application/json` header and `200` status.
 
-For more fine grained control, you can return a Fetch API [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response) instance, giving you full control over response type and headers.
+For more fine grained control, you can return a Fetch API [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response) instance, allowing you to set different headers, statuses and body types.

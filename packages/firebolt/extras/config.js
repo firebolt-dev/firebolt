@@ -14,6 +14,8 @@ if (
 
 if (!config.req) config.req = {}
 
+if (!config.middleware) config.middleware = []
+
 if (!config.mdx) config.mdx = {}
 if (!config.mdx.remarkPlugins) config.mdx.remarkPlugins = []
 if (!config.mdx.rehypePlugins) config.mdx.rehypePlugins = []

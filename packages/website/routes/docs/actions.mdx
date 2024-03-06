@@ -5,39 +5,37 @@
 
 # Actions
 
-Actions allow you to securely handle responses to user input directly inside your components.
+Actions allow you to run secure code on the server, directly inside your components.
 
-```jsx title='components/Subscribe.js' lineNumbers
+```jsx title='components/LikeButton.js' lineNumbers
 import { useAction } from 'firebolt'
 
-export function Subscribe() {
-  const exec = useAction(subscribe)
-  const submit = async form => {
-    const email = form.get('email')
-    await exec(email)
-    console.log('Subscribed!')
-  }
+export function LikeButton({ postId, isLiked }) {
+  const action = useAction(toggleLike, postId)
   return (
-    <form action={submit}>
-      <input name='email' />
-      <button type='submit'>Subscribe</button>
-    </form>
+    <div onClick={action}>
+      <span>{isLiked ? 'Unlike' : 'Like'}</span>
+    </div>
   )
 }
 
-export async function subscribe(req, email) {
-  await req.db('subscribers').insert({
-    id: req.uuid(),
-    email,
-  })
+export async function toggleLike(ctx, postId) {
+  const user = await ctx.getAuth()
+  const data = {
+    id: ctx.uuid(),
+    userId: user.id,
+    postId,
+  }
+  await ctx.db('likes').insert(data)
+  ctx.invalidate('#posts')
 }
 ```
 
-The action function always runs on the server and is completely removed from all client code.
+In this example, clicking the like button runs the `toggleLike` function on the server and then refreshes all data with the `#posts` tag in the background.
 
-## Requests & Cookies
+## Context & Cookies
 
-Action functions are provided a [Request](/docs/ref/request) object that allows you to read/write cookies and perform redirects.
-You can decorate the Request object with access your database etc in your [firebolt.config.js](/docs/ref/config).
+Action functions are provided a [Context](/docs/ref/context) object that allows you to interact with cookies and perform redirects.
+You can decorate the `context` object with anything you need, such as database access in your [firebolt.config.js](/docs/ref/config).
 
 In addition to this, when modifying a cookie on the server, all client components [observing that cookie](/docs/ref/useCookie) will update instantly.

@@ -5,9 +5,9 @@
 
 # useLoader
 
-The `useLoader` hook allows you to fetch data from a Loader function, which is simply any function that you write alongside your components.
+The `useLoader` hook allows you to fetch data from a Loader function which can be written alongside your components.
 
-Loader functions have access to server-only resources that you provide (such as databases) and their code is never exposed to the browser.
+Loader functions are run on the server and have access to secure resources such as your database. Their code is never exposed to the browser.
 
 ```jsx title='components/Profile.js' lineNumbers
 import { useLoader } from 'firebolt'
@@ -22,8 +22,8 @@ export function Profile({ id }) {
   )
 }
 
-export async function getUser(req, id) {
-  return await req.db('users').where({ id }).first()
+export async function getUser(ctx, id) {
+  return await ctx.db('users').where({ id }).first()
 }
 ```
 
@@ -31,9 +31,9 @@ The component above loads data for a user using the `getUser` function and then 
 
 ## useLoader(loaderFn, ...args)
 
-The first argument must be your Loader function.
+The first argument must be a reference to your Loader function.
 
-Any additional arguments will be passed to the loader function. These arguments are also used to construct a cache key for the data that the function returns and allows you to invalidate or update data in the [cache](/docs/ref/useCache) manually.
+Additional arguments are passed to the loader function. These arguments are also used to construct a cache key for the data that the function returns and allows you to invalidate or update data in the [cache](/docs/ref/useCache) manually.
 
 The `useLoader` hook returns a loader instance specific to the data being loaded. Loaders are de-duplicated so if your app tries to fetch the same thing in multiple parts of your app it will only be fetched once.
 
@@ -41,8 +41,8 @@ The `useLoader` hook returns a loader instance specific to the data being loaded
 
 The loader function must be exported from the same file or alternatively imported from somewhere else.
 
-The function is provided a [Request](/docs/ref/request) object as its first argument. The Request object has methods to access cookies, redirects, and set data expiration.
-You can decorate this object with access to a database or anything else in your [firebolt.config.js](/docs/ref/config) file.
+The function is provided a [Context](/docs/ref/context) object as its first argument. The Context object has methods to access cookies, redirects, and set data expiration.
+You can also decorate this object with access to a database or anything else in your [firebolt.config.js](/docs/ref/config) file.
 
 Additional arguments from the `useLoader` function are passed as additional arguments to your loader function.
 
@@ -62,9 +62,9 @@ Calling `invalidate()` will mark loader data in the cache as stale.
 
 If any components are observing this data it will be refetched in the background and automatically updated without triggering Suspense boundaries.
 
-If no components are observing the data then the data is evicted immediately, causing the next read to trigger Suspense boundaries as if the data was never there to begin with.
+If no components are observing the data then the data is evicted, causing the next read to trigger Suspense boundaries as if the data was never there to begin with.
 
-**Note:** data can also become invalidated if you use the `expire` method on the [Request](/docs/ref/request) object passed into your loader function.
+**Note:** data can also become invalidated if you mark it to `expire` after a certain amount of time. See the [Context](/docs/ref/context) object that is passed into your loader function.
 
 ## loader.set(newData)
 

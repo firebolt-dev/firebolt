@@ -566,27 +566,11 @@ export async function compile(opts) {
       app.use(compression())
       app.use(express.json())
       app.use(cookieParser())
-      app.use(async (req, res, next) => {
-        res.setHeader('X-Powered-By', 'Firebolt')
-        if (!prod) await runProgress.wait() // during development pause requests while builds are in progress
-        next()
-      })
-      app.use('/_firebolt', express.static('.firebolt/public'))
-      app.post('/_firebolt_fn', async (req, res) => {
-        // todo: try/catch
-        controller.handleFunction(req, res)
-      })
       app.use('*', async (req, res) => {
         try {
-          await controller.handleRequest(req, res)
+          await controller.handle(req, res, prod ? runProgress.wait : null)
         } catch (err) {
           console.error(err)
-          // console.log('controller.handleRequest catch')
-          // if (err instanceof controller.Request) {
-          //   logCodeError(parseServerError(err, appDir))
-          // } else {
-          //   console.error(err)
-          // }
         }
       })
       port = controller.config.port

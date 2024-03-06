@@ -192,10 +192,10 @@ export function useLoader(id, ...args) {
   return loader
 }
 
-export function useAction(id) {
+export function useAction(id, ...primedArgs) {
   const runtime = useRuntime()
   const action = runtime.getAction(id)
-  return action
+  return (...args) => action(...primedArgs, ...args)
 }
 
 export function useCache() {

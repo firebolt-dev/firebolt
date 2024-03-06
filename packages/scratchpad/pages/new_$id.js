@@ -61,8 +61,8 @@ function Item({ id }) {
   )
 }
 
-export async function getItem(req, id) {
-  let item = await req.db('items').where({ id }).first()
+export async function getItem(ctx, id) {
+  let item = await ctx.db('items').where({ id }).first()
   if (!item) {
     item = {
       id,
@@ -70,18 +70,18 @@ export async function getItem(req, id) {
       desc: `Desc ${id}`,
       version: 0,
     }
-    await req.db('items').insert(item)
+    await ctx.db('items').insert(item)
   }
   return item
 }
 
-export async function updateItem(req, data) {
+export async function updateItem(ctx, data) {
   const { id } = data
-  const item = await req.db('items').where({ id }).first()
+  const item = await ctx.db('items').where({ id }).first()
   item.name = data.name
   item.desc = data.desc
   item.version++
-  await req.db('items').where({ id }).update(item)
+  await ctx.db('items').where({ id }).update(item)
   return item
 }
 

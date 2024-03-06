@@ -119,7 +119,7 @@ export function createRuntime(stack) {
     return loadPage(page)
   }
 
-  async function callFunction(id, args) {
+  async function callFunction(type, id, args) {
     let result
     const res = await fetch('/_firebolt_fn', {
       method: 'POST',
@@ -127,8 +127,9 @@ export function createRuntime(stack) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        type,
         id,
-        args, // todo: rename fnArgs
+        args,
       }),
     })
     result = await res.json()
@@ -136,10 +137,10 @@ export function createRuntime(stack) {
   }
 
   function applyRedirect(redirect) {
-    if (redirect.type === 'push') {
+    if (redirect.mode === 'push') {
       history.pushState(null, '', redirect.url)
     }
-    if (redirect.type === 'replace') {
+    if (redirect.mode === 'replace') {
       history.replaceState(null, '', redirect.url)
     }
   }
@@ -178,14 +179,14 @@ export function createRuntime(stack) {
       async fetch() {
         let result
         if (ssr) {
-          result = await ssr.callFunction(id, args)
+          result = await ssr.callFunction('loader', id, args)
           ssr.inserts.write(`
             <script>
               globalThis.$firebolt('setLoaderData', '${key}', ${JSON.stringify(result)})
             </script>
           `)
         } else {
-          result = await callFunction(id, args)
+          result = await callFunction('loader', id, args)
         }
         invalidateCookies(result.cookies)
         return result
@@ -315,9 +316,9 @@ export function createRuntime(stack) {
 
       let promise
       if (ssr) {
-        promise = ssr.callFunction(id, args)
+        promise = ssr.callFunction('action', id, args)
       } else {
-        promise = callFunction(id, args)
+        promise = callFunction('action', id, args)
       }
       return promise.then(data => {
         invalidateCookies(data.cookies)

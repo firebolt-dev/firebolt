@@ -39,23 +39,23 @@ export default function config() {
 }
 ```
 
-## Request
+## Context
 
-You can decorate the [Request](/docs/ref/request) object that is passed to all [Loader](/docs/loaders), [Action](/docs/actions) and [handler.js](/docs/ref/handler.js) functions
+You can decorate the [Context](/docs/ref/context) object that is passed to middleware, [loaders](/docs/loaders), [actions](/docs/actions) and [handlers](/docs/ref/handler.js)
 
 ```jsx title='firebolt.config.js' lineNumbers
 import db from './db'
 
 export default function config() {
   return {
-    request: {
+    context: {
       db,
     },
   }
 }
 ```
 
-In this example, all Request objects will be provided a `req.db` value
+In this example, all Context objects will be provided a `ctx.db` value
 
 ## MDX Plugins
 
@@ -106,3 +106,32 @@ export default function config() {
 ```
 
 Learn more about environment variables on the [.env](/docs/ref/env) page.
+
+## Middleware
+
+Use middleware to intercept requests and handle them as needed
+
+```jsx title='firebolt.config.js' lineNumbers
+export default function config() {
+  return {
+    middleware: [
+      (req, ctx) => {
+        // example middleware that tags all requests with an ID
+        ctx.headers['X-Request-ID'] = ctx.uuid()
+      },
+      (req, ctx) => {
+        // example middleware that intercepts /foobars and returns some text
+        if (req.pathname === '/foobars') {
+          return new Response('foo-bars', {
+            headers: {
+              'Content-Type': 'text/plain',
+            },
+          })
+        }
+      },
+    ],
+  }
+}
+```
+
+The `req` is a Fetch API [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) and `ctx` is a [Context](/docs/ref/context) object that provides access to cookies, headers and custom context values such as your database.

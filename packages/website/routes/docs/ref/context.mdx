@@ -3,9 +3,11 @@
   description='API Reference for the Request object in Firebolt.'
 />
 
-# Request
+# Context
 
-[Loaders](/docs/ref/useLoader), [Actions](/docs/ref/useAction) and [handlers](/docs/ref/handler-js) all receive a `Request` object that provides useful utilities including custom properties that you define (such as database access) in your [firebolt.config.js](/docs/ref/config).
+The Context object is used to provide extra information and utilities to middleware, [loaders](/doc/ref/useLoader), [actions](/docs/ref/useAction) and [handlers](/docs/ref/handler-js).
+
+Along with the fields below, you can also inject your own with the `context` prop in your [firebolt.config.js](/docs/ref/config). This can be used to provide database access, auth utilities etc.
 
 ## cookies.get(key)
 
@@ -40,9 +42,9 @@ By default data fetched from a Loader is cached indefinitely. Use this to set th
 When data expires it becomes invalidated. Any components still observing the data it will be refetched in the background and automatically updated without triggering Suspense boundaries. If no components are observing the data then the data is evicted, causing the next read to trigger Suspense boundaries as if the data was never there to begin with.
 
 ```jsx
-export async function getTickets(req) {
-  const tickets = await req.db('tickets')
-  req.expire(60) // data will become invalidated after 60 seconds
+export async function getTickets(ctx) {
+  const tickets = await ctx.db('tickets')
+  ctx.expire(60) // data will become invalidated after 60 seconds
   return tickets
 }
 ```
@@ -60,17 +62,25 @@ _Restricted to: Actions, Loaders_
 Throws a redirect that will navigate the user to another page. The `type` argument can be `push` (default) or `replace`.
 
 ```jsx
-req.redirect('/login')
+ctx.redirect('/login')
 ```
 
-## error(data)
+## error(code)
 
-_Restricted to: Loaders_
+_Restricted to: Actions, Loaders_
 
-Throws an error that can be caught by an [\<ErrorBoundary\>](/docs/ref/error-boundary), decorating the error with an optional `data` prop that can be used to provide more context about operational errors.
+Throws an operational error that can be caught by an [\<ErrorBoundary\>](/docs/ref/error-boundary), decorating the error with an optional `code` prop that can be used to provide more context about operational errors.
 
 ## params
 
-_Restricted to: API Routes_
+_Restricted to: Handlers_
 
-An object that includes search params and dynamic route segments.
+An object that includes search params and dynamic route segments for the current route.
+
+## headers
+
+_Restricted to: Middleware_
+
+Allows you to append or modify headers in middleware. The object is shared across all middleware and headers are appended to the final response that is sent.
+
+This can be useful to enable CORS or tag requests ID's etc

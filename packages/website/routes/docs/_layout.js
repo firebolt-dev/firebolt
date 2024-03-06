@@ -145,7 +145,7 @@ export default function DocsLayout({ children }) {
             <NavLink label='useCache' href='/docs/ref/useCache' />
             <NavLink label='<Link>' href='/docs/ref/link' />
             <NavLink label='<ErrorBoundary>' href='/docs/ref/error-boundary' />
-            <NavLink label='Request' href='/docs/ref/request' />
+            <NavLink label='Context' href='/docs/ref/context' />
             <NavLink label='css' href='/docs/ref/css' />
             <NavLink label='cls' href='/docs/ref/cls' />
 

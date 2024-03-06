@@ -36,18 +36,18 @@ export function Content() {
   )
 }
 
-export async function getTitle(req) {
-  // const header = req.headers.get('Foobars')
-  // req.expire(5, 'days')
-  // req.cookies.get('foo')
-  // req.cookies.set('foo', bar)
-  // req.error('Yeah nah its wrong') // throws to boundary
+export async function getTitle(ctx) {
+  // const header = ctx.headers.get('Foobars')
+  // ctx.expire(5, 'days')
+  // ctx.cookies.get('foo')
+  // ctx.cookies.set('foo', bar)
+  // ctx.error('Yeah nah its wrong') // throws to boundary
   await new Promise(resolve => setTimeout(resolve, 1000))
-  // req.redirect('/about')
-  req.expire(5)
-  console.log('loader cookie get foo', req.cookies.get('foo'))
-  const foo = { id: req.uuid() }
+  // ctx.redirect('/about')
+  ctx.expire(5)
+  console.log('loader cookie get foo', ctx.cookies.get('foo'))
+  const foo = { id: ctx.uuid() }
   console.log('loader cookie set foo', foo)
-  req.cookies.set('foo', foo)
+  ctx.cookies.set('foo', foo)
   return 'HEYOO' + Math.random()
 }

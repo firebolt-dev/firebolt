@@ -50,10 +50,10 @@ export function Profile() {
   )
 }
 
-export async function getProfile(req) {
-  const token = req.cookies.get('auth')
-  const id = req.auth(token)
-  return await req.db('users').where({ id }).first()
+export async function getProfile(ctx) {
+  const token = ctx.cookies.get('auth')
+  const id = ctx.auth(token)
+  return await ctx.db('users').where({ id }).first()
 }
 ```
 

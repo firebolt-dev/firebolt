@@ -5,7 +5,7 @@
 
 # Loaders
 
-Loaders let you fetch data securely from a database or anywhere else, directly inside your pages and components.
+Loaders let you fetch data securely from a database or anywhere else, directly inside any component.
 
 ```jsx title='components/City.js' lineNumbers
 import { useLoader } from 'firebolt'
@@ -20,8 +20,8 @@ export function City({ id }) {
   )
 }
 
-export async function getCity(req, id) {
-  return await req.db('cities').where({ id }).first()
+export async function getCity(ctx, id) {
+  return await ctx.db('cities').where({ id }).first()
 }
 ```
 
@@ -33,9 +33,9 @@ Loaders simplify the way you build apps:
 - Secure code is stripped completely from all client bundles.
 - Forget about writing API endpoints completely (unless you [need them](/docs/ref/handler-js))
 
-## Requests & Invalidation
+## Context & Invalidation
 
-All loader functions are called with a [Request](/docs/ref/request) object that allows you to read/write cookies, perform redirects and set an expiration date on the data returned.
-You can decorate the Request object with access your database etc in your [firebolt.config.js](/docs/ref/config).
+All loader functions are called with a [Context](/docs/ref/context) object that allows you to read/write cookies, perform redirects and set an expiration date on the data returned.
+You can also decorate the context object with access to a database etc in your [firebolt.config.js](/docs/ref/config).
 
-If you set data to expire or manually invalidate data it will be refetched in the background and seamelessly update the UI. Learn more on the [useLoader](/docs/ref/useLoader) and [useCache](/docs/ref/useCache) pages.
+If you set data to expire or manually invalidate data, it will be refetched in the background and seamelessly update the UI. Learn more on the [useLoader](/docs/ref/useLoader) and [useCache](/docs/ref/useCache) pages.

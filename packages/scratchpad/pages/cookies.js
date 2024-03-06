@@ -28,14 +28,14 @@ export function Content() {
   )
 }
 
-export async function toggle(req) {
-  const on = req.cookies.get('on')
-  req.cookies.set('on', !on)
+export async function toggle(ctx) {
+  const on = ctx.cookies.get('on')
+  ctx.cookies.set('on', !on)
   console.log('on set to', !on)
 }
 
-export async function getBoop(req) {
+export async function getBoop(ctx) {
   const date = new Date().getTime()
-  req.cookies.set('lastFetched', date)
+  ctx.cookies.set('lastFetched', date)
   return Math.random()
 }

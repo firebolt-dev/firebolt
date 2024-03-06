@@ -8,34 +8,41 @@
 The `useAction` hook allows you to fetch data from an Action function written alongside any component. Action functions have access to server-only resources such as databases that you provide and their code is never exposed to the browser.
 
 ```jsx title='components/LikeButton.js' lineNumbers
-import { useState } from 'react'
-import { useAction } from 'firebolt'
+import { useLoader, useAction } from 'firebolt'
 
 export function LikeButton({ postId }) {
-  const [liked, setLiked] = useState(false)
-  const exec = useAction(markLiked)
-  const like = async () => {
-    await exec(postId)
-    setLiked(true)
-  }
+  const liked = useLoader(getLiked, postId).read()
+  const like = useAction(createLike, postId)
+  const unlike = useAction(deleteLike, postId)
   return (
-    <div>
-      {!liked && <div onClick={like}>Like</div>}
-      {liked && <div>You liked this post</div>}
+    <div onClick={liked ? unlike : like}>
+      <div>{liked ? 'Unlike' : 'Like'}</div>
     </div>
   )
 }
 
-export async function markLiked(req, postId) {
-  await req.db('likes').insert({ postId })
+export async function getLiked(ctx, postId) {
+  const { id: userId } = await ctx.getUser()
+  const like = await ctx.db('likes').where({ userId, postId }).first()
+  return !!like
+}
+
+export async function createLike(ctx, postId) {
+  const { id: userId } = await ctx.getUser()
+  await ctx.db('likes').insert({ userId, postId })
+}
+
+export async function deleteLike(ctx, postId) {
+  const { id: userId } = await ctx.getUser()
+  await ctx.db('likes').where({ userId, postId }).delete()
 }
 ```
 
-The component above renders a Like button that when clicked, inserts data into the database and updates the UI.
+## useAction(actionFn, ...args)
 
-## useAction(actionFn)
+The first argument must be a reference to your Action function.
 
-The first argument must be your Action function.
+You can prime the action with additional arguments here, or alternatively you can pass them in when you execute the function.
 
 Returns a function that executes the action when called.
 
@@ -43,7 +50,7 @@ Returns a function that executes the action when called.
 
 The action function must be exported from the same file or imported from another file.
 
-The function is provided a [Request](/docs/ref/request) object as its first argument. The Request object has methods to access cookies and perform redirects.
+The function is provided a [Context](/docs/ref/context) object as its first argument. The Context object has methods to access cookies and perform redirects.
 You can decorate this object with access to a database or anything else in your [firebolt.config.js](/docs/ref/config) file.
 
 Additional arguments from the action execution function are passed as additional arguments to your action function.
@@ -51,5 +58,21 @@ Additional arguments from the action execution function are passed as additional
 ## exec(...args)
 
 Calls your Action function with the provided arguments. Firebolt seamlessly handles calling your Action function on the server behind the scenes.
+
+In regards to action arguments, you can either prime them like this:
+
+```jsx
+const action = useAction(getUser, userId)
+// ...
+const user = await action()
+```
+
+Or provide them when calling it
+
+```jsx
+const action = useAction(getUser)
+// ...
+const user = await action(userId)
+```
 
 Returns a promise that resolves with the return value of the Action function.

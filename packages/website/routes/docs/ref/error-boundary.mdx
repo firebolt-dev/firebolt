@@ -5,7 +5,8 @@
 
 # \<ErrorBoundary\>
 
-The `<ErrorBoundary>` component captures errors thrown during rendering, including errors in [Loader](/docs/loaders) functions, and allows you to handle them gracefully with custom error UI. It also works seamlessly with server side rendering and when using loaders on the client.
+The `<ErrorBoundary>` component captures errors thrown during rendering, including errors in [Loader](/docs/loaders) functions, and allows you to handle them gracefully with custom error UI.
+It also works seamlessly with server side streaming and when using loaders on the client.
 
 ```jsx title='routes/trains/$id.js' lineNumbers
 import { ErrorBoundary, useRoute, useLoader } from 'firebolt'
@@ -22,7 +23,7 @@ export default function Train() {
 
 function TrainContent() {
   const { id } = useRoute().params
-  const loader = useLoader(fetchTrain, id)
+  const loader = useLoader(getTrain, id)
   const train = loader.read()
   return (
     <div>
@@ -32,23 +33,30 @@ function TrainContent() {
   )
 }
 
-function TrainError({ data }) {
+function TrainError({ code, id }) {
   return (
     <div>
-      <div>Error fetching train: {data?.reason || 'unknown'}</div>
+      <div>Error fetching train</div>
+      <div>Code: {code}</div>
+      <div>ID: {id}</div>
     </div>
   )
 }
 
-export async function fetchTrain(req, id) {
-  const train = await req.db('cars').where({ id }).first()
-  if (!train) req.error({ reason: 'not found!' })
+export async function getTrain(ctx, id) {
+  const train = await ctx.db('cars').where({ id }).first()
+
+  // example non-operational error (ctx.foo is undefined)
+  ctx.foo.bar.baz = 'yoohoo'
+
+  // example operational error
+  if (!train) ctx.error('NOT_FOUND')
 }
 ```
 
-It's recommended to use the `req.error(data)` utility method on the [Request](/docs/ref/request) to provide context for operational errors.
+All non-operational errors are logged to stdout on the server with a unique `id`. The Error Boundary fallback receives an `id` prop to help reconcile errors in your logs.
 
-In development you'll receive full non-operational errors but in production this will be replaced with a generic request error for security reasons.
+The [Context](/docs/ref/context) object provides a method to throw an operational error that includes a `code`, allowing you to provide contextual information to users. Operational errors are not logged to stdout.
 
 ## fallback
 
@@ -64,5 +72,5 @@ You can use the `fallback` prop a number of different ways for convenience:
 <ErrorBoundary fallback={<div>Error</div>} />
 
 // with a function
-<ErrorBoundary fallback={err => <div>{err.message}</div>} />
+<ErrorBoundary fallback={err => <div>{err.code}</div>} />
 ```

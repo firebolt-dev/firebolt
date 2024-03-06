@@ -5,19 +5,19 @@
 
 # Cookies
 
-Firebolt makes it easier to work with cookies from anywhere in your app by ensuring they are kept to up to date.
+Firebolt makes it easier to work with cookies by making them reactive from anywhere in your app.
 
-If you modify a cookie on the server or from another component, any other components observing that cookie will update instantly.
+If you modify a cookie on the server or in another component, any other components observing the cookie will instantly update.
 
-```jsx title='components/Auth.js' lineNumbers
+```jsx title='components/AuthWidget.js' lineNumbers
 import { useCookie } from 'firebolt'
 
-export function Auth() {
+export function AuthWidget() {
   const [token, setToken] = useCookie('authToken')
   return token ? <Profile /> : <LoginButton />
 }
 ```
 
-In this example, any changes to the `authToken` cookie (eg login/logout) will switch the auth component between showing the current users profile or showing a login button.
+In this example, any changes to the `authToken` cookie (eg after logging in or out) will toggle the auth widget component between showing the current users profile or showing a login button.
 
-To learn more about cookies, check out the [useCookie](/docs/ref/useCookie) and [Request](/docs/ref/request) docs.
+To learn more about cookies, check out the [useCookie](/docs/ref/useCookie) and [Context](/docs/ref/context) docs.

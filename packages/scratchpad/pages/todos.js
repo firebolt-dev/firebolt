@@ -40,22 +40,22 @@ export function Todos() {
   )
 }
 
-export async function list(req) {
+export async function list(ctx) {
   // await new Promise(resolve => setTimeout(resolve, 1000))
-  // req.redirect('/about')
-  // console.log('get foo cookie', req.cookies.get('foo'))
-  // console.log('get foo2 cookie', req.cookies.get('foo2'))
-  return await req.db('todos')
+  // ctx.redirect('/about')
+  // console.log('get foo cookie', ctx.cookies.get('foo'))
+  // console.log('get foo2 cookie', ctx.cookies.get('foo2'))
+  return await ctx.db('todos')
 }
 
-export async function create(req, text) {
+export async function create(ctx, text) {
   // await new Promise(resolve => setTimeout(resolve, 1000))
   // const chance = Math.random()
   // console.log({ chance })
   // if (chance < 0.5) {
-  //   req.redirect('/about')
+  //   ctx.redirect('/about')
   // }
-  req.cookies.set('foo', 'barrrrr')
-  req.cookies.set('foo2', { blah: 123 })
-  await req.db('todos').insert({ id: req.uuid(), text })
+  ctx.cookies.set('foo', 'barrrrr')
+  ctx.cookies.set('foo2', { blah: 123 })
+  await ctx.db('todos').insert({ id: ctx.uuid(), text })
 }

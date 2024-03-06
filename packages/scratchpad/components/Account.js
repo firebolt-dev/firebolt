@@ -6,8 +6,8 @@ export default function Account() {
   return <div onClick={() => loader.invalidate()}>Name: {account.name}</div>
 }
 
-export async function getAccount(req) {
-  req.expire(1000)
+export async function getAccount(ctx) {
+  ctx.expire(1000)
   await new Promise(resolve => setTimeout(resolve, 1000))
   return { name: 'Jim_' + Math.random() }
 }

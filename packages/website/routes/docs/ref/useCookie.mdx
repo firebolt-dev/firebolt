@@ -15,8 +15,8 @@ The 1st argument to `useCookie` is the cookie `key` and the 2nd argument is an o
 
 Returns an aray with exactly two values:
 
-1. The current value of the cookie
-2. The `set` function that lets you update the value of the cookie.
+- The current value of the cookie
+- The `set` function that lets you update the value of the cookie.
 
 ## set(value|fn, options)
 
@@ -29,7 +29,7 @@ setNumber(n => n + 1)
 
 ## Synchronization
 
-Updating a cookie will also update any other components observing its value. This also works when updating cookies on the server using the [Request](/docs/ref/request) object.
+Updating a cookie will also update any other components observing its value. This also works when updating cookies on the server using the [Context](/docs/ref/context) object.
 
 ## Options
 

@@ -4,9 +4,29 @@ import rehypeShiki from '@shikijs/rehype'
 export default function config() {
   return {
     productionBrowserSourceMaps: true,
-    async middleware(req) {
-      // todo: intercept requests eg icon generator!
+    context: {
+      foo: 'haha',
     },
+    middleware: [
+      // (req, ctx) => {
+      //   console.log('mw1')
+      //   ctx.headers['Foo'] = 'Boooo!'
+      //   // ctx.cookies.set('theme', 'light')
+      // },
+      // (req, ctx) => {
+      //   console.log('middle 1')
+      //   console.log('req', req)
+      //   console.log('ctx', ctx)
+      //   console.log(req.pathname)
+      //   ctx.headers['Bar'] = 'BAHHHH'
+      //   return new Response('HAHA', {
+      //     status: 201,
+      //     headers: {
+      //       'Content-Type': 'text/plain',
+      //     },
+      //   })
+      // },
+    ],
     mdx: {
       remarkPlugins: [remarkGFM],
       rehypePlugins: [
