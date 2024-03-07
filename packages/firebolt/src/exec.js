@@ -77,7 +77,7 @@ export async function exec(opts) {
   }
   let clientEntryPoints = []
 
-  const registry = new Map() // id -> { file, fnName }
+  const registry = new Map() // id -> { file, name }
 
   log.intro()
 
@@ -505,7 +505,7 @@ export async function exec(opts) {
     const getRegistryRelPath = file => path.relative(buildDir, file)
     let registryCode = ''
     registry.forEach(item => {
-      registryCode += `export { ${item.fnName} as ${item.id} } from '${getRegistryRelPath(item.file)}'\n`
+      registryCode += `export { ${item.name} as ${item.id} } from '${getRegistryRelPath(item.file)}'\n`
     })
     await fs.outputFile(buildRegistryFile, registryCode)
 

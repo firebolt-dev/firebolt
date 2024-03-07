@@ -3,6 +3,8 @@ import path from 'path'
 import crypto from 'crypto'
 import { hashString } from './hashString'
 
+const loaderActionRegex = /(useAction|useLoader)/
+
 export function registryPlugin({ registry, appDir }) {
   return {
     name: 'registryPlugin',
@@ -20,14 +22,21 @@ export function registryPlugin({ registry, appDir }) {
           return
         }
 
-        // console.log('---')
-        // console.log(modPath)
-
         // read file contents
         let contents = await fs.readFile(modPath, 'utf8')
 
-        let matches
+        // early exit if no useLoader/useAction hooks
+        if (!loaderActionRegex.test(contents)) {
+          return { contents, loader: 'jsx' }
+        }
+
+        // console.log('---')
+        // console.log(modPath)
+
         const imports = {}
+        const exports = {}
+
+        let matches
 
         // get all named imports
         const namedImportRegex = /import\s+{([^}]+)}\s+from\s+(['"][^'"]+['"])/g
@@ -57,27 +66,92 @@ export function registryPlugin({ registry, appDir }) {
           }
         }
 
+        // get all exports
+        const exportsRegex = /export\s+(async\s+function|function|const)\s+(\w+)/g // prettier-ignore
+        while ((matches = exportsRegex.exec(contents)) !== null) {
+          const name = matches[2].trim()
+          exports[name] = {
+            name,
+            alias: null,
+            file: modPath,
+          }
+        }
+
         // console.log('imports', imports)
+        // console.log('exports', exports)
 
-        // transform useLoader calls
-        contents = await transform({
-          modPath,
-          imports,
-          contents,
-          hook: 'useLoader',
-          registry,
-          appDir,
+        const getId = token => {
+          if (imports[token]) {
+            const name = imports[token].name
+            const alias = imports[token].alias
+            const file = path.resolve(path.dirname(modPath), imports[token].file) // prettier-ignore
+            const relFile = path.relative(appDir, file)
+            const fn = alias || name
+            const id = `f_${hashString(relFile + fn)}`
+            if (registry) {
+              registry.set(id, {
+                id,
+                file,
+                name,
+              })
+            }
+            return id
+            // fnInfo.push({ name, alias, file, id })
+          }
+          if (exports[token]) {
+            const name = token
+            const file = modPath
+            const relFile = path.relative(appDir, file)
+            const fn = name
+            const id = `f_${hashString(relFile + fn)}`
+            if (registry) {
+              registry.set(id, {
+                id,
+                file,
+                name,
+              })
+            }
+            return id
+          }
+        }
+
+        // transform useLoader & useAction calls
+        const hookRegex = /(useLoader|useAction)\(([^,)]+)/g
+        const lines = contents.split('\n')
+        // let inBlockComment = false
+        const result = lines.map(line => {
+          // // track and skip block comments
+          // if (line.includes('/*')) inBlockComment = true
+          // if (line.includes('*/')) {
+          //   inBlockComment = false
+          //   return line
+          // }
+          // // ignore inline comments// Ignore lines that are within block comments or are inline comments
+          // if (inBlockComment || line.trim().startsWith('//')) return line
+          // find and replace hook calls outside comments
+          return line.replace(hookRegex, (match, hook, fnName) => {
+            // match function to import/export id
+            const id = getId(fnName)
+            // ignore if none
+            if (!id) return match
+            // replace with id
+            // console.log('replace', fnName, id)
+            const replacement = `${hook}('${id}'`
+            if (match.trim().endsWith(')')) {
+              return (
+                replacement +
+                match.substring(
+                  match.indexOf(fnName) + fnName.length,
+                  match.length - 1
+                ) +
+                ')'
+              )
+            }
+            return replacement
+          })
         })
 
-        // transform useAction calls
-        contents = await transform({
-          modPath,
-          imports,
-          contents,
-          hook: 'useAction',
-          registry,
-          appDir,
-        })
+        contents = result.join('\n')
 
         // console.log('registry', registry)
 
@@ -86,82 +160,3 @@ export function registryPlugin({ registry, appDir }) {
     },
   }
 }
-
-async function transform({
-  modPath,
-  imports,
-  contents,
-  hook,
-  registry,
-  appDir,
-}) {
-  // check if file uses any of these hook calls
-  const usesHook = contents.includes(`${hook}(`)
-  if (!usesHook) return contents
-
-  // extract all function names used in useLoader/useAction calls
-  const dataRegex = new RegExp(`${hook}\\s*\\(\\s*([^,)]+)`, 'g')
-  let dataMatches
-  const fnNames = []
-  while ((dataMatches = dataRegex.exec(contents)) !== null) {
-    fnNames.push(dataMatches[1].trim())
-  }
-
-  // console.log('fnNames', fnNames)
-
-  // generate info about each function
-  const fnInfo = []
-  for (const fnName of fnNames) {
-    if (imports[fnName]) {
-      const name = imports[fnName].name
-      const alias = imports[fnName].alias
-      const file = path.resolve(path.dirname(modPath), imports[fnName].file) // prettier-ignore
-      const relFile = path.relative(appDir, file)
-      const fn = alias || name
-      const id = `f_${hashString(relFile + fn)}`
-      fnInfo.push({ name, alias, file, id })
-    } else {
-      const name = fnName
-      const alias = null
-      const file = modPath
-      const relFile = path.relative(appDir, file)
-      const fn = name
-      const id = `f_${hashString(relFile + fn)}`
-      fnInfo.push({ name, alias, file, id })
-    }
-  }
-
-  // console.log('fnInfo', fnInfo)
-
-  // replace all the functions used in useLoader/useAction calls with their id string
-  for (const item of fnInfo) {
-    // regex pattern to find the exact function name
-    const fnName = item.alias || item.name
-    const oldFnRegexPattern = `${hook}\\s*\\(\\s*${fnName}\\s*([^,)]*)`
-    const oldFnRegex = new RegExp(oldFnRegexPattern, 'g')
-
-    // replace the old function name with its id string
-    contents = contents.replace(oldFnRegex, `${hook}('${item.id}'$1`)
-  }
-
-  // register id to its file and function name
-  if (registry) {
-    for (const item of fnInfo) {
-      registry.set(item.id, {
-        id: item.id,
-        file: item.file,
-        fnName: item.name,
-      })
-    }
-  }
-
-  return contents
-}
-
-// async function hash(string) {
-//   const strUint8 = new TextEncoder('utf-8').encode(string)
-//   const hashBuffer = await crypto.subtle.digest('SHA-256', strUint8)
-//   const hashArray = Array.from(new Uint8Array(hashBuffer))
-//   const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-//   return hashHex
-// }
