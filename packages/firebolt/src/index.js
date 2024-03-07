@@ -1,6 +1,6 @@
 import { Command } from 'commander'
 
-import { compile } from './compile'
+import { exec } from './exec'
 
 process.title = 'Firebolt'
 
@@ -12,13 +12,13 @@ program
   .version('1.0.0')
 
 program.command('dev').action(() => {
-  compile({ build: true, watch: true, serve: true })
+  exec({ build: true, watch: true, serve: true })
 })
 program.command('build').action(() => {
-  compile({ build: true, production: true })
+  exec({ build: true, production: true })
 })
 program.command('start').action(() => {
-  compile({ serve: true })
+  exec({ serve: true })
 })
 
 program.parse()

@@ -34,7 +34,7 @@ import { Pending } from './utils/Pending'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-export async function compile(opts) {
+export async function exec(opts) {
   const prod = !!opts.production
   const env = prod ? 'production' : 'development'
 
