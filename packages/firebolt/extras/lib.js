@@ -131,7 +131,15 @@ export function Router() {
       const exec = async () => {
         const route = runtime.resolveRoute(browserUrl)
         if (!route.page.content) {
-          await runtime.loadPage(route.page)
+          try {
+            await runtime.loadPage(route.page)
+          } catch (err) {
+            // if loadPage fails to import a page module
+            // its likely that there is a new build/version of that page.
+            // in this case, we do a full page redirect to the new url.
+            window.location.href = browserUrl
+            return
+          }
         }
         if (cancelled) return
         setPreviousRoute(currentRoute)
