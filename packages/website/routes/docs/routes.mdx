@@ -38,12 +38,12 @@ This gives you full control over all of your content and can be useful for many 
 You can use the same mechanism to create API endpoints, eg `GET /api/users`:
 
 ```jsx title='routes/api/users.js' lineNumbers
-export function get(req) {
-  return await req.db('users')
+export function get(req, ctx) {
+  return await ctx.db('users')
 }
 ```
 
-As you'll see later on, you _probably_ won't even need to bother building an API unless your product requires one.
+As you'll see later on, unless your app explicitly needs to provide an API to its users, you won't even need these.
 
 ## Pages
 
