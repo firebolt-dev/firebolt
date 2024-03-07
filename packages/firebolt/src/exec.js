@@ -50,6 +50,8 @@ export async function exec(opts) {
   const buildConfigFile = path.join(appDir, '.firebolt/config.js')
   const buildManifestFile = path.join(appDir, '.firebolt/manifest.json')
   const buildLibFile = path.join(appDir, '.firebolt/lib.js')
+  const buildIconsNodeFile = path.join(appDir, '.firebolt/icons/node.js')
+  const buildIconsBrowserFile = path.join(appDir, '.firebolt/icons/browser.js')
   const buildBoostrapFile = path.join(appDir, '.firebolt/bootstrap.js')
   const buildRegistryFile = path.join(appDir, '.firebolt/registry.js')
   const buildControllerFile = path.join(appDir, '.firebolt/controller.js')
@@ -112,6 +114,9 @@ export async function exec(opts) {
         logLevel: 'silent',
         define: {
           'process.env.NODE_ENV': JSON.stringify(env),
+        },
+        alias: {
+          'firebolt/icons': buildIconsNodeFile,
         },
         loader: {
           '.js': 'jsx',
@@ -310,6 +315,7 @@ export async function exec(opts) {
         logLevel: 'silent',
         alias: {
           firebolt: buildLibFile,
+          'firebolt/icons': buildIconsNodeFile,
         },
         define: {
           'process.env.NODE_ENV': JSON.stringify(env),
@@ -437,6 +443,7 @@ export async function exec(opts) {
         logLevel: 'silent',
         alias: {
           firebolt: buildLibFile,
+          'firebolt/icons': buildIconsBrowserFile,
         },
         define: {
           'process.env.NODE_ENV': JSON.stringify(env),
@@ -525,6 +532,7 @@ export async function exec(opts) {
         logLevel: 'silent',
         alias: {
           firebolt: buildLibFile,
+          'firebolt/icons': buildIconsNodeFile,
         },
         define: {
           'process.env.NODE_ENV': JSON.stringify(env),

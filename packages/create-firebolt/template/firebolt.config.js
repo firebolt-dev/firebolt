@@ -1,5 +1,3 @@
-export default function config() {
-  return {
-    // your config here
-  }
+export const config = {
+  // your config here
 }

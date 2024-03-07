@@ -1,4 +1,4 @@
-import { Icons } from '@firebolt-dev/icons'
+import { Icons } from 'firebolt/icons'
 
 import { GlobalStyles } from '@/components/GlobalStyles'
 

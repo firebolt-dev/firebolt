@@ -54,7 +54,7 @@ const items = [
   },
 ]
 
-export const iconsSetup = async () => {
+async function setup() {
   const exists = await fs.exists(svg)
   if (!exists) throw new Error('[icon] svg icon not found')
   await fs.ensureDir(outputDir)
@@ -77,7 +77,7 @@ export const iconsSetup = async () => {
   }
 }
 
-export const iconsMiddleware = (req, ctx) => {
+function middleware(req, ctx) {
   for (const item of items) {
     if (req.pathname === item.pathname) {
       const stream = fs.createReadStream(item.file)
@@ -87,6 +87,20 @@ export const iconsMiddleware = (req, ctx) => {
           'Content-Type': item.mime,
         },
       })
+    }
+  }
+}
+
+export default function icons() {
+  return config => {
+    const ogSetup = config.setup
+    return {
+      ...config,
+      async setup() {
+        await ogSetup()
+        await setup()
+      },
+      middleware: [...config.middleware, middleware],
     }
   }
 }
