@@ -30,6 +30,7 @@ import { registryPlugin } from './utils/registryPlugin'
 import { zombieImportPlugin } from './utils/zombieImportPlugin'
 import { virtualModule } from './utils/virtualModule'
 import { Pending } from './utils/Pending'
+import { hashString } from './utils/hashString'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -164,9 +165,10 @@ export async function exec(opts) {
     const routes = []
     for (const file of routeFiles) {
       const route = {}
-      route.id = `route${++routeIds}`
+      const fileBase = path.relative(appRoutesDir, file)
+      route.id = `r${hashString(fileBase)}` // enforce 'r' prefix as numbers cant be used as export names
       route.file = file
-      route.fileBase = path.relative(appRoutesDir, file)
+      route.fileBase = fileBase
       route.fileBaseNoExt = route.fileBase.split('.').slice(0, -1).join('.')
       route.fileExt = route.fileBase.split('.').pop()
       // figure out route type
