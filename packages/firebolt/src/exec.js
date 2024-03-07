@@ -166,7 +166,7 @@ export async function exec(opts) {
     for (const file of routeFiles) {
       const route = {}
       const fileBase = path.relative(appRoutesDir, file)
-      route.id = `r${hashString(fileBase)}` // enforce 'r' prefix as numbers cant be used as export names
+      route.id = `r_${hashString(fileBase)}` // enforce 'r' prefix as numbers cant be used as export names
       route.file = file
       route.fileBase = fileBase
       route.fileBaseNoExt = route.fileBase.split('.').slice(0, -1).join('.')
@@ -450,7 +450,7 @@ export async function exec(opts) {
         plugins: [
           // mdxPlugin,
           virtualModule(mdxCache),
-          registryPlugin({ registry }),
+          registryPlugin({ registry, appDir }),
           // polyfill fs, path etc for browser environment
           // polyfillNode({}),
           // ensure pages are marked side-effect free for tree shaking
@@ -537,7 +537,7 @@ export async function exec(opts) {
         jsxImportSource: '@firebolt-dev/jsx',
         plugins: [
           mdxPlugin,
-          registryPlugin({ registry: null }), // dont write to registry, we already have it from the client bundles
+          registryPlugin({ registry: null, appDir }), // dont write to registry, we already have it from the client bundles
         ],
       })
     }

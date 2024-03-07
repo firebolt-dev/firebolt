@@ -1,8 +1,9 @@
 import fs from 'fs-extra'
 import path from 'path'
 import crypto from 'crypto'
+import { hashString } from './hashString'
 
-export function registryPlugin({ registry }) {
+export function registryPlugin({ registry, appDir }) {
   return {
     name: 'registryPlugin',
     setup(build) {
@@ -65,6 +66,7 @@ export function registryPlugin({ registry }) {
           contents,
           hook: 'useLoader',
           registry,
+          appDir,
         })
 
         // transform useAction calls
@@ -74,6 +76,7 @@ export function registryPlugin({ registry }) {
           contents,
           hook: 'useAction',
           registry,
+          appDir,
         })
 
         // console.log('registry', registry)
@@ -84,7 +87,14 @@ export function registryPlugin({ registry }) {
   }
 }
 
-async function transform({ modPath, imports, contents, hook, registry }) {
+async function transform({
+  modPath,
+  imports,
+  contents,
+  hook,
+  registry,
+  appDir,
+}) {
   // check if file uses any of these hook calls
   const usesHook = contents.includes(`${hook}(`)
   if (!usesHook) return contents
@@ -106,15 +116,17 @@ async function transform({ modPath, imports, contents, hook, registry }) {
       const name = imports[fnName].name
       const alias = imports[fnName].alias
       const file = path.resolve(path.dirname(modPath), imports[fnName].file) // prettier-ignore
-      const fullPath = `${file}${alias || name}`
-      const id = 'f' + crypto.createHash('sha256').update(fullPath).digest('hex') // prettier-ignore
+      const relFile = path.relative(appDir, file)
+      const fn = alias || name
+      const id = `f_${hashString(relFile + fn)}`
       fnInfo.push({ name, alias, file, id })
     } else {
       const name = fnName
       const alias = null
       const file = modPath
-      const fullPath = `${file}${name}`
-      const id = 'f' + crypto.createHash('sha256').update(fullPath).digest('hex') // prettier-ignore
+      const relFile = path.relative(appDir, file)
+      const fn = name
+      const id = `f_${hashString(relFile + fn)}`
       fnInfo.push({ name, alias, file, id })
     }
   }
