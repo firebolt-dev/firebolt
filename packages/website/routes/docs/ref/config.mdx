@@ -8,10 +8,8 @@
 The Firebolt config file allows you to configure how your app runs.
 
 ```jsx title='firebolt.config.js' lineNumbers
-export default function config() {
-  return {
-    // your config here
-  }
+export const config = {
+  // your config here
 }
 ```
 
@@ -20,10 +18,8 @@ export default function config() {
 By default your app will attempt to use the `PORT` environment variable, otherwise it will use the port in your config file which defaults to `3000`.
 
 ```jsx title='firebolt.config.js' lineNumbers
-export default function config() {
-  return {
-    port: 4000,
-  }
+export const config = {
+  port: 4000,
 }
 ```
 
@@ -32,10 +28,8 @@ export default function config() {
 Production builds don't include source maps in client bundles by default, but you can enable them with this setting if needed:
 
 ```jsx title='firebolt.config.js' lineNumbers
-export default function config() {
-  return {
-    productionBrowserSourceMaps: true,
-  }
+export const config = {
+  productionBrowserSourceMaps: true,
 }
 ```
 
@@ -46,12 +40,10 @@ You can decorate the [Context](/docs/ref/context) object that is passed to middl
 ```jsx title='firebolt.config.js' lineNumbers
 import db from './db'
 
-export default function config() {
-  return {
-    context: {
-      db,
-    },
-  }
+export const config = {
+  context: {
+    db,
+  },
 }
 ```
 
@@ -65,13 +57,11 @@ Firebolt uses [MDX](https://mdxjs.com/) and you can configure plugins for it her
 import remarkGFM from 'remark-gfm'
 import rehypeShiki from '@shikijs/rehype'
 
-export default function config() {
-  return {
-    mdx: {
-      remarkPlugins: [remarkGFM],
-      rehypePlugins: [rehypeShiki],
-    },
-  }
+export const config = {
+  mdx: {
+    remarkPlugins: [remarkGFM],
+    rehypePlugins: [rehypeShiki],
+  },
 }
 ```
 
@@ -82,12 +72,10 @@ By default, if you don't provide options when setting cookies they will expire a
 It can be useful to set your cookie defaults globally so that you don't have to provide options repeatedly throughout your app.
 
 ```jsx title='firebolt.config.js' lineNumbers
-export default function config() {
-  return {
-    cookie: {
-      expires: 30, // expire in 30 days
-    },
-  }
+export const config = {
+  cookie: {
+    expires: 30, // expire in 30 days
+  },
 }
 ```
 
@@ -98,40 +86,64 @@ See [useCookie](/docs/ref/useCookie) for all available options.
 By default any environment variables with the `PUBLIC_` prefix will be available on the client. You can change this prefix if needed.
 
 ```jsx title='firebolt.config.js' lineNumbers
-export default function config() {
-  return {
-    publicEnvPrefix: 'ANOTHER_PREFIX_',
-  }
+export const config = {
+  publicEnvPrefix: 'ANOTHER_PREFIX_',
 }
 ```
 
 Learn more about environment variables on the [.env](/docs/ref/env) page.
+
+## Setup
+
+The setup function is run once when your app starts. You can use this (or plugins can) to do things such as generating sitemaps and icons.
+
+```jsx title='firebolt.config.js' lineNumbers
+export const config = {
+  async setup() {
+    // generate icons/sitemaps etc
+  },
+}
+```
 
 ## Middleware
 
 Use middleware to intercept requests and handle them as needed
 
 ```jsx title='firebolt.config.js' lineNumbers
-export default function config() {
-  return {
-    middleware: [
-      (req, ctx) => {
-        // example middleware that tags all requests with an ID
-        ctx.headers['X-Request-ID'] = ctx.uuid()
-      },
-      (req, ctx) => {
-        // example middleware that intercepts /foobars and returns some text
-        if (req.pathname === '/foobars') {
-          return new Response('foo-bars', {
-            headers: {
-              'Content-Type': 'text/plain',
-            },
-          })
-        }
-      },
-    ],
-  }
+export const config = {
+  middleware: [
+    (req, ctx) => {
+      // example middleware that tags all requests with an ID
+      ctx.headers['X-Request-ID'] = ctx.uuid()
+    },
+    (req, ctx) => {
+      // example middleware that intercepts /foobars and returns some text
+      if (req.pathname === '/foobars') {
+        return new Response('foo-bars', {
+          headers: {
+            'Content-Type': 'text/plain',
+          },
+        })
+      }
+    },
+  ],
 }
 ```
 
 The `req` is a Fetch API [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) and `ctx` is a [Context](/docs/ref/context) object that provides access to cookies, headers and custom context values such as your database.
+
+## Plugins
+
+Plugins augment your config to intercept and handle requests among other things.
+
+```jsx title='firebolt.config.js' lineNumbers
+import icons from 'firebolt/icons'
+
+export const config = {
+  plugins: [icons()],
+}
+```
+
+The `firebolt/icons` plugin generates all of your favicons and icons from a single `svg` and injects them into your `<head>`.
+
+Learn more in the [Plugins](/docs/guides/plugins) guide.
