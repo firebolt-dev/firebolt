@@ -1,5 +1,6 @@
 import remarkGFM from 'remark-gfm'
 import rehypeShiki from '@shikijs/rehype'
+import { iconsSetup, iconsMiddleware } from '@firebolt-dev/icons'
 
 export default function config() {
   return {
@@ -7,26 +8,10 @@ export default function config() {
     context: {
       foo: 'haha',
     },
-    middleware: [
-      // (req, ctx) => {
-      //   console.log('mw1')
-      //   ctx.headers['Foo'] = 'Boooo!'
-      //   // ctx.cookies.set('theme', 'light')
-      // },
-      // (req, ctx) => {
-      //   console.log('middle 1')
-      //   console.log('req', req)
-      //   console.log('ctx', ctx)
-      //   console.log(req.pathname)
-      //   ctx.headers['Bar'] = 'BAHHHH'
-      //   return new Response('HAHA', {
-      //     status: 201,
-      //     headers: {
-      //       'Content-Type': 'text/plain',
-      //     },
-      //   })
-      // },
-    ],
+    async setup() {
+      await iconsSetup()
+    },
+    middleware: [iconsMiddleware],
     mdx: {
       remarkPlugins: [remarkGFM],
       rehypePlugins: [

@@ -1,6 +1,5 @@
 import fs from 'fs-extra'
 import path from 'path'
-import crypto from 'crypto'
 import { hashString } from './hashString'
 
 const loaderActionRegex = /(useAction|useLoader)/

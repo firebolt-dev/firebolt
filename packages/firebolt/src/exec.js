@@ -547,7 +547,6 @@ export async function exec(opts) {
     const elapsed = (performance.now() - startAt).toFixed(0)
     log.info(`${freshBuild ? 'built' : 'rebuilt'} ${style.dim(`(${elapsed}ms)`)}\n`) // prettier-ignore
     freshBuild = false
-    freshConfig = false
   }
 
   let runProgress = new Pending()
@@ -558,6 +557,14 @@ export async function exec(opts) {
 
   async function serve() {
     controller = await reimport(outputControllerFile)
+    if (freshConfig) {
+      try {
+        await controller.config.setup()
+      } catch (err) {
+        log.error(`config setup failed`)
+        console.error(err)
+      }
+    }
     if (server && controller.config.port !== port) {
       server.close()
       server = null
@@ -633,6 +640,7 @@ export async function exec(opts) {
       runPending = false
       await run()
     }
+    freshConfig = false
     runProgress.end()
   }
 
