@@ -67,6 +67,15 @@ const notFoundRoute = routes.find(r => r.pattern === '/not-found')
 
 const defaultCookieOptions = config.cookie
 
+function injectSearchParams(params, url) {
+  const searchParams = new URL(url, 'http://firebolt').searchParams
+  searchParams.forEach((value, key) => {
+    if (!params.hasOwnProperty(key)) {
+      params[key] = value
+    }
+  })
+}
+
 // utility to find a route from a url
 function resolveRouteAndParams(url) {
   if (!url) {
@@ -75,7 +84,10 @@ function resolveRouteAndParams(url) {
   for (const route of routes) {
     if (route.type !== 'page' && route.type !== 'handler') continue
     const [hit, params] = match(route.pattern, url)
-    if (hit) return [route, params]
+    if (hit) {
+      injectSearchParams(params, url)
+      return [route, params]
+    }
   }
   return [null, {}]
 }
