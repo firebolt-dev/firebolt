@@ -288,8 +288,3 @@ export function MDXProvider({ components, children }) {
 export function useMDXComponents() {
   return useContext(MDXContext)
 }
-
-export function MDXWrapper({ component: Component }) {
-  const components = useMDXComponents()
-  return <Component components={components} />
-}

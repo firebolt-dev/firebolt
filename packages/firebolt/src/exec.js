@@ -7,7 +7,6 @@ import { performance } from 'perf_hooks'
 import chokidar from 'chokidar'
 import * as esbuild from 'esbuild'
 import { isEqual, debounce } from 'lodash-es'
-import mdx from '@mdx-js/esbuild'
 
 import express from 'express'
 import cors from 'cors'
@@ -31,6 +30,7 @@ import { zombieImportPlugin } from './utils/zombieImportPlugin'
 import { virtualModule } from './utils/virtualModule'
 import { Pending } from './utils/Pending'
 import { hashString } from './utils/hashString'
+import createMdx from './utils/mdx'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -69,8 +69,7 @@ export async function exec(opts) {
 
   let freshBuild = true
   let freshConfig = true
-  let mdxPlugin
-  const mdxCache = {} // pageFile -> js
+  let mdx
   const ctx = {
     configValidator: null,
     pageInspector: null,
@@ -124,7 +123,7 @@ export async function exec(opts) {
         jsx: 'automatic',
         jsxImportSource: '@firebolt-dev/jsx',
         plugins: [
-          // mdxPlugin,
+          // mdx.plugin,
         ],
       })
     }
@@ -146,7 +145,7 @@ export async function exec(opts) {
     // we try to re-use the same mdx plugin across builds for performance
     // but if our config changes then our mdx options might have changed, so we re-create it!
     if (freshConfig) {
-      mdxPlugin = mdx({
+      mdx = createMdx({
         jsx: false,
         jsxRuntime: 'automatic',
         jsxImportSource: '@firebolt-dev/jsx',
@@ -236,61 +235,6 @@ export async function exec(opts) {
       return 0
     })
 
-    // build any mdx pages missing from our cache.
-    // building mdx pages is really slow so we build them once and use their output in future builds (and rebuilds) as a virtual module.
-    // our file watcher will evict mdx pages from the cache so they get rebuilt.
-    const routesNeedingMDXBuild = routes.filter(route => {
-      if (!route.mdx) return false
-      // if config changed then all mdx pages need building
-      if (freshConfig) return true
-      // otherwise only include mdx pages not cached
-      return !mdxCache[route.file]
-    })
-    if (routesNeedingMDXBuild.length) {
-      // console.log(
-      //   'building mdx',
-      //   routesNeedingMDXBuild.map(r => r.relAppToFile)
-      // )
-      // console.time('mdx')
-      const result = await esbuild.build({
-        entryPoints: routesNeedingMDXBuild.map(r => r.file),
-        outdir: 'out',
-        write: false,
-        // bundle: true,
-        // treeShaking: true,
-        // sourcemap: true,
-        // minify: false,
-        platform: 'neutral',
-        format: 'esm',
-        packages: 'external',
-        // external: ['react', 'react-dom', '@firebolt-dev/jsx'],
-        // external: [],
-        logLevel: 'silent',
-        // alias: {
-        //   firebolt: buildLibFile,
-        // },
-        define: {
-          'process.env.NODE_ENV': JSON.stringify(env),
-          ...publicDefineEnvs,
-        },
-        // loader: {
-        //   '.js': 'jsx',
-        // },
-        // jsx: 'automatic',
-        // jsxImportSource: '@firebolt-dev/jsx',
-        plugins: [mdxPlugin, zombieImportPlugin],
-      })
-      // todo: this doesn't feel like a robust way to match output files
-      // back to routes but it seems to work :sweat:
-      let i = 0
-      for (let out of result.outputFiles) {
-        const route = routesNeedingMDXBuild[i]
-        mdxCache[route.file] = out.text
-        i++
-      }
-      // console.timeEnd('mdx')
-    }
-
     // build, inspect and resolve pages and handlers
     let inspectionCode = ''
     for (const route of routes) {
@@ -327,8 +271,8 @@ export async function exec(opts) {
         jsx: 'automatic',
         jsxImportSource: '@firebolt-dev/jsx',
         plugins: [
-          // mdxPlugin,
-          virtualModule(mdxCache),
+          mdx.plugin,
+          // virtualModule(mdxCache),
         ],
       })
     }
@@ -354,16 +298,11 @@ export async function exec(opts) {
         open += `<${parent.id}.default>`
         close = `</${parent.id}.default>` + close
       }
-      if (route.mdx) {
-        return `key => ${open}<MDXWrapper key={key} component={${route.id}.default} />${close}`
-      } else {
-        return `key => ${open}<${route.id}.default key={key}/>${close}`
-      }
+      return `props => ${open}<${route.id}.default {...props} />${close}`
     }
 
     // create routes file
     const routesCode = `
-      import { MDXWrapper } from 'firebolt'
       ${routes
         .filter(route => isType(route, 'layout', 'page', 'handler'))
         .map(route => `import * as ${route.id} from '${route.relBuildToFile}'`)
@@ -396,7 +335,6 @@ export async function exec(opts) {
     for (const route of routes) {
       if (route.type !== 'page') continue
       const code = `
-        import { MDXWrapper } from 'firebolt'
         import * as ${route.id} from '${route.relShimToFile}'
         ${route.parents.map(parent => `import * as ${parent.id} from '${parent.relShimToFile}'`).join('\n')}
         const content = ${generateNestedJSX(route)}
@@ -425,7 +363,7 @@ export async function exec(opts) {
       clientEntryPoints = newClientEntryPoints
     }
     if (!ctx.clientBundles || freshConfig || clientEntryPointsChanged) {
-      // config changes require new mdxPlugin + productionBrowserSourceMaps value
+      // config changes require new mdx plugin + productionBrowserSourceMaps value
       ctx.clientBundles = await esbuild.context({
         entryPoints: clientEntryPoints,
         entryNames: '/[name]-[hash]',
@@ -455,8 +393,8 @@ export async function exec(opts) {
         jsx: 'automatic',
         jsxImportSource: '@firebolt-dev/jsx',
         plugins: [
-          // mdxPlugin,
-          virtualModule(mdxCache),
+          mdx.plugin,
+          // virtualModule(mdxCache),
           registryPlugin({ registry, appDir }),
           // polyfill fs, path etc for browser environment
           // polyfillNode({}),
@@ -518,7 +456,7 @@ export async function exec(opts) {
 
     // build server controller
     if (!ctx.controller || freshConfig) {
-      // config changes require new mdxPlugin
+      // config changes require new mdx plugin
       ctx.controller = await esbuild.context({
         entryPoints: [buildControllerFile],
         outfile: outputControllerFile,
@@ -544,7 +482,7 @@ export async function exec(opts) {
         jsx: 'automatic',
         jsxImportSource: '@firebolt-dev/jsx',
         plugins: [
-          mdxPlugin,
+          mdx.plugin,
           registryPlugin({ registry: null, appDir }), // dont write to registry, we already have it from the client bundles
         ],
       })
@@ -673,7 +611,7 @@ export async function exec(opts) {
 
       // track mdx pages and evict from cache
       if (relFile.endsWith('.mdx')) {
-        delete mdxCache[file]
+        mdx.evict(file)
       }
 
       run()
