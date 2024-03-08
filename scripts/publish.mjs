@@ -48,13 +48,6 @@ async function choose() {
   }
 }
 
-async function write() {
-  for (const pkg of packages) {
-    const data = JSON.stringify(pkg.json, null, 2).concat('\n')
-    await fs.writeFile(pkg.path, data)
-  }
-}
-
 async function update() {
   const depKeys = ['dependencies', 'devDependencies']
 
@@ -71,6 +64,20 @@ async function update() {
         }
       })
     })
+  }
+
+  // also update the create-firebolt template to use this version of firebolt
+  const templatePkg = './packages/create-firebolt/template/package.json'
+  const json = await fs.readJSON(templatePkg)
+  json.dependencies.firebolt = version
+  const data = JSON.stringify(json, null, 2).concat('\n')
+  await fs.writeFile(templatePkg, data)
+}
+
+async function write() {
+  for (const pkg of packages) {
+    const data = JSON.stringify(pkg.json, null, 2).concat('\n')
+    await fs.writeFile(pkg.path, data)
   }
 }
 
