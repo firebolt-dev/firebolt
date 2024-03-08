@@ -137,13 +137,13 @@ The `req` is a Fetch API [Request](https://developer.mozilla.org/en-US/docs/Web/
 Plugins augment your config to intercept and handle requests among other things.
 
 ```jsx title='firebolt.config.js' lineNumbers
-import icons from 'firebolt/icons'
+import icons from '@firebolt-dev/icons'
 
 export const config = {
   plugins: [icons()],
 }
 ```
 
-The `firebolt/icons` plugin generates all of your favicons and icons from a single `svg` and injects them into your `<head>`.
+The `@firebolt-dev/icons` plugin generates all of your favicons and icons from a single `svg` and injects them into your `<head>`.
 
 Learn more in the [Plugins](/docs/guides/plugins) guide.

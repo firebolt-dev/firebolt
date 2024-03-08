@@ -1,5 +1,5 @@
 {
-  "name": "@firebolt-dev/css",
+  "name": "@firebolt-dev/snap",
   "version": "0.1.5",
   "main": "dist/index.js",
   "type": "module",
@@ -8,6 +8,7 @@
     "build": "node scripts/build.mjs --production"
   },
   "dependencies": {
+    "puppeteer": "^22.4.1",
     "react": "canary",
     "stylis": "^4.3.1"
   },

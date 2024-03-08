@@ -1,4 +1,4 @@
-import icons from 'firebolt/icons'
+import icons from '@firebolt-dev/icons'
 
 export const config = {
   plugins: [

@@ -1,10 +1,12 @@
 import fs from 'fs-extra'
+import path from 'path'
 import puppeteer from 'puppeteer'
 import { renderToString } from 'react-dom/server'
 
-import { hashString } from '../hashString'
+import { hashString } from './hashString'
 
 const oneYear = 365 * 24 * 60 * 60
+const outputDir = '.firebolt/snap'
 
 export default async function snap(
   content,
@@ -12,8 +14,10 @@ export default async function snap(
 ) {
   const html = renderToString(content)
   const key = hashString(html)
-  const file = `.firebolt/snap/${key}.png`
+  const file = path.join(outputDir, `${key}.png`)
   const cached = await fs.exists(file)
+
+  await fs.ensureDir(outputDir)
 
   if (!cached) {
     const browser = await puppeteer.launch()

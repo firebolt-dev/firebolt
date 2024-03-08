@@ -1,5 +1,5 @@
 import { css } from 'firebolt'
-import { Icons } from 'firebolt/icons'
+import { Icons } from '@firebolt-dev/icons'
 
 export default function RootLayout({ children }) {
   return (

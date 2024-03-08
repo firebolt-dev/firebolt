@@ -1,6 +1,5 @@
-import { Logo } from '@/components/Logo'
 import { css } from 'firebolt'
-import snap from 'firebolt/snap'
+import snap from '@firebolt-dev/snap'
 
 import bg from '@/routes/og-bg.png'
 import robotoFlex from '@/routes/roboto-flex.woff2'
