@@ -1,6 +1,5 @@
 import fs from 'fs-extra'
 import path from 'path'
-import { Readable } from 'stream'
 import sharp from 'sharp'
 import ico from 'sharp-ico'
 
@@ -81,8 +80,7 @@ function middleware(req, ctx) {
   for (const item of items) {
     if (req.pathname === item.pathname) {
       const stream = fs.createReadStream(item.file)
-      const webStream = Readable.toWeb(stream)
-      return new Response(webStream, {
+      return new Response(stream, {
         headers: {
           'Content-Type': item.mime,
         },
