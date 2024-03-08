@@ -81,11 +81,6 @@ const run = async () => {
     projectName
   )
   await replace(
-    path.join(projectDir, 'document.js'),
-    '__projectName__',
-    projectName
-  )
-  await replace(
     path.join(projectDir, 'routes/index.js'),
     '__projectName__',
     projectName
