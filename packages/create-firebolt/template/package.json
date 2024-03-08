@@ -9,6 +9,6 @@
     "start": "firebolt start"
   },
   "dependencies": {
-    "firebolt": "0.1.1"
+    "firebolt": "0.1.2"
   }
 }
