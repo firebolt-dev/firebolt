@@ -51,27 +51,38 @@ async function choose() {
 async function update() {
   const depKeys = ['dependencies', 'devDependencies']
 
+  // temporaily include create-firebolt template for updates
+  const templatePath = path.join(
+    packagesDir,
+    'create-firebolt/template/package.json'
+  )
+  packages.push({
+    name: '',
+    root: null,
+    path: templatePath,
+    json: await fs.readJSON(templatePath),
+  })
+
   for (const pkg of packages) {
     pkg.json.version = version
     console.log(`version -> ${version}`)
 
     forEach(depKeys, depKey => {
       forEach(pkg.json[depKey], (_, key) => {
-        const isOurs = packages.find(pkg => pkg.name === key)
+        const isOurs = !!packages.find(pkg => pkg.name === key)
         if (isOurs) {
           pkg.json[depKey][key] = version
           console.log(`${depKey}.${key} -> ${version}`)
         }
       })
     })
+
+    const data = JSON.stringify(pkg.json, null, 2).concat('\n')
+    await fs.writeFile(pkg.path, data)
   }
 
-  // also update the create-firebolt template to use this version of firebolt
-  const templatePkg = './packages/create-firebolt/template/package.json'
-  const json = await fs.readJSON(templatePkg)
-  json.dependencies.firebolt = version
-  const data = JSON.stringify(json, null, 2).concat('\n')
-  await fs.writeFile(templatePkg, data)
+  // remove create-firebolt template
+  packages.pop()
 }
 
 async function write() {
@@ -116,7 +127,6 @@ async function run() {
   await read()
   await choose()
   await update()
-  await write()
   await build()
   await publish()
   console.log(' ')
