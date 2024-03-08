@@ -18,7 +18,7 @@ program.command('build').action(() => {
   exec({ build: true, production: true })
 })
 program.command('start').action(() => {
-  exec({ serve: true })
+  exec({ serve: true, production: true })
 })
 
 program.parse()

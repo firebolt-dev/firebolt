@@ -1,5 +1,4 @@
-import 'dotenv/config'
-
+import dotenv from 'dotenv-flow'
 import fs from 'fs-extra'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -47,6 +46,9 @@ const imgLoaders = {
 export async function exec(opts) {
   const prod = !!opts.production
   const env = prod ? 'production' : 'development'
+
+  // configure environment variables
+  dotenv.config({ node_env: env })
 
   const dir = __dirname
   const appDir = process.cwd()
