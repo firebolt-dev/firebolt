@@ -1,11 +1,11 @@
 import { css } from 'firebolt'
 
-import { Metadata } from '@/components/Metadata'
+import { Meta } from '@/components/Meta'
 
 export default function NotFound() {
   return (
     <>
-      <Metadata title='Page not found' />
+      <Meta title='Page not found' />
       <div
         css={css`
           height: 100vh;

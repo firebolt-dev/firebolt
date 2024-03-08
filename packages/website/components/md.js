@@ -2,10 +2,10 @@ import { useRef, useState } from 'react'
 import { Link, css, cls } from 'firebolt'
 import { Check, Copy, File, Link as LinkIcon } from 'lucide-react'
 
-import { Metadata } from './Metadata'
+import { Meta } from './Meta'
 
 export const components = {
-  Metadata,
+  Meta,
   img(props) {
     return <img {...props} css='border-radius: 10px;' />
   },
