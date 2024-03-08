@@ -8,8 +8,8 @@
     "create-firebolt": "dist/index.js"
   },
   "scripts": {
-    "dev": "node scripts/build.mjs --watch",
-    "build": "node scripts/build.mjs --minify"
+    "dev": "node scripts/build.mjs",
+    "build": "node scripts/build.mjs --production"
   },
   "dependencies": {
     "chalk": "^5.3.0",

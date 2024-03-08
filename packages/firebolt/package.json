@@ -9,8 +9,8 @@
   },
   "types": "types/firebolt.d.ts",
   "scripts": {
-    "dev": "node scripts/build.mjs --watch",
-    "build": "node scripts/build.mjs --minify"
+    "dev": "node scripts/build.mjs",
+    "build": "node scripts/build.mjs --production"
   },
   "dependencies": {
     "@firebolt-dev/css": "0.1.0",

@@ -2,10 +2,14 @@
   "name": "firebolt",
   "private": true,
   "version": "0.1.0",
+  "scripts": {
+    "publish": "node scripts/publish.mjs"
+  },
   "workspaces": [
     "packages/*"
   ],
   "dependencies": {
+    "inquirer": "^9.2.15",
     "prettier": "^3.2.5"
   },
   "overrides": {

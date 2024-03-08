@@ -4,8 +4,8 @@
   "main": "./dist/index.js",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/build.mjs --watch",
-    "build": "node scripts/build.mjs --minify"
+    "dev": "node scripts/build.mjs",
+    "build": "node scripts/build.mjs --production"
   },
   "dependencies": {
     "react": "canary",

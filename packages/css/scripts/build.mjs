@@ -5,13 +5,9 @@ import chokidar from 'chokidar'
 import esbuild from 'esbuild'
 
 const cwd = process.cwd()
-const env = process.env.NODE_ENV || 'development'
-const prod = env === 'production'
-
 const buildDir = path.join(cwd, 'dist')
-
-const opts = {}
-opts.watch = process.argv.includes('--watch')
+const prod = process.argv.includes('--production')
+const env = prod ? 'production' : 'development'
 
 let firstBuild = true
 
@@ -44,7 +40,7 @@ async function build() {
 }
 
 async function watch() {
-  if (!opts.watch) return
+  if (prod) return
   const watcher = chokidar.watch(['src'], {
     ignoreInitial: true,
   })
@@ -58,10 +54,7 @@ async function watch() {
 }
 
 await build()
-
-if (opts.watch) {
-  await watch()
-}
+await watch()
 
 function log(...args) {
   console.log('[css]', ...args)
