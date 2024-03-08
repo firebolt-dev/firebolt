@@ -36,6 +36,14 @@ import createMdx from './utils/mdx'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+const imgLoaders = {
+  '.svg': 'dataurl',
+  '.png': 'dataurl',
+  '.jpg': 'dataurl',
+  '.jpeg': 'dataurl',
+  '.woff2': 'dataurl',
+}
+
 export async function exec(opts) {
   const prod = !!opts.production
   const env = prod ? 'production' : 'development'
@@ -122,6 +130,7 @@ export async function exec(opts) {
         },
         loader: {
           '.js': 'jsx',
+          ...imgLoaders,
         },
         jsx: 'automatic',
         jsxImportSource: '@firebolt-dev/jsx',
@@ -271,6 +280,7 @@ export async function exec(opts) {
         },
         loader: {
           '.js': 'jsx',
+          ...imgLoaders,
         },
         jsx: 'automatic',
         jsxImportSource: '@firebolt-dev/jsx',
@@ -394,6 +404,7 @@ export async function exec(opts) {
         },
         loader: {
           '.js': 'jsx',
+          ...imgLoaders,
         },
         jsx: 'automatic',
         jsxImportSource: '@firebolt-dev/jsx',
@@ -484,6 +495,7 @@ export async function exec(opts) {
         },
         loader: {
           '.js': 'jsx',
+          ...imgLoaders,
         },
         jsx: 'automatic',
         jsxImportSource: '@firebolt-dev/jsx',
