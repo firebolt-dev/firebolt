@@ -1,7 +1,8 @@
 .DS_Store
 .firebolt
 .secret
-.env
+.env*
+!.env.example
 node_modules
 arch
 dist
