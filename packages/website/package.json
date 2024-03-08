@@ -1,6 +1,6 @@
 {
   "name": "@firebolt-dev/website",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@shikijs/rehype": "^1.1.6",
-    "firebolt": "0.1.2",
+    "firebolt": "0.1.3",
     "lucide-react": "^0.331.0",
     "react": "canary",
     "react-dom": "canary",
