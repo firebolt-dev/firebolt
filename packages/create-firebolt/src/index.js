@@ -5,6 +5,7 @@ import validateNPMName from 'validate-npm-package-name'
 import fs from 'fs-extra'
 import chalk from 'chalk'
 import { execSync } from 'child_process'
+import semver from 'semver'
 
 const cwd = process.cwd()
 const __filename = fileURLToPath(import.meta.url)
@@ -12,10 +13,24 @@ const __dirname = path.dirname(__filename)
 
 const green = chalk.green
 
+const pkgFile = path.join(import.meta.dirname, '../package.json')
+
+const { version } = await fs.readJSON(pkgFile)
+
 const run = async () => {
   // intro
 
-  console.log('\n  🔥 Firebolt\n')
+  console.log(`\n  🔥 Firebolt (${version})\n`)
+
+  // check node version
+
+  const valid = semver.gte(process.versions.node, '18.0.0')
+  if (!valid) {
+    console.error(
+      `Invalid node version: must be >= 18 (current: ${process.versions.node})\n`
+    )
+    process.exit()
+  }
 
   // prompt for a project name
 
