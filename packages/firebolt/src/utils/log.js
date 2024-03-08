@@ -1,7 +1,8 @@
 import * as style from './style'
+import { pkg } from './pkg'
 
 export function intro() {
-  console.log('\n  🔥 Firebolt\n')
+  console.log(`\n  🔥 Firebolt (v${pkg.version})\n`)
 }
 
 export function info(...args) {
