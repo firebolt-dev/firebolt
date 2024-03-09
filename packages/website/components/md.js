@@ -32,7 +32,10 @@ export const components = {
           font-weight: 700;
           margin-top: 50px;
           margin-bottom: 16px;
-          scroll-margin-top: 102px;
+          scroll-margin-top: 102px; // anchor top offset
+          @media all and (max-width: 915px) {
+            scroll-margin-top: 146px; // mobile nav
+          }
         `}
       >
         <Anchor id={id}>{props.children}</Anchor>
