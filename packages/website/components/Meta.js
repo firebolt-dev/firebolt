@@ -8,7 +8,6 @@ export function Meta({ title, description, image }) {
   if (title && !image) {
     image = encodeURI(`${process.env.PUBLIC_DOMAIN}/og?title=${title}`)
   }
-  console.log({ title, titleFull, description, image })
   return (
     <>
       <title>{titleFull}</title>
