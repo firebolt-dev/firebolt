@@ -141,14 +141,6 @@ export async function exec(opts) {
 
     const config = (await reimport(tmpConfigFile)).config
 
-    // get all public env variables for client bundles
-    const publicDefineEnvs = {}
-    for (const key in process.env) {
-      if (key.startsWith(config.publicEnvPrefix)) {
-        publicDefineEnvs[`process.env.${key}`] = `"${process.env[key]}"`
-      }
-    }
-
     // create mdx plugin
     // we try to re-use the same mdx plugin across builds for performance
     // but if our config changes then our mdx options might have changed, so we re-create it!
@@ -270,7 +262,6 @@ export async function exec(opts) {
         },
         define: {
           'process.env.NODE_ENV': JSON.stringify(env),
-          ...publicDefineEnvs,
         },
         loader: {
           '.js': 'jsx',
@@ -392,7 +383,6 @@ export async function exec(opts) {
         },
         define: {
           'process.env.NODE_ENV': JSON.stringify(env),
-          ...publicDefineEnvs,
         },
         loader: {
           '.js': 'jsx',
@@ -481,7 +471,6 @@ export async function exec(opts) {
         },
         define: {
           'process.env.NODE_ENV': JSON.stringify(env),
-          ...publicDefineEnvs,
         },
         loader: {
           '.js': 'jsx',

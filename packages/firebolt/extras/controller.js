@@ -76,6 +76,22 @@ function injectSearchParams(params, url) {
   })
 }
 
+// get all public env variables for client js
+const envs = {}
+for (const key in process.env) {
+  if (key.startsWith(config.publicEnvPrefix)) {
+    envs[key] = process.env[key]
+  }
+}
+const envsCode = `
+  if (!globalThis.process) globalThis.process = {}
+  if (!globalThis.process.env) globalThis.process.env = {}
+  const envs = ${JSON.stringify(envs)};
+  for (const key in envs) {
+    globalThis.process.env[key] = envs[key]
+  }
+`
+
 // utility to find a route from a url
 function resolveRouteAndParams(url) {
   if (!url) {
@@ -320,6 +336,7 @@ async function handlePage(req, res, route, params) {
     bootstrapScriptContent: isBot
       ? undefined
       : `
+      ${envsCode}
       globalThis.$firebolt = function (...args) {
         globalThis.$firebolt.stack.push(args)
       }
