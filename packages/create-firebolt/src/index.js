@@ -11,8 +11,6 @@ const cwd = process.cwd()
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-const debug = process.env.DEBUG === 'true'
-
 const green = chalk.green
 
 const pkgFile = path.join(import.meta.dirname, '../package.json')
@@ -106,12 +104,12 @@ const run = async () => {
   // initialize git repo
 
   console.log('Initializing git repository')
-  execSync(`git init`, { cwd: projectDir, stdio: debug ? 'pipe' : 'ignore' })
+  execSync(`git init`, { cwd: projectDir, stdio: 'ignore' })
 
   // run npm install
 
   console.log('Installing dependencies...')
-  execSync('npm install', { cwd: projectDir, stdio: debug ? 'pipe' : 'ignore' })
+  execSync('npm install', { cwd: projectDir, stdio: 'ignore' })
 
   console.log(`\nSuccess!\n`)
   console.log(
