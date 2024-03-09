@@ -13,10 +13,14 @@ export function createRuntime(stack) {
   let defaultCookieOptions
   let notFoundPage
 
+  let resolve
+  const resolver = new Promise(_resolve => (resolve = _resolve))
+
   const runtime = {
     ssr,
     call,
-    init,
+    config,
+    ready,
     registerPage,
     resolvePageAndParams,
     resolveRoute,
@@ -38,16 +42,24 @@ export function createRuntime(stack) {
     runtime[action](...args)
   }
 
-  function init(opts) {
+  function config(opts) {
     ssr = runtime.ssr = opts.ssr
     pages = opts.pages
     defaultCookieOptions = opts.defaultCookieOptions
     notFoundPage = pages.find(p => p.pattern === '/not-found')
   }
 
+  function ready() {
+    return resolver
+  }
+
   function registerPage(pageId, content) {
     const page = pages.find(page => page.id === pageId)
     page.content = content
+    if (resolve) {
+      resolve()
+      resolve = null
+    }
   }
 
   function resolvePageAndParams(url) {

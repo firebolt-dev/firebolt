@@ -309,7 +309,7 @@ async function handlePage(req, res, route, params) {
     pages: pagesForServer,
   }
 
-  const runtime = createRuntime([['init', options]])
+  const runtime = createRuntime([['config', options]])
 
   const isBot = isbot(req.get('user-agent') || '')
 
@@ -341,7 +341,7 @@ async function handlePage(req, res, route, params) {
         globalThis.$firebolt.stack.push(args)
       }
       globalThis.$firebolt.stack = []
-      globalThis.$firebolt('init', {
+      globalThis.$firebolt('config', {
         ssr: null,
         pages: ${JSON.stringify(pagesForClient)},
         defaultCookieOptions: ${JSON.stringify(config.cookie)},

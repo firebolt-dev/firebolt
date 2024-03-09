@@ -7,8 +7,10 @@ const runtime = createRuntime(globalThis.$firebolt.stack)
 
 globalThis.$firebolt = (...args) => runtime.call(...args)
 
-hydrateRoot(document, <Root runtime={runtime} />, {
-  // onRecoverableError(err) {
-  //   console.log(document.documentElement.outerHTML)
-  // },
+runtime.ready().then(() => {
+  hydrateRoot(document, <Root runtime={runtime} />, {
+    // onRecoverableError(err) {
+    //   console.log(document.documentElement.outerHTML)
+    // },
+  })
 })
