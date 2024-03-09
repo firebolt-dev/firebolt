@@ -1,21 +1,19 @@
-export function Meta({ title, description }) {
-  let titleExt
+export function Meta({ title, description, image }) {
+  let titleFull
   if (title) {
-    titleExt = title + ' | Firebolt'
+    titleFull = title + ' | Firebolt'
+  } else {
+    titleFull = 'Firebolt'
   }
-  let image
-  if (title) {
+  if (title && !image) {
     image = encodeURI(`${process.env.PUBLIC_DOMAIN}/og?title=${title}`)
   }
+  console.log({ title, titleFull, description, image })
   return (
     <>
-      {title && (
-        <>
-          <title>{titleExt}</title>
-          <meta name='og:title' content={titleExt} />
-          <meta name='twitter:title' content={title} />
-        </>
-      )}
+      <title>{titleFull}</title>
+      <meta name='og:title' content={titleFull} />
+      <meta name='twitter:title' content={title} />
       {description && (
         <>
           <meta name='description' content={description} />

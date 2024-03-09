@@ -2,6 +2,7 @@ import { Link, css } from 'firebolt'
 
 import { Page } from '@/components/Page'
 import { Image } from '@/components/Image'
+import { Meta } from '@/components/Meta'
 
 export default function Blog({ children }) {
   return (
@@ -33,6 +34,10 @@ export default function Blog({ children }) {
           }
         `}
       >
+        <Meta
+          title='Blog'
+          description='Blog posts from the Firebolt team about the future of web development.'
+        />
         <Post
           url='/blog/introducing-firebolt'
           image='/introducing-firebolt.png'

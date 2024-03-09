@@ -3,11 +3,13 @@ import { Link, useCookie, css } from 'firebolt'
 import { Check, ChevronRight, Copy } from 'lucide-react'
 
 import { Page } from '@/components/Page'
+import { Meta } from '@/components/Meta'
 
 export default function Home() {
   const [theme, setTheme] = useCookie('theme', 'system')
   return (
     <Page>
+      <Meta description='The simple react framework.' />
       <div
         className='home'
         css={css`
