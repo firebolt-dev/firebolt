@@ -20,7 +20,10 @@ export default async function snap(
   await fs.ensureDir(outputDir)
 
   if (!cached) {
-    const browser = await puppeteer.launch()
+    const browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    })
     const page = await browser.newPage()
     await page.setViewport({ width, height, deviceScaleFactor: 1 })
     await page.setContent(html)
