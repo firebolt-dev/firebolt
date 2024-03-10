@@ -149,12 +149,10 @@ export default function DocsLayout({ children }) {
             <NavLink label='css' href='/docs/ref/css' />
             <NavLink label='cls' href='/docs/ref/cls' />
 
-            {/* <div className='docs-nav-section'>Guides</div>
-            <NavLink label='Theme toggles' href='/docs/guides/theme-toggles' />
-            <NavLink
-              label='Deploy to fly.io'
-              href='/docs/guides/deploy-to-fly'
-            /> */}
+            <div className='docs-nav-section'>Plugins & Utilities</div>
+            <NavLink label='@firebolt-dev/cors' href='/docs/pkg/cors' />
+            <NavLink label='@firebolt-dev/icons' href='/docs/pkg/icons' />
+            <NavLink label='@firebolt-dev/snap' href='/docs/pkg/snap' />
           </div>
         </div>
         <div className='docs-main'>

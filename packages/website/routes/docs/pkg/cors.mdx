@@ -1,0 +1,33 @@
+<Meta
+  title='Package: @firebolt-dev/cors'
+  description='A Firebolt plugin for implementing CORS.'
+/>
+
+# @firebolt-dev/cors
+
+The `@firebolt-dev/cors` package is a plugin for implementing CORS and allowing requests from external origins.
+
+```jsx title='firebolt.config.js' lineNumbers
+import cors from '@firebolt-dev/cors'
+
+export const config = {
+  plugins: [
+    cors({
+      /* options */
+    }),
+  ],
+}
+```
+
+By default (with no options) all external requests are allowed.
+
+## Options
+
+| Property      | Default | Type                                                  | Description                                                  |
+| ------------- | ------- | ----------------------------------------------------- | ------------------------------------------------------------ |
+| origin        | `'*'`   | `String` \| `String[]` \| `(origin:String) => String` | The value of "Access-Control-Allow-Origin" CORS header.      |
+| allowMethods  | All     | `String[]`                                            | The value of "Access-Control-Allow-Methods" CORS header.     |
+| allowHeaders  | `[]`    | `String[]`                                            | The value of "Access-Control-Allow-Headers" CORS header.     |
+| maxAge        |         | `Number`                                              | The value of "Access-Control-Max-Age" CORS header.           |
+| credentials   |         | `Boolean`                                             | The value of "Access-Control-Allow-Credentials" CORS header. |
+| exposeHeaders | `[]`    | `String[]`                                            | The value of "Access-Control-Expose-Headers" CORS header.    |

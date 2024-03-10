@@ -5,12 +5,12 @@ import { renderToString } from 'react-dom/server'
 
 import { hashString } from './hashString'
 
-const oneYear = 365 * 24 * 60 * 60
+const oneYear = 365 * 24 * 60 * 60 // seconds
 const outputDir = '.firebolt/snap'
 
 export default async function snap(
   content,
-  { width = 1200, height = 630, expires = oneYear } = {}
+  { width = 1200, height = 630 } = {}
 ) {
   const html = renderToString(content)
   const key = hashString(html)
@@ -36,7 +36,7 @@ export default async function snap(
   return new Response(stream, {
     headers: {
       'Content-Type': 'image/png',
-      'Cache-Control': `public, immutable, no-transform, max-age=${expires}`,
+      'Cache-Control': `public, immutable, no-transform, max-age=${oneYear}`,
     },
   })
 }

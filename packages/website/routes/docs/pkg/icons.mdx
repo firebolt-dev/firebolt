@@ -1,0 +1,48 @@
+<Meta
+  title='Package: @firebolt-dev/icons'
+  description='A Firebolt plugin for auto-generating favicons and icons from an svg.'
+/>
+
+# @firebolt-dev/icons
+
+The `@firebolt-dev/icons` package provides a plugin to auto-generate favicons and icons from a single `svg` file that you provide.
+
+- Generate icon variations for all browsers and devices (eg `favicon.ico` and `icon-*.png`)
+- Intercept and serve icons when requested
+- Inject them into your `<head>`
+
+It uses the current best practices to ensure icons work across all modern browsers and devices.
+
+## Step 1. SVG
+
+Place the SVG you want to use for your app icon at `routes/icon.svg`
+
+## Step 2. Install Plugin
+
+Install the plugin in your [firebolt.config.js](/docs/ref/config)
+
+```jsx title='firebolt.config.js' lineNumbers
+import icons from '@firebolt-dev/icons'
+
+export const config = {
+  plugins: [icons()],
+}
+```
+
+## Step 3. Add Component
+
+Add the `<Icons>` component to the `<head>` of your root layout:
+
+```jsx title='routes/_layout.js' lineNumbers
+import { Icons } from '@firebolt-dev/icons'
+
+export default function RootLayout() {
+  return (
+    <html>
+      <head>
+        <Icons />
+      </head>
+    </html>
+  )
+}
+```

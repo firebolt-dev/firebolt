@@ -1,0 +1,107 @@
+<Meta
+  title='Package: @firebolt-dev/snap'
+  description='A Firebolt utility for rendering jsx to an image.'
+/>
+
+# @firebolt-dev/snap
+
+The `@firebolt-dev/snap` package provides a utility for rendering jsx to an image. It can be used to dynamically create images for pages in your app on the fly, that can then be used in open graph meta tags.
+
+## Usage
+
+Create a [handler](/docs/ref/handler-js) to render your images
+
+```jsx title='routes/opengraph.js' lineNumbers
+import { css } from 'firebolt'
+import snap from '@firebolt-dev/snap'
+
+export async function get(req, ctx) {
+  const { title } = ctx.params
+  return snap(
+    <div
+      css={css`
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      `}
+    >
+      <div>{title}</div>
+    </div>
+  )
+}
+```
+
+In this example, a request such as `GET /opengraph?msg=Hello` will respond with a 1200x630 png with the text "Hello" centered inside of it.
+
+You can now use this in your meta tags to generate unique images for each of your pages. For example by using a `<Meta>` component or similar:
+
+```jsx title='components/Meta.js' lineNumbers
+export function Meta({ title }) {
+  const image = `${process.env.PUBLIC_DOMAIN}/opengraph?title=${title}`
+  return (
+    <>
+      <title>{title}</title>
+      <meta name='og:title' content={title} />
+      <meta name='og:image' content={image} />
+      <meta name='twitter:title' content={image} />
+      <meta name='twitter:image' content={image} />
+      {/* description etc... */}
+    </>
+  )
+}
+```
+
+## Caching
+
+JSX is rendered to a string and sent to puppeteer to be screenshot.
+
+A hash is generated based on the HTML string and the image is stored at `.firebolt/snap/[hash].png`.
+Requests for each unique image are only screenshot once using puppeteer and then subsequent requests for the same image are served from the cache.
+
+## Images, Fonts etc
+
+When rendering images or using fonts, we recommend injecting them as `base64` data urls for better results.
+
+Firebolt makes this easy, as imports for media and fonts return base64 data urls automatically:
+
+```jsx title='routes/opengraph.js' lineNumbers
+import { css } from 'firebolt'
+import snap from '@firebolt-dev/snap'
+
+import background from './background.png'
+import robotoFlex from './roboto-flex.woff2'
+
+export async function get(req, ctx) {
+  return snap(
+    <div
+      css={css`
+        @font-face {
+          font-family: 'Roboto Flex';
+          src: url(${robotoFlex}) format('woff2');
+        }
+        background-image: url(${background});
+      `}
+    >
+      {/* content */}
+    </div>
+  )
+}
+```
+
+## Options
+
+By default all rendered images are `1200 x 630` which is the recommended size for images utilizing meta tags such as `og:image` and `twitter:image`.
+
+You can modify this size by providing options as a second argument to `snap`:
+
+```jsx
+return snap(<div />, { width: 600, height: 315 })
+```
+
+## Environment
+
+This plugin relies on [puppeteer](https://pptr.dev/) and requires an environment that supports it.
+
+Check out our [website](https://github.com/firebolt-dev/firebolt/blob/main/packages/website/Dockerfile) repo to see how we configured this for [fly.io](https://fly.io)
