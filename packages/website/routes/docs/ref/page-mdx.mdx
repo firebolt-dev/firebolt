@@ -48,12 +48,10 @@ You can enhance MDX with any Remark/Rehype plugins in your [firebolt.config.js](
 import remarkGFM from 'remark-gfm'
 import rehypeShiki from '@shikijs/rehype'
 
-export default function config() {
-  return {
-    mdx: {
-      remarkPlugins: [remarkGFM],
-      rehypePlugins: [rehypeShiki],
-    },
-  }
+export const config = {
+  mdx: {
+    remarkPlugins: [remarkGFM],
+    rehypePlugins: [rehypeShiki],
+  },
 }
 ```

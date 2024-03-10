@@ -55,7 +55,7 @@ const items = [
 
 async function setup() {
   const exists = await fs.exists(svg)
-  if (!exists) throw new Error('[icon] svg icon not found')
+  if (!exists) throw new Error('[icons] routes/icon.svg source not found')
   await fs.ensureDir(outputDir)
   for (const item of items) {
     if (item.png) {
