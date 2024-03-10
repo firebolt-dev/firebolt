@@ -1,6 +1,6 @@
 {
   "name": "@firebolt-dev/jsx",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "main": "dist/index.js",
   "type": "module",
   "exports": {
@@ -11,7 +11,7 @@
     "build": "node scripts/build.mjs --production"
   },
   "dependencies": {
-    "@firebolt-dev/css": "0.1.12",
+    "@firebolt-dev/css": "0.1.13",
     "react": "canary"
   },
   "overrides": {
