@@ -29,5 +29,3 @@ export function expressToWebRequest(req) {
   request.pathname = pathname // helper
   return request
 }
-
-class FireboltRequest extends Request {}
