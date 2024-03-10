@@ -41,7 +41,7 @@ The `useLoader` hook returns a loader instance specific to the data being loaded
 
 The loader function must be exported from the same file or alternatively imported from somewhere else.
 
-The function is provided a [Context](/docs/ref/context) object as its first argument. The Context object has methods to access cookies, redirects, and set data expiration.
+The function is provided with a [Context](/docs/ref/context) object as its first argument. The Context object has methods to access cookies, redirects, and set data expiration.
 You can also decorate this object with access to a database or anything else in your [firebolt.config.js](/docs/ref/config) file.
 
 Additional arguments from the `useLoader` function are passed as additional arguments to your loader function.
@@ -54,13 +54,13 @@ When `loader.read()` is called, if there is no data in the cache it will throw a
 
 Once the promise resolves the component will re-render and `loader.read()` returns the data, finally rendering the component.
 
-If the loader function fails, the promise will reject and the error will be thrown to the nearest [ErrorBoundary](/docs/ref/error-boundary) allowing you to show a custom error UI.
+If the loader function fails, the promise will be rejected and the error will be thrown to the nearest [ErrorBoundary](/docs/ref/error-boundary) allowing you to show a custom error UI.
 
 ## loader.invalidate()
 
 Calling `invalidate()` will mark loader data in the cache as stale.
 
-If any components are observing this data it will be refetched in the background and automatically updated without triggering Suspense boundaries.
+If any components are observing this data it will be re-fetched in the background and automatically updated without triggering Suspense boundaries.
 
 If no components are observing the data then the data is evicted, causing the next read to trigger Suspense boundaries as if the data was never there to begin with.
 
@@ -72,7 +72,7 @@ This method allows you to manually update the data stored in the cache and re-re
 
 ## loader.edit(editFn)
 
-This method, for convenience allows you to make a partial update to your data and automatically handles immutability behind the scenes.
+This method, for convenience, allows you to make a partial update to your data and automatically handles immutability behind the scenes.
 
 ```jsx
 loader.edit(user => {

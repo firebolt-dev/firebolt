@@ -39,7 +39,7 @@ _Restricted to: Loaders_
 
 By default data fetched from a Loader is cached indefinitely. Use this to set the data to expire after a certain amount of time, or immediately.
 
-When data expires it becomes invalidated. Any components still observing the data it will be refetched in the background and automatically updated without triggering Suspense boundaries. If no components are observing the data then the data is evicted, causing the next read to trigger Suspense boundaries as if the data was never there to begin with.
+When data expires it becomes invalidated. Any components still observing the data it will be re-fetched in the background and automatically updated without triggering Suspense boundaries. If no components are observing the data then the data is evicted, causing the next read to trigger Suspense boundaries as if the data was never there to begin with.
 
 ```jsx
 export async function getTickets(ctx) {

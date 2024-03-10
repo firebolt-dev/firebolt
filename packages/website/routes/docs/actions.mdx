@@ -35,7 +35,7 @@ In this example, clicking the like button runs the `toggleLike` function on the 
 
 ## Context & Cookies
 
-Action functions are provided a [Context](/docs/ref/context) object that allows you to interact with cookies and perform redirects.
+Action functions are provided with a [Context](/docs/ref/context) object that allows you to interact with cookies and perform redirects.
 You can decorate the `context` object with anything you need, such as database access in your [firebolt.config.js](/docs/ref/config).
 
 In addition to this, when modifying a cookie on the server, all client components [observing that cookie](/docs/ref/useCookie) will update instantly.

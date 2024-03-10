@@ -149,12 +149,12 @@ export default function DocsLayout({ children }) {
             <NavLink label='css' href='/docs/ref/css' />
             <NavLink label='cls' href='/docs/ref/cls' />
 
-            <div className='docs-nav-section'>Guides</div>
+            {/* <div className='docs-nav-section'>Guides</div>
             <NavLink label='Theme toggles' href='/docs/guides/theme-toggles' />
             <NavLink
               label='Deploy to fly.io'
               href='/docs/guides/deploy-to-fly'
-            />
+            /> */}
           </div>
         </div>
         <div className='docs-main'>

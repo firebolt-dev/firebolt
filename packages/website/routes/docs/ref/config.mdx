@@ -114,7 +114,7 @@ export const config = {
   middleware: [
     (req, ctx) => {
       // example middleware that tags all requests with an ID
-      ctx.headers['X-Request-ID'] = ctx.uuid()
+      ctx.headers.set('X-Request-ID') = ctx.uuid()
     },
     (req, ctx) => {
       // example middleware that intercepts /foobars and returns some text

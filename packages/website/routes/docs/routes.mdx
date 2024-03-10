@@ -5,11 +5,11 @@
 
 # Routes
 
-The `routes` directory is an intuitive yet unique way of organising all of your static and dynamic content that needs to be available at a URL.
+The `routes` directory is an intuitive yet unique way of organizing all of your static and dynamic content that needs to be available at a URL.
 
 ## Static Files
 
-At it's most basic, the `routes` directory can serve static assets such a fonts, robots files and images by simply placing them there.
+At it's most basic, the `routes` directory can serve static assets such as fonts, robots files and images by simply placing them there.
 
 For example the `routes/robots.txt` file will be accessible at `/robots.txt`.
 
@@ -31,7 +31,7 @@ export function get(req, ctx) {
 }
 ```
 
-This gives you full control over all of your content and can be useful for many things incuding sitemap generation, image transformation and open graph image generators.
+This gives you full control over all of your content and can be useful for many things including sitemap generation, image transformation and open graph image generators.
 
 ## API Routes
 
@@ -97,7 +97,7 @@ export default function Docs({ children }) {
 ```md title='routes/docs/intro.mdx' lineNumbers
 # Intro
 
-Lets get started...
+Let's get started...
 ```
 
 In the example above, visiting `/docs/intro` will show the intro page nested inside the docs layout.
@@ -106,7 +106,7 @@ The root layout at `routes/_layout.js` is used to wrap your entire app with `<ht
 
 ## MDX
 
-Yup, we also support MDX pages out of the box, allowing you write your content with super powered markdown. Simply use the `.mdx` extension.
+Yup, we also support MDX pages out of the box, allowing you to write your content with super powered markdown. Simply use the `.mdx` extension.
 
 You can [configure](/docs/ref/config) MDX with plugins to provide syntax highlighting or support github flavored markdown, anything you need.
 
@@ -114,7 +114,7 @@ You can also customize the components rendered by MDX with an [MDXProvider](/doc
 
 ## Summary
 
-The `routes` folder is a simple yet powerful concept that allows you to keep your app organised, supporting essentially anything you might need.
+The `routes` folder is a simple yet powerful concept that allows you to keep your app organized, supporting essentially anything you might need.
 
 When building components that need to be shared across multiple routes, you can place them outside of the `routes` directory in a `components` directory or similar, and pull them in as needed.
 
