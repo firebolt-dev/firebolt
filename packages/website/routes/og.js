@@ -29,6 +29,7 @@ export async function get(req, ctx) {
         background-image: url(${bg});
         background-size: cover;
         background-position: center;
+        padding: 0 70px;
 
         .title {
           margin-top: 337px;
