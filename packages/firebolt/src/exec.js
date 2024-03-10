@@ -8,7 +8,6 @@ import * as esbuild from 'esbuild'
 import { isEqual, debounce } from 'lodash-es'
 
 import express from 'express'
-import cors from 'cors'
 import compression from 'compression'
 import cookieParser from 'cookie-parser'
 
@@ -514,7 +513,6 @@ export async function exec(opts) {
     }
     if (!server) {
       const app = express()
-      app.use(cors())
       app.use(compression())
       app.use(express.json())
       app.use(cookieParser())

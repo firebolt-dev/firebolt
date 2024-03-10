@@ -1,9 +1,10 @@
 import remarkGFM from 'remark-gfm'
 import rehypeShiki from '@shikijs/rehype'
 import icons from '@firebolt-dev/icons'
+import cors from '@firebolt-dev/cors'
 
 export const config = {
-  plugins: [icons()],
+  plugins: [icons(), cors()],
   productionBrowserSourceMaps: true,
   mdx: {
     remarkPlugins: [remarkGFM],

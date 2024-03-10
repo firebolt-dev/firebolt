@@ -396,9 +396,9 @@ export async function handle(req, res, wait) {
       response = await response
     }
     if (response instanceof Response) {
-      for (const key in context.headers) {
-        res.setHeader(key, context.headers[key])
-      }
+      context.headers.forEach((value, key) => {
+        res.setHeader(key, value)
+      })
       context.cookies.$pushChangesToExpressResponse(res)
       webToExpressResponse(response, res)
       return
@@ -406,9 +406,9 @@ export async function handle(req, res, wait) {
   }
 
   // apply headers from middleware that didn't end
-  for (const key in context.headers) {
-    res.setHeader(key, context.headers[key])
-  }
+  context.headers.forEach((value, key) => {
+    res.setHeader(key, value)
+  })
 
   // public files
   if (url.startsWith('/_firebolt/')) {

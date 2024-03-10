@@ -34,7 +34,7 @@ export function createContext({
 
   // headers
   if (type === 'middleware') {
-    ctx.headers = {}
+    ctx.headers = new Headers()
   }
 
   // redirect
