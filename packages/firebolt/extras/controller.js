@@ -405,6 +405,11 @@ export async function handle(req, res, wait) {
     }
   }
 
+  // apply headers from middleware that didn't end
+  for (const key in context.headers) {
+    res.setHeader(key, context.headers[key])
+  }
+
   // public files
   if (url.startsWith('/_firebolt/')) {
     const dir = path.join(__dirname, '../public')
