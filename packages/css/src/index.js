@@ -21,6 +21,8 @@ const getStyle = css => {
     className,
     wrappedCSS,
     string,
+    css,
+    isStyle: true,
   }
   cache[key] = style
   return style
@@ -104,7 +106,9 @@ export function css(strings, ...values) {
   // recombine
   let str = strings[0]
   for (let i = 0; i < values.length; i++) {
-    const value = values[i] || ''
+    let value = values[i]
+    if (!value) continue
+    if (value.isStyle) value = value.css
     str += value + strings[i + 1]
   }
   return str

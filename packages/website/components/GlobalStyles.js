@@ -76,7 +76,7 @@ function Theme() {
   )
 }
 
-const lightVariables = `
+const lightVariables = css`
   :root {
     --primary-color: rgb(244 63 94);
     --bg-color: white;
@@ -101,7 +101,7 @@ const lightVariables = `
   }
 `
 
-const darkVariables = `
+const darkVariables = css`
   :root {
     --primary-color: rgb(244 63 94);
     --bg-color: rgb(18, 18, 18);
