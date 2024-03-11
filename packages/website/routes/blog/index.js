@@ -41,7 +41,7 @@ export default function Blog({ children }) {
         <Post
           url='/blog/introducing-firebolt'
           image='/introducing-firebolt.png'
-          date='February 29, 2024'
+          date='March 11, 2024'
           title='Introducing Firebolt: The Simple React Framework'
           description={`
             Building for the web should be easy...
