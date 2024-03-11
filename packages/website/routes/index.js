@@ -9,7 +9,7 @@ export default function Home() {
   const [theme, setTheme] = useCookie('theme', 'system')
   return (
     <Page>
-      <Meta description='The simple react framework.' />
+      <Meta description='The simple react framework.' image='/og-default.png' />
       <div
         className='home'
         css={css`

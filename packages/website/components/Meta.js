@@ -7,6 +7,8 @@ export function Meta({ title, description, image }) {
   }
   if (title && !image) {
     image = encodeURI(`${process.env.PUBLIC_DOMAIN}/og?title=${title}`)
+  } else {
+    image = `${process.env.PUBLIC_DOMAIN}${image}`
   }
   return (
     <>
