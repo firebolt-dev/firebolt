@@ -207,6 +207,11 @@ export async function handleHandler(ctx, route, params) {
 async function handlePage(ctx, route, params) {
   let url = ctx.req.href
 
+  // apply headers
+  ctx.headers.forEach((value, key) => {
+    ctx.expRes.setHeader(key, value)
+  })
+
   let notFound
   if (!route) {
     notFound = true

@@ -513,6 +513,7 @@ export async function exec(opts) {
     }
     if (!server) {
       const app = express()
+      app.disable('x-powered-by')
       app.use(compression())
       // app.use(express.json())
       app.use(cookieParser())
