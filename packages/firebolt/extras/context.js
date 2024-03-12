@@ -1,3 +1,5 @@
+import send from 'send'
+
 import { createCookies } from './cookies'
 
 export function createContext({ expReq, expRes, defaultCookieOptions, base }) {
@@ -113,12 +115,6 @@ export function createContext({ expReq, expRes, defaultCookieOptions, base }) {
       }
       expRes.end()
     }
-    // apply body
-    // if (res.body) {
-    //   Readable.fromWeb(res.body).pipe(expRes)
-    // } else {
-    //   expRes.end()
-    // }
   }
 
   ctx.sendFile = path => {
@@ -127,7 +123,12 @@ export function createContext({ expReq, expRes, defaultCookieOptions, base }) {
       expRes.setHeader(key, value)
     })
     // send file
-    expRes.sendFile(path)
+    const opts = {
+      lastModified: true,
+      maxAge: 60 * 60 * 1000, // 1 hour
+    }
+    const stream = send(expReq, path, opts)
+    stream.pipe(expRes)
   }
 
   ctx.new = () => {
