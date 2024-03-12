@@ -7,7 +7,6 @@ import { renderToPipeableStream } from 'react-dom/server'
 import { isbot } from 'isbot'
 import { Root } from 'firebolt'
 
-import './web'
 import { matcher } from './matcher'
 import { config } from './config.js'
 import routes from './routes.js'

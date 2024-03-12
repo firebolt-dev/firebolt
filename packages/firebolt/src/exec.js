@@ -11,6 +11,7 @@ import express from 'express'
 import compression from 'compression'
 import cookieParser from 'cookie-parser'
 
+import './utils/web'
 import * as style from './utils/style'
 import * as log from './utils/log'
 import { reimport } from './utils/reimport'

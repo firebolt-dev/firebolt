@@ -2,6 +2,8 @@ import { ReadStream } from 'fs'
 import { Readable } from 'stream'
 
 class FireboltRequest extends Request {
+  static isFirebolt = true
+
   constructor(input, options) {
     super(input, options)
     this.isFirebolt = true
@@ -41,12 +43,15 @@ class FireboltRequest extends Request {
 }
 
 class FireboltResponse extends Response {
+  static isFirebolt = true
+
   constructor(body, options) {
     if (body instanceof ReadStream) {
-      // converts fs.createReadStream(file) to web ReadableStream
+      // convert fs.createReadStream(file) to web ReadableStream
       body = Readable.toWeb(body)
     }
     super(body, options)
+    this.isFirebolt = true
   }
 
   static notFound() {
@@ -54,7 +59,34 @@ class FireboltResponse extends Response {
       status: 404,
     })
   }
+
+  static error() {
+    const res = super.error()
+    return new FireboltResponse(res.body, {
+      status: res.status,
+      statusText: res.statusText,
+      headers: res.headers,
+    })
+  }
+
+  static json(data, options) {
+    const res = super.json(data, options)
+    return new FireboltResponse(res.body, {
+      status: res.status,
+      statusText: res.statusText,
+      headers: res.headers,
+    })
+  }
+
+  static redirect(url, status) {
+    const res = super.redirect(url, status)
+    return new FireboltResponse(res.body, {
+      status: res.status,
+      statusText: res.statusText,
+      headers: res.headers,
+    })
+  }
 }
 
-globalThis.Request = FireboltRequest
-globalThis.Response = FireboltResponse
+if (!Request.isFirebolt) globalThis.Request = FireboltRequest
+if (!Response.isFirebolt) globalThis.Response = FireboltResponse
