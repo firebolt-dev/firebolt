@@ -7,15 +7,14 @@ import { renderToPipeableStream } from 'react-dom/server'
 import { isbot } from 'isbot'
 import { Root } from 'firebolt'
 
+import './web'
 import { matcher } from './matcher'
 import { config } from './config.js'
 import routes from './routes.js'
 import manifest from './manifest.json'
 import * as registry from './registry'
-import { cookieOptionsToExpress } from './cookies'
 import { createRuntime } from './runtime'
 import { createContext } from './context'
-import { expressToWebRequest, webToExpressResponse } from './web-api'
 import { muid } from './uuid'
 
 // suppress React warning about useLayoutEffect on server, this is nonsense because useEffect
@@ -120,8 +119,8 @@ async function callFunction(ctx, id, args) {
 }
 
 // handle loader/action function call requests from the client
-export async function handleFunction(req, res) {
-  const { id, args } = req.body
+export async function handleFunction(ctx) {
+  const { type, id, args } = await ctx.req.json()
 
   // deserialize FormData if used
   if (args[0] && args[0].$form) {
@@ -132,29 +131,24 @@ export async function handleFunction(req, res) {
     args[0] = form
   }
 
-  const context = createContext({
-    type: req.body.type,
-    req,
-    params: {},
-    defaultCookieOptions,
-    base: config.context,
-  })
+  ctx.type = type
+  ctx.params = {}
+
   let value
   let error
   try {
-    value = await callFunction(context, id, args)
+    value = await callFunction(ctx, id, args)
   } catch (err) {
     error = err
   }
   const data = {}
   // get changed cookies to notify client UI
-  data.cookies = context.cookies.$getChanged()
-  // apply cookie changes to express response
-  context.cookies.$pushChangesToExpressResponse(res)
+  data.cookies = ctx.cookies.$getChanged()
   // handle redirect if any
   if (error?.isContext && error.$redirect) {
     data.redirect = error.$redirect
-    return res.status(200).json(data)
+    const res = Response.json(data)
+    return ctx.send(res)
   }
   if (error?.isContext) {
     data.error = {
@@ -162,7 +156,8 @@ export async function handleFunction(req, res) {
       message: 'An error ocurred in a handler',
       code: error.$errorCode || null,
     }
-    return res.status(400).json(data)
+    const res = Response.json(data, { status: 400 })
+    return ctx.send(res)
   }
   if (error) {
     const id = muid()
@@ -172,48 +167,46 @@ export async function handleFunction(req, res) {
       message: 'An error ocurred in a handler',
       id,
     }
-    return res.status(400).json(data)
+    const res = Response.json(data, { status: 400 })
+    return ctx.send(res)
   }
   // otherwise respond with the return value
   data.value = value
-  data.expire = context.$expire
-  data.invalidations = context.$invalidations
-  res.status(200).json(data)
+  data.expire = ctx.$expire
+  data.invalidations = ctx.$invalidations
+  const res = Response.json(data)
+  ctx.send(res)
 }
 
-export async function handleHandler(req, res, route, params) {
-  const method = methodToApiFunction[req.method]
-  const request = expressToWebRequest(req)
-  const context = createContext({
-    type: 'handler',
-    req,
-    params,
-    defaultCookieOptions,
-    base: config.context,
-  })
+export async function handleHandler(ctx, route, params) {
+  const method = methodToApiFunction[ctx.req.method]
+  ctx.type = 'handler'
+  ctx.params = params || {}
   let result
   try {
-    result = route.module[method](request, context)
+    result = route.module[method](ctx)
     if (result instanceof Promise) {
       result = await result
     }
   } catch (err) {
     console.error('Received error from handler:')
     console.error(err)
-    return res.status(500).end()
+    const res = new Response(null, {
+      status: 500,
+    })
+    ctx.send(res)
   }
-  // apply any cookie changes
-  context.cookies.$pushChangesToExpressResponse(res)
   // if result is a Response, pipe it through
   if (result instanceof Response) {
-    return webToExpressResponse(result, res)
+    return ctx.send(result)
   }
   // otherwise assume json
-  return res.json(result)
+  const res = Response.json(result)
+  return ctx.send(res)
 }
 
-async function handlePage(req, res, route, params) {
-  let url = req.originalUrl
+async function handlePage(ctx, route, params) {
+  let url = ctx.req.href
 
   let notFound
   if (!route) {
@@ -234,35 +227,18 @@ async function handlePage(req, res, route, params) {
     },
   }
 
-  const cookies = {
-    get(key) {
-      // console.log('s.cookies.get', key, req.cookies[key])
-      return req.cookies[key]
-    },
-    set(key, value, options) {
-      // console.log('s.cookies.set', key, value, options)
-      res.cookie(key, value, cookieOptionsToExpress(options))
-    },
-    remove(key) {
-      // console.log('scookies.remove', key)
-      res.clearCookie(key)
-    },
-  }
-
   const options = {
     ssr: {
       url,
       params,
       inserts,
-      cookies,
+      cookies: ctx.cookies,
       async callFunction(type, id, args) {
-        const context = createContext({
-          type,
-          req,
-          params,
-          defaultCookieOptions,
-          base: config.context,
-        })
+        // we have to use a fresh context here to capture cookies set
+        // in this function
+        const context = ctx.new()
+        context.type = type
+        context.params = params
         let value
         let error
         try {
@@ -274,7 +250,7 @@ async function handlePage(req, res, route, params) {
         context.cookies.$pushChangesToStream(inserts)
         // if FireboltRequest error, write out the redirect and stop
         if (error?.isContext && error.$redirect) {
-          context.$applyRedirectToExpressResponse(res)
+          context.$applyRedirectToExpressResponse()
           return
         }
         if (error?.isContext) {
@@ -311,7 +287,7 @@ async function handlePage(req, res, route, params) {
 
   const runtime = createRuntime([['config', options]])
 
-  const isBot = isbot(req.get('user-agent') || '')
+  const isBot = isbot(ctx.req.headers.get('User-Agent') || '')
 
   const stream = new PassThrough()
   stream.on('data', chunk => {
@@ -324,11 +300,11 @@ async function handlePage(req, res, route, params) {
 
     // console.log('---')
     // console.log(str)
-    res.write(str)
-    res.flush()
+    ctx.expRes.write(str)
+    ctx.expRes.flush()
   })
   stream.on('end', () => {
-    res.end()
+    ctx.expRes.end()
   })
 
   let didError = false
@@ -350,15 +326,15 @@ async function handlePage(req, res, route, params) {
     bootstrapModules: isBot ? [] : [route.file, bootstrapFile],
     onShellReady() {
       if (!isBot) {
-        res.statusCode = notFound ? 404 : didError ? 500 : 200
-        res.setHeader('Content-Type', 'text/html')
+        ctx.expRes.statusCode = notFound ? 404 : didError ? 500 : 200
+        ctx.expRes.setHeader('Content-Type', 'text/html')
         pipe(stream)
       }
     },
     onAllReady() {
       if (isBot) {
-        res.statusCode = notFound ? 404 : didError ? 500 : 200
-        res.setHeader('Content-Type', 'text/html')
+        ctx.expRes.statusCode = notFound ? 404 : didError ? 500 : 200
+        ctx.expRes.setHeader('Content-Type', 'text/html')
         // pipe(res)
         pipe(stream)
       }
@@ -368,47 +344,38 @@ async function handlePage(req, res, route, params) {
     },
     onShellError(err) {
       console.error(err)
-      res.statusCode = 500
-      res.setHeader('content-type', 'text/html')
-      res.send('<p>Something went wrong</p>')
+      ctx.expRes.statusCode = 500
+      ctx.expRes.setHeader('content-type', 'text/html')
+      ctx.expRes.send('<p>Something went wrong</p>')
     },
   })
 }
 
-export async function handle(req, res, wait) {
-  res.setHeader('X-Powered-By', 'Firebolt')
-
+export async function handle(expReq, expRes, wait) {
   if (wait) await wait()
 
-  let url = req.originalUrl
-
-  // middleware
-  const context = createContext({
-    type: 'middleware',
-    req,
+  const ctx = createContext({
+    expReq,
+    expRes,
     defaultCookieOptions,
     base: config.context,
   })
+
+  const url = ctx.req.href
+
+  ctx.headers.set('X-Powered-By', 'Firebolt')
+
+  // middleware
+  ctx.type = 'middleware'
   for (const exec of config.middleware) {
-    const request = expressToWebRequest(req)
-    let response = exec(request, context)
-    if (response instanceof Promise) {
-      response = await response
+    let res = exec(ctx)
+    if (res instanceof Promise) {
+      res = await res
     }
-    if (response instanceof Response) {
-      context.headers.forEach((value, key) => {
-        res.setHeader(key, value)
-      })
-      context.cookies.$pushChangesToExpressResponse(res)
-      webToExpressResponse(response, res)
-      return
+    if (res instanceof Response) {
+      return ctx.send(res)
     }
   }
-
-  // apply headers from middleware that didn't end
-  context.headers.forEach((value, key) => {
-    res.setHeader(key, value)
-  })
 
   // public files
   if (url.startsWith('/_firebolt/')) {
@@ -416,15 +383,16 @@ export async function handle(req, res, wait) {
     const file = path.join(dir, url.substring(10))
     const exists = await fs.exists(file)
     if (exists) {
-      return res.sendFile(file)
+      return ctx.sendFile(file)
     } else {
-      return res.status(404).send('Not found')
+      const res = Response.notFound()
+      return ctx.send(res)
     }
   }
 
   // function requests
   if (url === '/_firebolt_fn') {
-    return handleFunction(req, res)
+    return handleFunction(ctx)
   }
 
   let [route, params] = resolveRouteAndParams(url)
@@ -438,28 +406,29 @@ export async function handle(req, res, wait) {
     const file = path.join(cwd, 'routes', url)
     const exists = await fs.exists(file)
     if (exists) {
-      return res.sendFile(file)
+      return ctx.sendFile(file)
     } else {
-      return res.status(404).send('Not found')
+      const res = Response.notFound()
+      return ctx.send(res)
     }
   }
 
   // route not found
   if (!route) {
-    return handlePage(req, res, null, {})
+    return handlePage(ctx, null, {})
   }
 
   // route page
   if (route.type === 'page') {
-    return handlePage(req, res, route, params)
+    return handlePage(ctx, route, params)
   }
 
   // route handler
   if (route.type === 'handler') {
-    return handleHandler(req, res, route, params)
+    return handleHandler(ctx, route, params)
   }
 
-  console.error('TODO: handle fall through')
+  console.error('Unhandled fall through')
 }
 
 const extRegex = /\/[^/]+\.[^/]+$/

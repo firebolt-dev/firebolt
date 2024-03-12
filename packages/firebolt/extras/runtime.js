@@ -418,14 +418,12 @@ export function createRuntime(stack) {
   const cookieObservers = {} // [key]: Set
 
   function getCookie(key) {
-    let value
     if (ssr) {
-      value = ssr.cookies.get(key)
-    } else {
-      value = cookiejs.get(key)
-      // cookiejs returns false if cookie doesn't exist
-      if (value === false) value = null
+      return ssr.cookies.get(key)
     }
+    let value = cookiejs.get(key)
+    // cookiejs returns false if cookie doesn't exist
+    if (value === false) value = null
     if (value === null || value === undefined) return null
     let data
     try {
@@ -444,14 +442,13 @@ export function createRuntime(stack) {
       const prevData = getCookie(key)
       data = data(prevData || defaultValue)
     }
+    if (ssr) {
+      return ssr.cookies.set(key, data, options)
+    }
     options = options || defaultCookieOptions
     // console.log('setCookie', { key, data, options })
     if (data === null || data === undefined || data === '') {
-      if (ssr) {
-        ssr.cookies.remove(key)
-      } else {
-        cookiejs.remove(key)
-      }
+      cookiejs.remove(key)
       data = null
     } else {
       let value
@@ -463,11 +460,7 @@ export function createRuntime(stack) {
           data
         )
       }
-      if (ssr) {
-        ssr.cookies.set(key, value, options)
-      } else {
-        cookiejs.set(key, value, options)
-      }
+      cookiejs.set(key, value, options)
     }
     const observers = cookieObservers[key]
     if (observers) {

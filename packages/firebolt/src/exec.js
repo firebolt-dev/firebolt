@@ -11,7 +11,6 @@ import express from 'express'
 import compression from 'compression'
 import cookieParser from 'cookie-parser'
 
-import './utils/response'
 import * as style from './utils/style'
 import * as log from './utils/log'
 import { reimport } from './utils/reimport'
@@ -514,28 +513,28 @@ export async function exec(opts) {
     if (!server) {
       const app = express()
       app.use(compression())
-      app.use(express.json())
+      // app.use(express.json())
       app.use(cookieParser())
       app.use('*', async (req, res) => {
+        const wait = prod ? runProgress.wait : null
         try {
-          await controller.handle(req, res, prod ? runProgress.wait : null)
+          await controller.handle(req, res, wait)
         } catch (err) {
           console.error(err)
         }
       })
       port = controller.config.port
-      function onConnected() {
+      server = app.listen(port, () => {
         console.log(`server running at http://localhost:${port}\n`)
-      }
-      function onError(err) {
+      })
+      server.on('error', err => {
         if (err.code === 'EADDRINUSE') {
           log.error(`port ${port} is already in use\n`)
           process.exit()
         } else {
           log.error(`failed to start server: ${err.message}`)
         }
-      }
-      server = app.listen(port, onConnected).on('error', onError)
+      })
     }
   }
 
