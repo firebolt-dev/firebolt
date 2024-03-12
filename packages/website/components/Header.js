@@ -99,7 +99,7 @@ export function Header() {
         </Link>
         <Link
           className='header-social'
-          href='https://github.com/firebolt-dev'
+          href='https://github.com/firebolt-dev/firebolt'
           target='_blank'
           aria-label='View Firebolt on GitHub'
         >
