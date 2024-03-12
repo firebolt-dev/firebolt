@@ -1,6 +1,6 @@
 {
   "name": "@firebolt-dev/trellix",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,9 +9,9 @@
     "start": "firebolt start"
   },
   "dependencies": {
-    "@firebolt-dev/icons": "0.2.0",
-    "@firebolt-dev/snap": "0.2.0",
-    "firebolt": "0.2.0",
+    "@firebolt-dev/icons": "0.2.1",
+    "@firebolt-dev/snap": "0.2.1",
+    "firebolt": "0.2.1",
     "lucide-react": "^0.331.0",
     "nanoid": "^5.0.6",
     "react": "canary",
