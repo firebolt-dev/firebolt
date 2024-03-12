@@ -15,7 +15,7 @@ Create a [handler](/docs/ref/handler-js) to render your images
 import { css } from 'firebolt'
 import snap from '@firebolt-dev/snap'
 
-export async function get(req, ctx) {
+export async function get(ctx) {
   const { title } = ctx.params
   return snap(
     <div
@@ -73,7 +73,7 @@ import snap from '@firebolt-dev/snap'
 import background from './background.png'
 import robotoFlex from './roboto-flex.woff2'
 
-export async function get(req, ctx) {
+export async function get(ctx) {
   return snap(
     <div
       css={css`

@@ -18,7 +18,7 @@ For example the `routes/robots.txt` file will be accessible at `/robots.txt`.
 For dynamic files that need to be generated on the fly you can create virtual assets by giving them a `.js` extension and handling the appropriate HTTP method
 
 ```jsx title='routes/robots.txt.js' lineNumbers
-export function get(req, ctx) {
+export function get(ctx) {
   const data = `
     User-agent: *
     Disallow:
@@ -38,7 +38,7 @@ This gives you full control over all of your content and can be useful for many 
 You can use the same mechanism to create API endpoints, eg `GET /api/users`:
 
 ```jsx title='routes/api/users.js' lineNumbers
-export function get(req, ctx) {
+export function get(ctx) {
   return await ctx.db('users')
 }
 ```

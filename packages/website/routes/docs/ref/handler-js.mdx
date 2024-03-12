@@ -16,7 +16,7 @@ You can use a handler to expose what appears to be a static file that is actuall
 ```jsx title='routes/sitemap.xml.js' lineNumbers
 import getOrRefreshSitemap from '../scripts/sitemap.js'
 
-export async function get(req, ctx) {
+export async function get(ctx) {
   const sitemap = await getOrRefreshSitemap()
   return new Response(sitemap, {
     headers: {
@@ -35,27 +35,25 @@ You can handle multiple HTTP methods to form API routes.
 Supported function names are `get`, `put`, `patch`, `post`, `del` and `options`.
 
 ```jsx title='route/api/users/$id.js' lineNumbers
-export async function get(req, ctx) {
-  const { id } = req.params
+export async function get(ctx) {
+  const { id } = ctx.req.params
   return await ctx.db('users').where({ id }).first()
 }
 
-export async function put(req, ctx) {
-  const data = await req.json()
+export async function put(ctx) {
+  const data = await ctx.req.json()
   /* update and return user */
 }
 ```
 
 **IMPORTANT:** Unless your app needs to provide a public API to its users, we recommend building your entire app using [Loaders](/docs/loaders) and [Actions](/docs/actions) instead of API routes due to how efficient they can be.
 
-## Request & Context
+## Context
 
-Handlers are provided a Fetch API [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) object with details about the request.
-
-They're also given a [Context](/docs/ref/context) object that includes some utilities for managing cookies, route params, and any extras you've provided in your [firebolt.config.js](/docs/ref/config) such as database access.
+Handlers are provided a [Context](/docs/ref/context) object that provides access to the Web API [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) and utilities for managing cookies, route params and extras you've provided in your [firebolt.config.js](/docs/ref/config), such as database access.
 
 ## Response
 
 Handlers can return any valid JSON and Firebolt will automatically respond with a `Content-Type: application/json` header and `200` status.
 
-For more fine grained control, you can return a Fetch API [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response) instance, allowing you to set different headers, statuses and body types.
+For more fine grained control, you can return a Web API [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response) instance, allowing you to set different headers, statuses and body types.

@@ -9,29 +9,44 @@ The Context object is used to provide extra information and utilities to middlew
 
 Along with the fields below, you can also inject your own with the `context` prop in your [firebolt.config.js](/docs/ref/config). This can be used to provide database access, auth utilities etc.
 
-## cookies.get(key)
+## cookies
 
-Gets the value of a cookie.
-
-```jsx
-req.cookies.get('auth')
-```
-
-## cookies.set(key, value, options)
-
-Sets the value of a cookie.
+A utility to read and write cookies. Any cookie changes made during middleware, loaders, actions and handlers will automatically be applied to the final response before it is sent.
 
 ```jsx
-req.cookies.set('auth', auth)
+// get a cookie
+ctx.cookies.get('auth')
+
+// set a cookie
+ctx.cookies.set('auth', auth)
+
+// set a cookie with options
+ctx.cookies.set('auth', auth, { expires: 30 })
+
+// remove a cookie
+ctx.cookies.set('auth', null)
 ```
 
-Setting a cookie to `null` removes it.
+See the [useCookie](/docs/ref/useCookie) reference to learn more about cookies, options and synchronization.
 
-```jsx
-req.cookies.set('auth', null)
-```
+## req
 
-See the [useCookie](/docs/ref/useCookie) reference for more info about cookies and synchronization.
+_Restricted to: Middleware_
+
+A Web API [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) object.
+
+Firebolt adds some additional fields to this object to make it easier to work with:
+
+- `.pathname` The pathname (eg `/cities/123`)
+- `.href`: The pathname and search params ( eg `/cities/123?details=true`)
+
+## headers
+
+_Restricted to: Middleware_
+
+Allows you to append or modify headers in middleware. The object is shared across all middleware and headers are applied to the final response before it is sent.
+
+This can be useful to enable CORS or tag requests with an ID etc.
 
 ## expire(seconds)
 
@@ -76,11 +91,3 @@ Throws an operational error that can be caught by an [\<ErrorBoundary\>](/docs/r
 _Restricted to: Handlers_
 
 An object that includes search params and dynamic route segments for the current route.
-
-## headers
-
-_Restricted to: Middleware_
-
-Allows you to append or modify headers in middleware. The object is shared across all middleware and headers are appended to the final response that is sent.
-
-This can be useful to enable CORS or tag requests ID's etc

@@ -112,13 +112,13 @@ Use middleware to intercept requests and handle them as needed
 ```jsx title='firebolt.config.js' lineNumbers
 export const config = {
   middleware: [
-    (req, ctx) => {
+    (ctx) => {
       // example middleware that tags all requests with an ID
       ctx.headers.set('X-Request-ID') = ctx.uuid()
     },
-    (req, ctx) => {
+    (ctx) => {
       // example middleware that intercepts /foobars and returns some text
-      if (req.pathname === '/foobars') {
+      if (ctx.req.pathname === '/foobars') {
         return new Response('foo-bars', {
           headers: {
             'Content-Type': 'text/plain',
@@ -130,7 +130,7 @@ export const config = {
 }
 ```
 
-The `req` is a Fetch API [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) and `ctx` is a [Context](/docs/ref/context) object that provides access to cookies, headers and custom context values such as your database.
+Middleware is provided a [Context](/docs/ref/context) object that provides the Web API [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) and utilities to manage cookies, headers and custom values (such as a database) that you configured in your [firebolt.config.js](/docs/ref/config).
 
 ## Plugins
 
