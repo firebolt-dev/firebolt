@@ -1,12 +1,4 @@
-import { cookieOptionsToExpress } from './cookies'
-
-export function createContext({
-  type,
-  req,
-  defaultCookieOptions,
-  params,
-  base,
-}) {
+export function createContext({ type, cookies, base, params }) {
   const ctx = {}
 
   decorate(ctx, base)
@@ -80,90 +72,7 @@ export function createContext({
   }
 
   // cookies
-  ctx.cookies = {
-    get(key) {
-      let data = req.cookies[key]
-      if (data === null || data === undefined || data === '') {
-        return null
-      }
-      let value
-      try {
-        value = JSON.parse(data)
-      } catch (err) {
-        console.error(`could not deserialize cookie ${key} with value:`, data)
-        return null
-      }
-      return value
-    },
-    set(key, value, options) {
-      if (value === null || value === undefined || value === '') {
-        req.cookies[key] = null
-        ctx.cookies.$changes.push({
-          type: 'remove',
-          key,
-        })
-      } else {
-        let data
-        try {
-          data = JSON.stringify(value)
-        } catch (err) {
-          return console.error(
-            `could not serialize cookie ${key} with value:`,
-            value
-          )
-        }
-        req.cookies[key] = data
-        ctx.cookies.$changes.push({
-          type: 'set',
-          key,
-          data,
-          options: options || defaultCookieOptions,
-        })
-      }
-    },
-    $changes: [],
-    $getChanged() {
-      const keys = []
-      for (const change of ctx.cookies.$changes) {
-        if (!keys.includes(change.key)) {
-          keys.push(change.key)
-        }
-      }
-      return keys
-    },
-    $pushChangesToExpressResponse(res) {
-      for (const change of ctx.cookies.$changes) {
-        if (change.type === 'set') {
-          let { key, data, options } = change
-          options = cookieOptionsToExpress(options)
-          res.cookie(key, data, options)
-        }
-        if (change.type === 'remove') {
-          let { key } = change
-          res.clearCookie(key)
-        }
-      }
-      ctx.cookies.$changes.length = 0
-    },
-    $pushChangesToStream(inserts) {
-      for (const change of ctx.cookies.$changes) {
-        if (change.type === 'set') {
-          let { key, data, options } = change
-          options = JSON.stringify(options)
-          inserts.write(`
-            <script>globalThis.$firebolt('setCookie', '${key}', ${data}, ${options})</script>
-          `)
-        }
-        if (change.type === 'remove') {
-          let { key } = change
-          inserts.write(`
-            <script>globalThis.$firebolt('setCookie', '${key}', null)</script>
-          `)
-        }
-      }
-      ctx.cookies.$changes.length = 0
-    },
-  }
+  ctx.cookies = cookies
 
   ctx.isContext = true
 

@@ -68,7 +68,7 @@ function createMiddleware(options) {
 
       let headers = opts.allowHeaders
       if (!headers?.length) {
-        const requestHeaders = c.req.header('Access-Control-Request-Headers')
+        const requestHeaders = req.headers.get('Access-Control-Request-Headers')
         if (requestHeaders) {
           headers = requestHeaders.split(/\s*,\s*/)
         }
