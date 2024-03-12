@@ -76,7 +76,9 @@ async function setup() {
   }
 }
 
-function middleware(req, ctx) {
+function middleware(ctx) {
+  const req = ctx.req
+
   for (const item of items) {
     if (req.pathname === item.pathname) {
       const stream = fs.createReadStream(item.file)

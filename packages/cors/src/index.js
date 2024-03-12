@@ -33,7 +33,9 @@ function createMiddleware(options) {
     }
   })(opts.origin)
 
-  return async function cors(req, ctx) {
+  return async function cors(ctx) {
+    const req = ctx.req
+
     function set(key, value) {
       ctx.headers.set(key, value)
     }
@@ -82,7 +84,8 @@ function createMiddleware(options) {
       ctx.headers.delete('Content-Type')
 
       return new Response(null, {
-        headers: ctx.headers,
+        // ctx.headers are auto applied
+        // headers: ctx.headers,
         status: 204,
         statusText: 'No Content',
       })

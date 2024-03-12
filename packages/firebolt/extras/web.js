@@ -1,3 +1,6 @@
+import { ReadStream } from 'fs'
+import { Readable } from 'stream'
+
 class FireboltRequest extends Request {
   constructor(input, options) {
     super(input, options)
@@ -37,4 +40,21 @@ class FireboltRequest extends Request {
   }
 }
 
+class FireboltResponse extends Response {
+  constructor(body, options) {
+    if (body instanceof ReadStream) {
+      // converts fs.createReadStream(file) to web ReadableStream
+      body = Readable.toWeb(body)
+    }
+    super(body, options)
+  }
+
+  static notFound() {
+    return new FireboltResponse('Not found', {
+      status: 404,
+    })
+  }
+}
+
 globalThis.Request = FireboltRequest
+globalThis.Response = FireboltResponse
