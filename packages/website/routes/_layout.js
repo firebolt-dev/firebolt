@@ -1,6 +1,6 @@
 import { Icons } from '@firebolt-dev/icons'
 
-import { GlobalStyles } from '@/components/GlobalStyles'
+import { Styles } from '@/components/Styles'
 import { Analytics } from '@/components/Analytics'
 
 export default function RootLayout({ children }) {
@@ -23,7 +23,7 @@ export default function RootLayout({ children }) {
           type='font/woff2'
           crossOrigin='anonymous'
         />
-        <GlobalStyles />
+        <Styles />
         <Analytics />
         <Icons />
       </head>

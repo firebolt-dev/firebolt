@@ -1,6 +1,6 @@
 import { useCookie, css } from 'firebolt'
 
-export function GlobalStyles() {
+export function Styles() {
   return (
     <>
       <Reset />
