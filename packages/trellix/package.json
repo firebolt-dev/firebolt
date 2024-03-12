@@ -1,5 +1,5 @@
 {
-  "name": "@firebolt-dev/website",
+  "name": "@firebolt-dev/trellix",
   "version": "0.1.14",
   "private": true,
   "type": "module",
@@ -9,15 +9,13 @@
     "start": "firebolt start"
   },
   "dependencies": {
-    "@shikijs/rehype": "^1.1.6",
-    "firebolt": "0.1.14",
     "@firebolt-dev/icons": "0.1.14",
     "@firebolt-dev/snap": "0.1.14",
-    "@firebolt-dev/cors": "0.1.14",
+    "firebolt": "0.1.14",
     "lucide-react": "^0.331.0",
+    "nanoid": "^5.0.6",
     "react": "canary",
-    "react-dom": "canary",
-    "remark-gfm": "^4.0.0"
+    "react-dom": "canary"
   },
   "overrides": {
     "react": "canary",

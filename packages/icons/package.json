@@ -1,6 +1,6 @@
 {
   "name": "@firebolt-dev/icons",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "main": "dist/index.js",
   "browser": "dist/browser.js",
   "type": "module",
