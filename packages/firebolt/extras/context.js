@@ -9,7 +9,7 @@ export function createContext({ expReq, expRes, defaultCookieOptions, base }) {
 
   ctx.isContext = true
 
-  ctx.type = null
+  ctx.type = null // middleware, handler, loader, action
 
   ctx.req = Request.fromExpress(expReq)
 
@@ -17,31 +17,45 @@ export function createContext({ expReq, expRes, defaultCookieOptions, base }) {
 
   ctx.cookies = createCookies(ctx.req, defaultCookieOptions)
 
+  // type: middleware
+  ctx.headers = new Headers()
+
   // type: handler
   ctx.params = null
 
   // type: action
   ctx.$invalidations = []
   ctx.invalidate = (...args) => {
+    if (!['action'].includes(ctx.type)) {
+      throw new Error('ctx.invalidate() can only be used inside an action')
+    }
     ctx.$invalidations.push(args)
   }
 
   // type: loader, action
   ctx.error = code => {
+    if (!['loader', 'action'].includes(ctx.type)) {
+      throw new Error('ctx.error() can only be used inside an action or loader')
+    }
     throw new ContextError(code, `An error occurred in a ${ctx.type}`)
   }
 
-  // type: middleware
-  ctx.headers = new Headers()
-
   // type: loader, action
   ctx.redirect = (url, mode) => {
+    if (!['loader', 'action'].includes(ctx.type)) {
+      throw new Error(
+        'ctx.redirect() can only be used inside an action or loader'
+      )
+    }
     throw new ContextRedirect(url, mode)
   }
 
   // type: loader
   ctx.$expire = null
   ctx.expire = (amount, unit = 'seconds') => {
+    if (!['loader'].includes(ctx.type)) {
+      throw new Error('ctx.expire() can only be used inside a loader')
+    }
     ctx.$expire = parseExpiry(amount, unit)
   }
 
