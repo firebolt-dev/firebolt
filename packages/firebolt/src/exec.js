@@ -515,7 +515,6 @@ export async function exec(opts) {
       const app = express()
       app.disable('x-powered-by')
       app.use(compression())
-      // app.use(express.json())
       app.use(cookieParser())
       app.use('*', async (req, res) => {
         const wait = prod ? runProgress.wait : null

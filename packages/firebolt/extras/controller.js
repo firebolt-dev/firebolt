@@ -13,7 +13,7 @@ import routes from './routes.js'
 import manifest from './manifest.json'
 import * as registry from './registry'
 import { createRuntime } from './runtime'
-import { createContext } from './context'
+import { ContextError, ContextRedirect, createContext } from './context'
 import { muid } from './uuid'
 
 // suppress React warning about useLayoutEffect on server, this is nonsense because useEffect
@@ -144,16 +144,17 @@ export async function handleFunction(ctx) {
   // get changed cookies to notify client UI
   data.cookies = ctx.cookies.$getChanged()
   // handle redirect if any
-  if (error?.isContext && error.$redirect) {
-    data.redirect = error.$redirect
+  if (error instanceof ContextRedirect) {
+    const { url, mode } = error
+    data.redirect = { url, mode }
     const res = Response.json(data)
     return ctx.send(res)
   }
-  if (error?.isContext) {
+  if (error instanceof ContextError) {
     data.error = {
-      name: 'OperationalError',
-      message: 'An error ocurred in a handler',
-      code: error.$errorCode || null,
+      name: error.name,
+      message: error.message,
+      code: error.code || null,
     }
     const res = Response.json(data, { status: 400 })
     return ctx.send(res)
@@ -163,7 +164,7 @@ export async function handleFunction(ctx) {
     console.error(`[${id}]`, error)
     data.error = {
       name: 'Error',
-      message: 'An error ocurred in a handler',
+      message: 'An error occurred',
       id,
     }
     const res = Response.json(data, { status: 400 })
@@ -253,16 +254,16 @@ async function handlePage(ctx, route, params) {
         // write out any cookies first
         context.cookies.$pushChangesToStream(inserts)
         // if FireboltRequest error, write out the redirect and stop
-        if (error?.isContext && error.$redirect) {
-          context.$applyRedirectToExpressResponse()
-          return
+        if (error instanceof ContextRedirect) {
+          const redirect = error
+          return redirect.applyToExpressResponse(ctx.expRes)
         }
-        if (error?.isContext) {
+        if (error instanceof ContextError) {
           return {
             error: {
-              name: 'OperationalError',
-              message: 'An error ocurred in a handler',
-              code: error.$errorCode || null,
+              name: error.name,
+              message: error.message,
+              code: error.code || null,
             },
           }
         }
@@ -272,7 +273,7 @@ async function handlePage(ctx, route, params) {
           return {
             error: {
               name: 'Error',
-              message: 'An error ocurred in a handler',
+              message: 'An error occurred',
               id,
             },
           }

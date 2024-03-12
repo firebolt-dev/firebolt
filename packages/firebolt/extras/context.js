@@ -28,43 +28,15 @@ export function createContext({ expReq, expRes, defaultCookieOptions, base }) {
 
   // type: loader, action
   ctx.error = code => {
-    ctx.$errorCode = code
-    throw ctx
+    throw new ContextError(code, `An error occurred in a ${ctx.type}`)
   }
 
   // type: middleware
   ctx.headers = new Headers()
 
   // type: loader, action
-  ctx.redirect = (url, mode = 'push') => {
-    ctx.$redirect = { url, mode }
-    throw ctx
-  }
-  ctx.$applyRedirectToExpressResponse = () => {
-    if (!ctx.$redirect) return
-    /**
-     * during ssr if we need to redirect, we have to do it using a script
-     * because the response is already streaming :)
-     *
-     * NOTE: we write directly to the response and flush it so that we don't get a flash
-     * of the rendering before it redirects.
-     */
-    if (ctx.$redirect.mode === 'replace') {
-      expRes.write(`
-              <script>window.location.replace('${ctx.$redirect.url}')</script>
-            `)
-      expRes.flush()
-    }
-    if (ctx.$redirect.mode === 'push') {
-      /**
-       * NOTE: it appears that this does not push a new route to the history and instead replaces it.
-       * this is likely because the location changes BEFORE the html document has finished streaming.
-       */
-      expRes.write(`
-              <script>window.location.href = '${ctx.$redirect.url}'</script>
-            `)
-      expRes.flush()
-    }
+  ctx.redirect = (url, mode) => {
+    throw new ContextRedirect(url, mode)
   }
 
   // type: loader
@@ -171,4 +143,46 @@ function decorate(obj, extras) {
   Object.keys(extras).forEach(key => {
     obj[key] = extras[key]
   })
+}
+
+export class ContextRedirect {
+  constructor(url, mode = 'push') {
+    this.url = url
+    this.mode = mode
+  }
+
+  applyToExpressResponse(expRes) {
+    /**
+     * during ssr if we need to redirect, we have to do it using a script
+     * because the response is already streaming :)
+     *
+     * NOTE: we write directly to the response and flush it so that we don't get a flash
+     * of the rendering before it redirects.
+     */
+    if (this.mode === 'replace') {
+      expRes.write(`
+        <script>window.location.replace('${this.url}')</script>
+      `)
+      expRes.flush()
+    }
+    if (this.mode === 'push') {
+      /**
+       * NOTE: it appears that this does not push a new route to the history and instead replaces it.
+       * this is likely because the location changes BEFORE the html document has finished streaming.
+       */
+      expRes.write(`
+        <script>window.location.href = '${this.url}'</script>
+      `)
+      expRes.flush()
+    }
+  }
+}
+
+export class ContextError extends Error {
+  constructor(code, message) {
+    super(message)
+    this.name = this.constructor.name
+    this.code = code
+    Error.captureStackTrace(this, this.constructor)
+  }
 }
