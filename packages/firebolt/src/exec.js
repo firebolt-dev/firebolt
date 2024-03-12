@@ -512,7 +512,6 @@ export async function exec(opts) {
       server = null
     }
     if (!server) {
-      const cacheOpts = { maxAge: 1000 * 60 * 60 }
       const app = express()
       app.disable('x-powered-by')
       app.use(compression())
@@ -521,7 +520,14 @@ export async function exec(opts) {
         res.setHeader('X-Powered-By', 'Firebolt')
         next()
       })
-      app.use('/_firebolt', express.static('.firebolt/public', cacheOpts))
+      app.use(
+        '/_firebolt',
+        express.static('.firebolt/public', {
+          // all of these files are hashed so are max cached
+          maxeAge: 1000 * 60 * 60 * 24 * 365, // 1y
+          immutable: true,
+        })
+      )
       app.use('*', async (req, res, next) => {
         const wait = prod ? runProgress.wait : null
         try {
@@ -530,7 +536,11 @@ export async function exec(opts) {
           console.error(err)
         }
       })
-      app.use(express.static('routes', cacheOpts))
+      app.use(
+        express.static('routes', {
+          maxAge: 1000 * 60 * 60, // 1h
+        })
+      )
       port = controller.config.port
       server = app.listen(port, () => {
         console.log(`server running at http://localhost:${port}\n`)
