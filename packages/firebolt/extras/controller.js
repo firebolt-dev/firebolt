@@ -356,7 +356,7 @@ async function handlePage(ctx, route, params) {
   })
 }
 
-export async function handle(expReq, expRes, wait) {
+export async function handle(expReq, expRes, wait, next) {
   if (wait) await wait()
 
   const ctx = createContext({
@@ -367,8 +367,6 @@ export async function handle(expReq, expRes, wait) {
   })
 
   const url = ctx.req.href
-
-  ctx.headers.set('X-Powered-By', 'Firebolt')
 
   // middleware
   ctx.type = 'middleware'
@@ -382,18 +380,18 @@ export async function handle(expReq, expRes, wait) {
     }
   }
 
-  // public files
-  if (url.startsWith('/_firebolt/')) {
-    const dir = path.join(__dirname, '../public')
-    const file = path.join(dir, url.substring(10))
-    const exists = await fs.exists(file)
-    if (exists) {
-      return ctx.sendFile(file)
-    } else {
-      const res = Response.notFound()
-      return ctx.send(res)
-    }
-  }
+  // public files (note: this is now handled by prior middleware)
+  // if (url.startsWith('/_firebolt/')) {
+  //   const dir = path.join(__dirname, '../public')
+  //   const file = path.join(dir, url.substring(10))
+  //   const exists = await fs.exists(file)
+  //   if (exists) {
+  //     return ctx.sendFile(file)
+  //   } else {
+  //     const res = Response.notFound()
+  //     return ctx.send(res)
+  //   }
+  // }
 
   // function requests
   if (url === '/_firebolt_fn') {
@@ -408,14 +406,9 @@ export async function handle(expReq, expRes, wait) {
 
   // route files
   if (!route && hasExt(url)) {
-    const file = path.join(cwd, 'routes', url)
-    const exists = await fs.exists(file)
-    if (exists) {
-      return ctx.sendFile(file)
-    } else {
-      const res = Response.notFound()
-      return ctx.send(res)
-    }
+    // requests for static files that don't have a handler
+    // should continue to the next middleware
+    return next()
   }
 
   // route not found

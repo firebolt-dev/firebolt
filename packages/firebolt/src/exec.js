@@ -512,18 +512,25 @@ export async function exec(opts) {
       server = null
     }
     if (!server) {
+      const cacheOpts = { maxAge: 1000 * 60 * 60 }
       const app = express()
       app.disable('x-powered-by')
       app.use(compression())
       app.use(cookieParser())
-      app.use('*', async (req, res) => {
+      app.use((req, res, next) => {
+        res.setHeader('X-Powered-By', 'Firebolt')
+        next()
+      })
+      app.use('/_firebolt', express.static('.firebolt/public', cacheOpts))
+      app.use('*', async (req, res, next) => {
         const wait = prod ? runProgress.wait : null
         try {
-          await controller.handle(req, res, wait)
+          await controller.handle(req, res, wait, next)
         } catch (err) {
           console.error(err)
         }
       })
+      app.use(express.static('routes', cacheOpts))
       port = controller.config.port
       server = app.listen(port, () => {
         console.log(`server running at http://localhost:${port}\n`)
