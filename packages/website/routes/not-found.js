@@ -5,7 +5,7 @@ import { Meta } from '@/components/Meta'
 export default function NotFound() {
   return (
     <>
-      <Meta title='Page not found' />
+      <Meta title='Page not found' description='That page could not be found' />
       <div
         css={css`
           height: 100vh;
