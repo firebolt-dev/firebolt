@@ -87,16 +87,18 @@ const run = async () => {
   console.log('Initializing project')
   await fs.copy(templateDir, projectDir)
 
-  // personalize their project
+  // rename gitignore
+
+  await fs.rename(
+    path.join(projectDir, '_.gitignore'),
+    path.join(projectDir, '.gitignore')
+  )
+
+  // personalize project
 
   console.log('Personalizing project')
   await replace(
     path.join(projectDir, 'package.json'),
-    '__projectName__',
-    projectName
-  )
-  await replace(
-    path.join(projectDir, 'routes/index.js'),
     '__projectName__',
     projectName
   )

@@ -10,7 +10,7 @@ export default function RootLayout({ children }) {
         <style
           global={css`
             :root {
-              // ...
+              font-family: sans-serif;
             }
           `}
         />
