@@ -1,6 +1,6 @@
 {
   "name": "__projectName__",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "type": "module",
   "private": true,
   "scripts": {
@@ -9,8 +9,8 @@
     "start": "firebolt start"
   },
   "dependencies": {
-    "firebolt": "0.2.4",
-    "@firebolt-dev/icons": "0.2.4",
+    "firebolt": "0.2.5",
+    "@firebolt-dev/icons": "0.2.5",
     "react": "18.3.0-canary-0066e0b68-20240306",
     "react-dom": "18.3.0-canary-0066e0b68-20240306"
   },
