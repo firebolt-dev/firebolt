@@ -1,5 +1,0 @@
-.DS_Store
-.firebolt
-.env*
-!.env.example
-node_modules
