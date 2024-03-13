@@ -47,7 +47,7 @@ export async function exec(opts) {
   const env = prod ? 'production' : 'development'
 
   // configure environment variables
-  dotenv.config({ node_env: env })
+  dotenv.config({ node_env: env, silent: true })
 
   const dir = __dirname
   const appDir = process.cwd()
