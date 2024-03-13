@@ -14,6 +14,7 @@ export function createContext({ expReq, expRes, defaultCookieOptions, base }) {
 
   ctx.req = Request.fromExpress(expReq)
 
+  ctx.expReq = expReq
   ctx.expRes = expRes
 
   ctx.cookies = createCookies(ctx.req, defaultCookieOptions)

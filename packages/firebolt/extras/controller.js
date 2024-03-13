@@ -208,6 +208,10 @@ export async function handleHandler(ctx, route, params) {
 async function handlePage(ctx, route, params) {
   let url = ctx.req.href
 
+  if (prod) {
+    console.log(`[${ctx.expReq.ip || 'no-ip'}] GET ${url}`)
+  }
+
   // apply headers
   ctx.headers.forEach((value, key) => {
     ctx.expRes.setHeader(key, value)
