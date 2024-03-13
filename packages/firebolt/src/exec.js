@@ -10,6 +10,7 @@ import { isEqual, debounce } from 'lodash-es'
 import express from 'express'
 import compression from 'compression'
 import cookieParser from 'cookie-parser'
+import ip from 'request-ip'
 
 import './utils/web'
 import * as style from './utils/style'
@@ -513,6 +514,7 @@ export async function exec(opts) {
     }
     if (!server) {
       const app = express()
+      app.use(ip.mw())
       app.disable('x-powered-by')
       app.use(compression())
       app.use(cookieParser())

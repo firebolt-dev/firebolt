@@ -209,7 +209,7 @@ async function handlePage(ctx, route, params) {
   let url = ctx.req.href
 
   if (prod) {
-    console.log(`[${ctx.expReq.ip || 'no-ip'}] GET ${url}`)
+    console.log(`[${ctx.expReq.clientIp || 'no-ip'}] GET ${url}`)
   }
 
   // apply headers

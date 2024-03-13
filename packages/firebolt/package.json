@@ -34,6 +34,7 @@
     "nanoid": "^5.0.6",
     "react": "canary",
     "react-dom": "canary",
+    "request-ip": "^3.3.0",
     "send": "^0.18.0",
     "source-map-support": "^0.5.21"
   },
