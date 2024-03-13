@@ -1,4 +1,5 @@
 import send from 'send'
+import { Readable } from 'stream'
 
 import { createCookies } from './cookies'
 
@@ -73,15 +74,18 @@ export function createContext({ expReq, expRes, defaultCookieOptions, base }) {
     // apply status
     expRes.status(res.status)
     // apply body
-    const body = res.body
-    if (body == null) {
+    let body = res.body
+    if (!body) {
       expRes.end()
       return
     }
     // expRes?.socket?.setTimeout?.(0)
     // expRes?.socket?.setNoDelay?.(true)
     // expRes?.socket?.setKeepAlive?.(true)
-    const isReadable = !!body.read
+    if (body instanceof ReadableStream) {
+      body = Readable.fromWeb(body)
+    }
+    const isReadable = body instanceof Readable
     if (isReadable) {
       expRes.once('close', () => {
         body.destroy()

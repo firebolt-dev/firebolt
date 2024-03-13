@@ -46,10 +46,11 @@ class FireboltResponse extends Response {
   static isFirebolt = true
 
   constructor(body, options) {
-    if (body instanceof ReadStream) {
-      // convert fs.createReadStream(file) to web ReadableStream
-      body = Readable.toWeb(body)
-    }
+    // if (body instanceof ReadStream) {
+    //   // convert fs.createReadStream(file) to web ReadableStream
+    //   console.log('convert')
+    //   body = Readable.toWeb(body)
+    // }
     super(body, options)
     this.isFirebolt = true
   }

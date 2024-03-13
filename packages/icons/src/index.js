@@ -76,6 +76,8 @@ async function setup() {
   }
 }
 
+const oneHour = 1000 * 60 * 60
+
 function middleware(ctx) {
   const req = ctx.req
 
@@ -85,6 +87,7 @@ function middleware(ctx) {
       return new Response(stream, {
         headers: {
           'Content-Type': item.mime,
+          'Cache-Control': `public, max-age=${oneHour}`,
         },
       })
     }

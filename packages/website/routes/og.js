@@ -4,7 +4,7 @@ import snap from '@firebolt-dev/snap'
 import bg from '@/routes/og-bg.png'
 import robotoFlex from '@/routes/roboto-flex.woff2'
 
-export async function get(req, ctx) {
+export async function get(ctx) {
   const { title } = ctx.params
   return snap(
     <div
