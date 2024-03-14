@@ -1,8 +1,3 @@
-# fly.toml app configuration file generated for firebolt on 2024-03-09T13:39:39+11:00
-#
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
-#
-
 app = 'firebolt'
 primary_region = 'lax'
 
@@ -15,6 +10,11 @@ primary_region = 'lax'
   auto_start_machines = true
   min_machines_running = 1
   processes = ['app']
+
+[http_service.concurrency]
+  type = "requests"
+  hard_limit = 99999999
+  soft_limit = 99999
 
 [[vm]]
   memory = '512mb'
