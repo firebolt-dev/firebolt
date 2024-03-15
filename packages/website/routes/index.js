@@ -1,12 +1,11 @@
 import { useState } from 'react'
-import { Link, useCookie, css } from 'firebolt'
-import { Check, ChevronRight, Copy } from 'lucide-react'
+import { Link, css } from 'firebolt'
+import { Check, ChevronRight, Copy, ArrowUpRightFromSquare } from 'lucide-react'
 
 import { Page } from '@/components/Page'
 import { Meta } from '@/components/Meta'
 
 export default function Home() {
-  const [theme, setTheme] = useCookie('theme', 'system')
   return (
     <Page>
       <Meta
@@ -57,7 +56,7 @@ export default function Home() {
           }
           .home-install {
             padding: 0 8px;
-            margin: 0 0 120px;
+            margin: 0 0 12px;
             align-self: center;
             width: 300px;
             height: 34px;
@@ -86,6 +85,17 @@ export default function Home() {
           }
           .home-install-copied {
             color: var(--icon-color-dim);
+          }
+          .home-stackblitz {
+            font-size: 14px;
+            text-align: center;
+            margin: 0 0 120px;
+            a {
+              color: var(--primary-color);
+            }
+            svg {
+              transform: translateY(1px);
+            }
           }
           .home-features {
             display: flex;
@@ -153,6 +163,14 @@ export default function Home() {
           <ChevronRight className='home-install-chevron' size={20} />
           <span className='home-install-text'>npm create firebolt</span>
           <CopyButton />
+        </div>
+        <div className='home-stackblitz'>
+          <span>or try it on </span>
+          <Link href='https://stackblitz.com/edit/firebolt?file=routes%2Findex.js'>
+            <span>
+              StackBlitz <ArrowUpRightFromSquare size={12} />
+            </span>
+          </Link>
         </div>
         <div className='home-features'>
           <div className='home-feature'>
