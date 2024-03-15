@@ -1,5 +1,4 @@
 import { css } from 'firebolt'
-import { Icons } from '@firebolt-dev/icons'
 
 export default function RootLayout({ children }) {
   return (
@@ -7,6 +6,7 @@ export default function RootLayout({ children }) {
       <head>
         <meta charSet='utf-8' />
         <meta name='viewport' content='width=device-width, initial-scale=1' />
+        <link rel='icon' href='/favicon.ico' />
         <style
           global={css`
             :root {
@@ -14,7 +14,6 @@ export default function RootLayout({ children }) {
             }
           `}
         />
-        <Icons />
       </head>
       <body>{children}</body>
     </html>
