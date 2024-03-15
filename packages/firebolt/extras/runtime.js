@@ -254,6 +254,7 @@ export function createRuntime(stack) {
       // },
       edit(fnOrValue) {
         if (typeof fnOrValue === 'function') {
+          const fn = fnOrValue
           const newValue = produce(value, draft => {
             fn(draft)
           })
