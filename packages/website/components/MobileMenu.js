@@ -5,6 +5,7 @@ import { Menu, Code, BookText, Home } from 'lucide-react'
 export function MobileMenu({ className = '' }) {
   const route = useRoute()
   const [open, setOpen] = useState(false)
+  const close = () => setOpen(false)
   useEffect(() => {
     if (!open) return
     const onWindowClick = e => {
@@ -33,26 +34,20 @@ export function MobileMenu({ className = '' }) {
           position: absolute;
           top: calc(100% + 8px);
           right: 0;
-          width: 180px;
+          width: 150px;
           background: var(--menu-bg);
           border: var(--menu-border);
           border-radius: 8px;
           box-shadow: var(--menu-shadow);
+          padding: 10px 0;
         }
         .menu-item {
           display: flex;
           align-items: center;
-          height: 40px;
-          padding: 0 8px;
-          margin: 4px;
-          border-radius: 4px;
+          font-weight: 500;
+          padding: 10px 20px;
           &:hover {
             cursor: pointer;
-            background: var(--menu-item-hover-bg);
-          }
-          &.active {
-            background: var(--menu-item-active-bg);
-            color: var(--menu-item-active-color);
           }
         }
         .menu-item-icon {
@@ -72,7 +67,7 @@ export function MobileMenu({ className = '' }) {
       </div>
       {open && (
         <div className='menu-content'>
-          {/* <Link href='/'>
+          <Link href='/' onClick={close}>
             <div
               className={cls('menu-item', {
                 active: route.url === '/',
@@ -81,18 +76,18 @@ export function MobileMenu({ className = '' }) {
               <Home className='menu-item-icon' size={20} />
               <span>Home</span>
             </div>
-          </Link> */}
-          <Link href='/docs'>
+          </Link>
+          <Link href='/docs' onClick={close}>
             <div
               className={cls('menu-item', {
                 active: route.url.startsWith('/docs'),
               })}
             >
               <Code className='menu-item-icon' size={20} />
-              <span>Documentation</span>
+              <span>Docs</span>
             </div>
           </Link>
-          <Link href='/blog'>
+          <Link href='/blog' onClick={close}>
             <div
               className={cls('menu-item', {
                 active: route.url.startsWith('/blog'),

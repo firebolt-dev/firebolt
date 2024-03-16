@@ -80,6 +80,7 @@ const lightVariables = css`
   :root {
     --primary-color: rgb(244 63 94);
     --bg-color: white;
+    --bg2-color: white;
     --text-color: rgb(23, 23, 23);
     --text-color-dim: rgb(102, 102, 102);
     --line-color: rgba(0, 0, 0, 0.1);
@@ -104,21 +105,22 @@ const lightVariables = css`
 const darkVariables = css`
   :root {
     --primary-color: rgb(244 63 94);
-    --bg-color: rgb(18, 18, 18);
+    --bg-color: rgb(10, 14, 18);
+    --bg2-color: rgb(15, 18, 25);
     --text-color: rgba(237, 237, 237);
-    --text-color-dim: rgb(161, 161, 161);
-    --line-color: rgba(255, 255, 255, 0.1);
+    --text-color-dim: rgb(92, 101, 113);
+    --line-color: rgb(35, 41, 45);
     --icon-color: white;
     --icon-color-dim: rgba(255, 255, 255, 0.3);
-    --header-bg: rgba(18, 18, 18, 0.9);
-    --menu-bg: rgb(39 37 37);
+    --header-bg: rgba(10, 14, 18, 0.9);
+    --menu-bg: rgb(10, 14, 18);
     --menu-border: 1px solid rgb(39 37 37);
     --menu-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
     --menu-item-hover-bg: rgb(55 51 51);
     --menu-item-active-bg: var(--primary-color);
     --menu-item-active-color: white;
 
-    --inline-code-bg: #2b2b2b;
+    --inline-code-bg: rgb(34, 38, 46);
 
     .shiki span {
       color: var(--shiki-dark);

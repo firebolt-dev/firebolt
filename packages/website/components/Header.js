@@ -20,7 +20,7 @@ export function Header() {
         backdrop-filter: blur(8px);
         padding: 0 20px;
         z-index: 100;
-        border-bottom: 1px solid var(--line-color);
+        /* border-bottom: 1px solid var(--line-color); */
         .header-inner {
           width: 100%;
           max-width: 1300px;
@@ -38,10 +38,10 @@ export function Header() {
         }
         .header-link {
           color: var(--text-color-dim);
+          font-weight: 500;
           margin-left: 24px;
           &.active {
             color: var(--text-color);
-            text-decoration: underline;
           }
         }
         .header-gap2 {

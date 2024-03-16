@@ -1,6 +1,17 @@
 import { useState } from 'react'
 import { Link, css } from 'firebolt'
-import { Check, ChevronRight, Copy, ArrowUpRightFromSquare } from 'lucide-react'
+import {
+  Check,
+  ChevronRight,
+  Copy,
+  ArrowUpRightFromSquare,
+  PlugZap,
+  Zap,
+  ArrowDownWideNarrow,
+  Cpu,
+  Palette,
+  Cookie,
+} from 'lucide-react'
 
 import { Page } from '@/components/Page'
 import { Meta } from '@/components/Meta'
@@ -100,16 +111,17 @@ export default function Home() {
           .home-features {
             display: flex;
             flex-wrap: wrap;
-            margin: -8px -8px 80px;
+            margin: -16px -16px 80px;
           }
           .home-feature {
             display: flex;
             align-items: stretch;
             flex-basis: 33.333%;
-            padding: 8px;
+            padding: 16px;
           }
           .home-feature-inner {
             border: 1px solid var(--line-color);
+            background: var(--bg2-color);
             border-radius: 8px;
             padding: 20px;
             h1 {
@@ -119,7 +131,11 @@ export default function Home() {
             }
             p {
               line-height: 1.4;
-              // ...
+              color: var(--text-color-dim);
+            }
+            svg {
+              margin-right: 12px;
+              transform: translateY(5px);
             }
           }
           @media all and (max-width: 930px) {
@@ -175,7 +191,10 @@ export default function Home() {
         <div className='home-features'>
           <div className='home-feature'>
             <div className='home-feature-inner'>
-              <h1>Powerful Simplicity</h1>
+              <h1>
+                <PlugZap />
+                <span>Powerful Simplicity</span>
+              </h1>
               <p>
                 All the power of a super framework without any of the
                 overwhelming complexity. It's just React.
@@ -184,7 +203,10 @@ export default function Home() {
           </div>
           <div className='home-feature'>
             <div className='home-feature-inner'>
-              <h1>Micro Runtime</h1>
+              <h1>
+                <Zap />
+                <span>Micro Runtime</span>
+              </h1>
               <p>
                 Firebolt's ultra-compact 10 KB runtime ensures your app has the
                 smallest overhead of any framework.
@@ -193,7 +215,10 @@ export default function Home() {
           </div>
           <div className='home-feature'>
             <div className='home-feature-inner'>
-              <h1>Parallel Streaming</h1>
+              <h1>
+                <ArrowDownWideNarrow />
+                <span>Parallel Streaming</span>
+              </h1>
               <p>
                 Parallel server-side streaming means your pages load faster than
                 ever and your SEO skyrockets!
@@ -202,7 +227,10 @@ export default function Home() {
           </div>
           <div className='home-feature'>
             <div className='home-feature-inner'>
-              <h1>Actions & Loaders</h1>
+              <h1>
+                <Cpu />
+                <span>Actions & Loaders</span>
+              </h1>
               <p>
                 Interact with your database directly inside your components.
                 Forget about building an API.
@@ -211,7 +239,10 @@ export default function Home() {
           </div>
           <div className='home-feature'>
             <div className='home-feature-inner'>
-              <h1>CSS-in-JS</h1>
+              <h1>
+                <Palette />
+                <span>CSS-in-JS</span>
+              </h1>
               <p>
                 Ready to go, first class support for CSS-in-JS that works
                 flawlessly with server streaming.
@@ -220,7 +251,10 @@ export default function Home() {
           </div>
           <div className='home-feature'>
             <div className='home-feature-inner'>
-              <h1>Cookies, Baked.</h1>
+              <h1>
+                <Cookie />
+                <span>Cookies, Baked.</span>
+              </h1>
               <p>
                 Next level, bi-directional cookie synchronization that keeps
                 your code clean and simple.

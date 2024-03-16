@@ -100,6 +100,7 @@ export const components = {
         className={cls('shiki', { lineNumbers })}
         css={css`
           border: 1px solid var(--line-color);
+          background: var(--bg2-color);
           margin: 24px 0;
           border-radius: 8px;
           .pre-header {

@@ -24,7 +24,7 @@ export default function DocsLayout({ children }) {
             position: sticky;
             top: 102px;
             height: calc(100vh - 102px);
-            width: 300px;
+            /* width: 235px; */
             margin: 0 0 24px -12px;
             display: flex;
             flex-direction: column;
@@ -38,7 +38,7 @@ export default function DocsLayout({ children }) {
             display: none;
           }
           .docs-nav-section {
-            font-size: 18px;
+            font-size: 20px;
             font-weight: 700;
             margin: 32px 0 12px;
             padding-left: 12px;
@@ -50,12 +50,13 @@ export default function DocsLayout({ children }) {
             display: flex;
             align-items: center;
             padding: 0 12px;
-            height: 40px;
+            height: 34px;
             border-radius: 8px;
             color: var(--text-color-dim);
+            font-weight: 500;
             &.active {
-              background: var(--primary-color);
-              color: white;
+              /* background: var(--primary-color); */
+              color: var(--primary-color);
             }
           }
 
@@ -63,6 +64,7 @@ export default function DocsLayout({ children }) {
             max-width: 800px;
             flex: 1;
             padding: 0 0 100px 32px;
+            margin: 0 auto;
           }
 
           @media all and (max-width: 915px) {
@@ -122,6 +124,7 @@ export default function DocsLayout({ children }) {
             <span>Documentation</span>
           </div>
           <div className='docs-nav-content' onClick={close}>
+            <div className='docs-nav-section'>Guide</div>
             <NavLink label='Getting Started' href='/docs' />
             <NavLink label='Routes' href='/docs/routes' />
             <NavLink label='Styles' href='/docs/styles' />
@@ -131,7 +134,7 @@ export default function DocsLayout({ children }) {
             <NavLink label='Cookies' href='/docs/cookies' />
             <NavLink label='Deployment' href='/docs/deployment' />
 
-            <div className='docs-nav-section'>Reference</div>
+            <div className='docs-nav-section'>API</div>
             <NavLink label='_layout.js' href='/docs/ref/layout' />
             <NavLink label='page.js' href='/docs/ref/page-js' />
             <NavLink label='page.mdx' href='/docs/ref/page-mdx' />
@@ -149,7 +152,7 @@ export default function DocsLayout({ children }) {
             <NavLink label='css' href='/docs/ref/css' />
             <NavLink label='cls' href='/docs/ref/cls' />
 
-            <div className='docs-nav-section'>Plugins & Utilities</div>
+            <div className='docs-nav-section'>Utilities</div>
             <NavLink label='@firebolt-dev/cors' href='/docs/pkg/cors' />
             <NavLink label='@firebolt-dev/icons' href='/docs/pkg/icons' />
             <NavLink label='@firebolt-dev/snap' href='/docs/pkg/snap' />
