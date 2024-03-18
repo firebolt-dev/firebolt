@@ -53,7 +53,7 @@ const items = [
   },
 ]
 
-async function setup() {
+async function build() {
   const exists = await fs.exists(svg)
   if (!exists) throw new Error('[icons] routes/icon.svg source not found')
   await fs.ensureDir(outputDir)
@@ -96,12 +96,12 @@ function middleware(ctx) {
 
 export default function icons() {
   return config => {
-    const ogSetup = config.setup
+    const ogBuild = config.build
     return {
       ...config,
-      async setup() {
-        await ogSetup()
-        await setup()
+      async build() {
+        await ogBuild()
+        await build()
       },
       middleware: [...config.middleware, middleware],
     }

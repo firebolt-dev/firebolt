@@ -93,17 +93,33 @@ export const config = {
 
 Learn more about environment variables on the [.env](/docs/ref/env) page.
 
-## Setup
+## Build
 
-The setup function is run once when your app starts. You can use this (or plugins can) to do things such as generating sitemaps and icons.
+The build function can be used to do any kind of work at build time, such as generating sitemaps or icons.
 
 ```jsx title='firebolt.config.js' lineNumbers
 export const config = {
-  async setup() {
-    // generate icons/sitemaps etc
+  async build() {
+    // ...
   },
 }
 ```
+
+The function is called just once when running `npm run dev` or `npm run build`.
+
+## Start
+
+The start function is run each time your app starts.
+
+```jsx title='firebolt.config.js' lineNumbers
+export const config = {
+  async start() {
+    // ...
+  },
+}
+```
+
+The function is called just once when running `npm run dev` or `npm run start`.
 
 ## Middleware
 

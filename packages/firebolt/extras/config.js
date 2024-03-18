@@ -5,7 +5,8 @@ let config = initial
 if (process.env.PORT) config.port = process.env.PORT
 if (!config.port) config.port = 3000
 
-if (!config.setup) config.setup = async () => {}
+if (!config.build) config.build = async () => {}
+if (!config.start) config.start = async () => {}
 
 if (
   config.productionBrowserSourceMaps !== true &&

@@ -87,6 +87,9 @@ export async function exec(opts) {
   }
   let clientEntryPoints = []
 
+  let hasRunConfigBuild = false
+  let hasRunConfigStart = false
+
   const registry = new Map() // id -> { file, name }
 
   log.intro()
@@ -140,6 +143,12 @@ export async function exec(opts) {
     // console.timeEnd('configValidator')
 
     const config = (await reimport(tmpConfigFile)).config
+
+    // config build (only run once)
+    if (!hasRunConfigBuild) {
+      await config.build()
+      hasRunConfigBuild = true
+    }
 
     // create mdx plugin
     // we try to re-use the same mdx plugin across builds for performance
@@ -500,13 +509,14 @@ export async function exec(opts) {
 
   async function serve() {
     controller = await reimport(outputControllerFile)
-    if (freshConfig) {
+    if (!hasRunConfigStart) {
       try {
-        await controller.config.setup()
+        await controller.config.start()
       } catch (err) {
-        log.error(`config setup failed`)
+        log.error(`config start failed`)
         console.error(err)
       }
+      hasRunConfigStart = true
     }
     if (server && controller.config.port !== port) {
       server.close()
