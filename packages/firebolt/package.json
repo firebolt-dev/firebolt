@@ -1,6 +1,6 @@
 {
   "name": "firebolt",
-  "version": "0.2.8",
+  "version": "0.3.0",
   "description": "",
   "license": "MIT",
   "type": "module",
@@ -13,8 +13,8 @@
     "build": "node scripts/build.mjs --production"
   },
   "dependencies": {
-    "@firebolt-dev/css": "0.2.8",
-    "@firebolt-dev/jsx": "0.2.8",
+    "@firebolt-dev/css": "0.3.0",
+    "@firebolt-dev/jsx": "0.3.0",
     "@mdx-js/esbuild": "^3.0.1",
     "@mdx-js/react": "^3.0.1",
     "chalk": "^5.3.0",
