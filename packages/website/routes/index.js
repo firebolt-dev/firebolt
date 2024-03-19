@@ -11,6 +11,11 @@ import {
   Cpu,
   Palette,
   Cookie,
+  Split,
+  Signpost,
+  Milestone,
+  Shuffle,
+  Component,
 } from 'lucide-react'
 
 import { Page } from '@/components/Page'
@@ -21,7 +26,7 @@ export default function Home() {
     <Page>
       <Meta
         title='Firebolt'
-        description='The Simple React Framework.'
+        description='The Effortless React Framework.'
         image='/og-default.png'
         root
       />
@@ -166,11 +171,10 @@ export default function Home() {
         `}
       >
         <h1 className='home-title'>
-          The <span>Simple</span> React Framework
+          The <span>Productive</span> React Framework
         </h1>
         <p className='home-tag'>
-          Build full-stack apps for the web, with all of the features and none
-          of the complexity.
+          Quickly build high performance, efficient, full-stack apps on the web.
         </p>
         <Link href='/docs' className='home-cta'>
           <span>Get Started</span>
@@ -196,8 +200,8 @@ export default function Home() {
                 <span>Powerful Simplicity</span>
               </h1>
               <p>
-                All the power of a super framework without any of the
-                overwhelming complexity. It's just React.
+                Powerful features crafted into a tiny framework designed to help
+                you build faster and deliver more value.
               </p>
             </div>
           </div>
@@ -205,35 +209,36 @@ export default function Home() {
             <div className='home-feature-inner'>
               <h1>
                 <Zap />
-                <span>Micro Runtime</span>
+                <span>Ultra Speed</span>
               </h1>
               <p>
-                Firebolt's ultra-compact 10 KB runtime ensures your app has the
-                smallest overhead of any framework.
+                Our 10 KB runtime with parallel server-side streaming ensures
+                your pages load faster than any other framework.
               </p>
             </div>
           </div>
           <div className='home-feature'>
             <div className='home-feature-inner'>
               <h1>
-                <ArrowDownWideNarrow />
-                <span>Parallel Streaming</span>
+                <Shuffle />
+                <span>Unified Routing</span>
               </h1>
               <p>
-                Parallel server-side streaming means your pages load faster than
-                ever and your SEO skyrockets!
+                A single intuitive directory for everything accessed by a URL:
+                Pages, assets, virtual files, APIs and more.
               </p>
             </div>
           </div>
           <div className='home-feature'>
             <div className='home-feature-inner'>
               <h1>
-                <Cpu />
-                <span>Actions & Loaders</span>
+                <Component />
+                <span>True Composability</span>
               </h1>
               <p>
-                Interact with your database directly inside your components.
-                Forget about building an API.
+                Fetch and interact with your database from inside any component.
+                Build entire platforms by creating components and composing them
+                together.
               </p>
             </div>
           </div>
@@ -244,8 +249,8 @@ export default function Home() {
                 <span>CSS-in-JS</span>
               </h1>
               <p>
-                Ready to go, first class support for CSS-in-JS that works
-                flawlessly with server streaming.
+                First class, high performance CSS-in-JS to help keep your
+                components isolated and composable. Ready to go!
               </p>
             </div>
           </div>

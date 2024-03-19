@@ -42,7 +42,7 @@ export default function Blog({ children }) {
           url='/blog/introducing-firebolt'
           image='/introducing-firebolt.png'
           date='March 11, 2024'
-          title='Introducing Firebolt: The Simple React Framework'
+          title='Introducing Firebolt: The Productive React Framework'
           description={`
             Building for the web should be easy...
 

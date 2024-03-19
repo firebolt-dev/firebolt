@@ -5,13 +5,78 @@
 
 # Routes
 
-The `routes` directory is an intuitive yet unique way of organizing all of your static and dynamic content that needs to be available at a URL.
+The `routes` directory is an intuitive yet unique way of organizing all of your static and dynamic content together in a single folder.
+
+## Pages
+
+You can add a page to your app by creating a `.js` file that exports a default React component
+
+```jsx title='routes/about.js' lineNumbers
+export default function About() {
+  return (
+    <main>
+      <h1>About Us</h1>
+      <p>...</p>
+    </main>
+  )
+}
+```
+
+This page is rendered when you visit `/about`.
+
+Pages are just regular React components with no magical named exports. You'll learn more about how to fetch and interact with data later on in this guide.
+
+## Dynamic Pages
+
+You can create dynamic route segments by using a `$` variable in your file or folder name:
+
+```jsx title='routes/blog/$slug.js' lineNumbers
+import { useRoute } from 'firebolt'
+
+export default function Post() {
+  const { slug } = useRoute().params
+  return <div>Slug: {slug}</div>
+}
+```
+
+You can learn more about these and catch-all segments on the [page.js](/docs/ref/page-js) reference.
+
+## Layouts
+
+Firebolt also supports nested layouts that maintain their state when switching between pages that share the same layout.
+
+```jsx title='routes/docs/_layout.js' lineNumbers
+export default function Docs({ children }) {
+  return (
+    <div>
+      <nav>{/* shared navigation */}</nav>
+      {children}
+    </div>
+  )
+}
+```
+
+```md title='routes/docs/intro.mdx' lineNumbers
+# Intro
+
+Let's get started...
+```
+
+In the example above, visiting `/docs/intro` will show the intro page nested inside the docs layout.
+
+The root layout at `routes/_layout.js` is used to wrap your entire app with `<html>` and `<body>` tags.
+
+## MDX
+
+As you might have noticed we also support MDX pages out of the box, allowing you to write your content with super powered markdown. Simply use the `.mdx` extension.
+
+You can [configure](/docs/ref/config) MDX with plugins to provide syntax highlighting or support github flavored markdown, anything you need.
+
+You can also customize the components rendered by MDX with an [MDXProvider](/docs/ref/page-mdx)
 
 ## Static Files
 
-At it's most basic, the `routes` directory can serve static assets such as fonts, robots files and images by simply placing them there.
-
-For example the `routes/robots.txt` file will be accessible at `/robots.txt`.
+The `routes` directory also serves all your static assets such as fonts and images. For example `routes/robots.txt` will be available at `/robots.txt`.
 
 ## Virtual Files
 
@@ -44,73 +109,6 @@ export function get(ctx) {
 ```
 
 As you'll see later on, unless your app explicitly needs to provide an API to its users, you won't even need these.
-
-## Pages
-
-You can add pages to your app by creating a `.js` file that exports a default React component
-
-```jsx title='routes/about.js' lineNumbers
-export default function About() {
-  return (
-    <main>
-      <h1>About Us</h1>
-      <p>...</p>
-    </main>
-  )
-}
-```
-
-This page will render when you visit `/about`.
-
-Pages are just regular React components with no special exports etc. You'll learn more about how to load and interact with data later on in this guide.
-
-## Dynamic Pages
-
-You can create dynamic route segments by using a `$` variable in your file or folder name:
-
-```jsx title='routes/blog/$slug.js' lineNumbers
-import { useRoute } from 'firebolt'
-
-export default function Post() {
-  const { slug } = useRoute().params
-  return <div>Slug: {slug}</div>
-}
-```
-
-We also support catch-all segments that you can read more about on the [page.js](/docs/ref/page-js) reference.
-
-## Layouts
-
-Firebolt also supports nested layouts that maintain their state when switching between pages that share the same layout.
-
-```jsx title='routes/docs/_layout.js' lineNumbers
-export default function Docs({ children }) {
-  return (
-    <div>
-      <nav>{/* shared navigation */}</nav>
-      {children}
-    </div>
-  )
-}
-```
-
-```md title='routes/docs/intro.mdx' lineNumbers
-# Intro
-
-Let's get started...
-```
-
-In the example above, visiting `/docs/intro` will show the intro page nested inside the docs layout.
-
-The root layout at `routes/_layout.js` is used to wrap your entire app with `<html>` and `<body>` tags.
-
-## MDX
-
-Yup, we also support MDX pages out of the box, allowing you to write your content with super powered markdown. Simply use the `.mdx` extension.
-
-You can [configure](/docs/ref/config) MDX with plugins to provide syntax highlighting or support github flavored markdown, anything you need.
-
-You can also customize the components rendered by MDX with an [MDXProvider](/docs/ref/page-mdx)
 
 ## Summary
 
