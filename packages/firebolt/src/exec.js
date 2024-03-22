@@ -536,7 +536,7 @@ export async function exec(opts) {
         '/_firebolt',
         express.static('.firebolt/public', {
           // all of these files are hashed so are max cached
-          maxeAge: 1000 * 60 * 60 * 24 * 365, // 1y
+          maxAge: 1000 * 60 * 60 * 24 * 365, // 1y
           immutable: true,
         })
       )
