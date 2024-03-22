@@ -213,7 +213,7 @@ export default function Home() {
               </h1>
               <p>
                 Our 10 KB runtime with parallel server-side streaming ensures
-                your pages load faster than any other framework.
+                your pages load faster than ever before.
               </p>
             </div>
           </div>
