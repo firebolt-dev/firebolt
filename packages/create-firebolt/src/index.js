@@ -13,7 +13,7 @@ const __dirname = path.dirname(__filename)
 
 const green = chalk.green
 
-const modDir = new URL('.', import.meta.url).pathname
+const modDir = new URL('.', import.meta.url).pathname.substring(1)
 const pkgFile = path.join(modDir, '../package.json')
 
 const { version } = await fs.readJSON(pkgFile)
