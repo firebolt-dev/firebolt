@@ -36,6 +36,11 @@ export function createRuntime(stack) {
     getCookie,
     setCookie,
     observeCookie,
+    cookies: {
+      get: getCookie,
+      set: setCookie,
+      observe: observeCookie,
+    },
   }
 
   function call(action, ...args) {

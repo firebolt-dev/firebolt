@@ -227,6 +227,11 @@ export function useCookie(key, defaultValue = null) {
   return [value ?? defaultValue, update]
 }
 
+export function useCookies() {
+  const runtime = useRuntime()
+  return runtime.cookies
+}
+
 export class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props)
