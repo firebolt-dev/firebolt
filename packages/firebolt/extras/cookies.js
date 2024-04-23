@@ -55,7 +55,7 @@ export function createCookies(req, defaultCookieOptions) {
       }
       let value
       try {
-        value = JSON.parse(data)
+        value = JSON.parse(decodeURIComponent(data))
       } catch (err) {
         console.error(`could not deserialize cookie ${key} with value:`, data)
         return null
@@ -72,7 +72,7 @@ export function createCookies(req, defaultCookieOptions) {
       } else {
         let data
         try {
-          data = JSON.stringify(value)
+          data = encodeURIComponent(JSON.stringify(value))
         } catch (err) {
           return console.error(
             `could not serialize cookie ${key} with value:`,

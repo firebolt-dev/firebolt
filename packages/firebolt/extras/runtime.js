@@ -433,7 +433,7 @@ export function createRuntime(stack) {
     if (value === null || value === undefined) return null
     let data
     try {
-      data = JSON.parse(value)
+      data = JSON.parse(decodeURIComponent(value))
     } catch (err) {
       console.error(`could not deserialize cookie ${key} with value:`, value)
       console.log({ value })
@@ -459,7 +459,7 @@ export function createRuntime(stack) {
     } else {
       let value
       try {
-        value = JSON.stringify(data)
+        value = encodeURIComponent(JSON.stringify(data))
       } catch (err) {
         return console.error(
           `could not serialize cookie ${key} with data:`,
