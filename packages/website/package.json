@@ -1,6 +1,6 @@
 {
   "name": "@firebolt-dev/website",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,10 +10,10 @@
   },
   "dependencies": {
     "@shikijs/rehype": "^1.1.6",
-    "firebolt": "0.4.1",
-    "@firebolt-dev/icons": "0.4.1",
-    "@firebolt-dev/snap": "0.4.1",
-    "@firebolt-dev/cors": "0.4.1",
+    "firebolt": "0.4.2",
+    "@firebolt-dev/icons": "0.4.2",
+    "@firebolt-dev/snap": "0.4.2",
+    "@firebolt-dev/cors": "0.4.2",
     "lucide-react": "^0.331.0",
     "react": "canary",
     "react-dom": "canary",
