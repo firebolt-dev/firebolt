@@ -96,7 +96,12 @@ function resolveRouteAndParams(url) {
     return [null, {}]
   }
   for (const route of routes) {
-    if (route.type !== 'page' && route.type !== 'handler') continue
+    if (
+      route.type !== 'page' &&
+      route.type !== 'handler' &&
+      route.type !== 'static'
+    )
+      continue
     const [hit, params] = match(route.pattern, url)
     if (hit) {
       injectSearchParams(params, url)
@@ -408,16 +413,14 @@ export async function handle(expReq, expRes, wait, next) {
   // console.log('route', route)
   // console.log('params', params)
 
-  // route files
-  if (!route && hasExt(url)) {
-    // requests for static files that don't have a handler
-    // should continue to the next middleware
-    return next()
-  }
-
   // route not found
   if (!route) {
     return handlePage(ctx, null, {})
+  }
+
+  // route static
+  if (route.type === 'static') {
+    return next() // next handler returns these
   }
 
   // route page
