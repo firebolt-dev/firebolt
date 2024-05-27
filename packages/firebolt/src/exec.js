@@ -190,6 +190,8 @@ export async function exec(opts) {
         route.fileBase.endsWith('/_layout.js')
       ) {
         route.type = 'layout'
+      } else if (route.fileBase.startsWith('static/')) {
+        route.type = 'static' // enforced static files, eg *.js that doesn't get identified as a page
       } else if (route.fileExt === 'js') {
         route.type = 'pageOrHandler' // intermediary, replaced with 'handler' or 'page' during inspection
       } else if (route.fileExt === 'mdx') {
