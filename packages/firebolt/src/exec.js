@@ -25,6 +25,7 @@ import {
   parseEsbuildError,
   parseServerError,
 } from './utils/errors'
+import { workerPlugin as WorkerPlugin } from './utils/workerPlugin'
 import { registryPlugin } from './utils/registryPlugin'
 import { zombieImportPlugin } from './utils/zombieImportPlugin'
 import { virtualModule } from './utils/virtualModule'
@@ -34,6 +35,8 @@ import createMdx from './utils/mdx'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+
+const workerPlugin = WorkerPlugin()
 
 const imgLoaders = {
   '.svg': 'dataurl',
@@ -134,6 +137,7 @@ export async function exec(opts) {
         jsx: 'automatic',
         jsxImportSource: '@firebolt-dev/jsx',
         plugins: [
+          workerPlugin,
           // mdx.plugin,
         ],
       })
@@ -281,6 +285,7 @@ export async function exec(opts) {
         jsx: 'automatic',
         jsxImportSource: '@firebolt-dev/jsx',
         plugins: [
+          workerPlugin,
           mdx.plugin,
           // virtualModule(mdxCache),
         ],
@@ -402,6 +407,7 @@ export async function exec(opts) {
         jsx: 'automatic',
         jsxImportSource: '@firebolt-dev/jsx',
         plugins: [
+          workerPlugin,
           mdx.plugin,
           // virtualModule(mdxCache),
           registryPlugin({ registry, appDir }),
@@ -490,6 +496,7 @@ export async function exec(opts) {
         jsx: 'automatic',
         jsxImportSource: '@firebolt-dev/jsx',
         plugins: [
+          workerPlugin,
           mdx.plugin,
           registryPlugin({ registry: null, appDir }), // dont write to registry, we already have it from the client bundles
         ],
@@ -627,6 +634,9 @@ export async function exec(opts) {
     }
     const watcher = chokidar.watch([appDir], watchOptions)
     const onChange = async (type, file) => {
+      // ignore worker script cache (infinite loop)
+      if (file.includes('/.cache/workerPlugin')) return
+
       const relFile = path.relative(appDir, file)
       log.change(`~/${relFile}`)
 
